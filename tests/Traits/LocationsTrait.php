@@ -15,11 +15,6 @@ use PHPUnit\Framework\TestCase;
 trait LocationsTrait {
 
   /**
-   * Path to the fixtures directory from the repository root.
-   */
-  const FIXTURES_DIR = 'tests/Fixtures';
-
-  /**
    * Path to the root directory of this project.
    */
   protected static string $root;
@@ -56,6 +51,13 @@ trait LocationsTrait {
   protected static string $tmp;
 
   /**
+   * Path to the fixtures directory from the repository root.
+   */
+  protected static function locationsFixtures(): string {
+    return 'tests/Fixtures';
+  }
+
+  /**
    * Initialize the locations.
    *
    * @param string $cwd
@@ -82,7 +84,7 @@ trait LocationsTrait {
   }
 
   protected function locationsFixtureDir(?string $name = NULL): string {
-    $path = File::dir(static::$root . DIRECTORY_SEPARATOR . static::FIXTURES_DIR);
+    $path = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixtures());
 
     // Set the fixtures directory based on the passed name.
     if ($name) {
