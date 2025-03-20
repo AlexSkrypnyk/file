@@ -17,7 +17,7 @@
         "source": "https://github.com/alexskrypnyk/file"
     },
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.2",
         "symfony/filesystem": "^7.2"
     },
     "require-dev": {
@@ -26,7 +26,7 @@
         "ergebnis/composer-normalize": "^2.42",
         "opis/closure": "^4.0",
         "phpstan/phpstan": "^2",
-        "phpunit/phpunit": "^12",
+        "phpunit/phpunit": "^11",
         "rector/rector": "^2"
     },
     "minimum-stability": "stable",

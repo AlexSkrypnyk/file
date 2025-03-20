@@ -6,7 +6,7 @@ namespace AlexSkrypnyk\File\Internal;
 
 class ExtendedSplFileInfo extends \SplFileInfo {
 
-  public const string CONTENT_IGNORED_MARKER = 'content_ignored';
+  public const CONTENT_IGNORED_MARKER = 'content_ignored';
 
   protected string $basepath;
 
