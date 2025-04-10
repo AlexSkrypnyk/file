@@ -234,7 +234,7 @@ class FileStringsTest extends UnitTestBase {
 
   #[DataProvider('dataProviderRemoveLine')]
   public function testRemoveLine(string $filename, string $content, string $needle, string $expected): void {
-    $file = static::$build . DIRECTORY_SEPARATOR . $filename;
+    $file = static::$workspace . DIRECTORY_SEPARATOR . $filename;
     file_put_contents($file, $content);
 
     File::removeLine($file, $needle);
