@@ -17,7 +17,7 @@ class Syncer {
    * Sync files from one directory to another, respecting the .ignorecontent.
    */
   public function sync(string $dst, int $permissions = 0755, bool $copy_empty_dirs = FALSE): static {
-    File::dir($dst, TRUE);
+    File::mkdir($dst, $permissions);
 
     foreach ($this->src_index->getFiles() as $file) {
       $absolute_src_path = $file->getPathname();

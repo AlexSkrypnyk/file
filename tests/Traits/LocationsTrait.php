@@ -75,11 +75,11 @@ trait LocationsTrait {
    *   class where this trait is used.
    */
   protected function locationsInit(string $cwd, ?callable $after = NULL): void {
-    static::$root = File::dir($cwd, TRUE);
-    static::$workspace = File::dir(rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'workspace-' . microtime(TRUE), TRUE);
-    static::$repo = File::dir(static::$workspace . DIRECTORY_SEPARATOR . 'repo', TRUE);
-    static::$sut = File::dir(static::$workspace . DIRECTORY_SEPARATOR . 'sut', TRUE);
-    static::$tmp = File::dir(static::$workspace . DIRECTORY_SEPARATOR . 'tmp', TRUE);
+    static::$root = File::mkdir($cwd);
+    static::$workspace = File::mkdir(rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'workspace-' . microtime(TRUE));
+    static::$repo = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'repo');
+    static::$sut = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'sut');
+    static::$tmp = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'tmp');
     static::$fixtures = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir());
 
     if ($after !== NULL && $after instanceof \Closure) {
