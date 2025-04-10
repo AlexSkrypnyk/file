@@ -110,27 +110,55 @@ class File {
     return (new Filesystem())->exists($files);
   }
 
-  public static function dir(string $directory, bool $create = FALSE, int $permissions = 0777): string {
+  /**
+   * Get absolute path for existing directory.
+   *
+   * @param string $directory
+   *   Directory path.
+   *
+   * @return string
+   *   Absolute directory path.
+   *
+   * @throws \RuntimeException
+   *   When directory does not exist.
+   */
+  public static function dir(string $directory): string {
     $directory = static::realpath($directory);
 
     if (!is_dir($directory)) {
-      if (!$create) {
-        throw new \RuntimeException(sprintf('Directory "%s" does not exist.', $directory));
-      }
+      throw new \RuntimeException(sprintf('Directory "%s" does not exist.', $directory));
+    }
 
-      $directory = static::absolute($directory);
-      if (static::exists($directory)) {
-        if (!is_dir($directory)) {
-          throw new \RuntimeException(sprintf('Directory "%s" is a file.', $directory));
-        }
+    return $directory;
+  }
+
+  /**
+   * Creates a directory if it doesn't exist.
+   *
+   * @param string $directory
+   *   Directory to create.
+   * @param int $permissions
+   *   Directory permissions.
+   *
+   * @return string
+   *   Created directory path.
+   *
+   * @throws \RuntimeException
+   *   When directory cannot be created or is a file.
+   */
+  public static function mkdir(string $directory, int $permissions = 0777): string {
+    $directory = static::absolute($directory);
+    if (static::exists($directory)) {
+      if (!is_dir($directory)) {
+        throw new \RuntimeException(sprintf('Directory "%s" is a file.', $directory));
       }
-      else {
-        (new Filesystem())->mkdir($directory, $permissions);
-        if (!is_readable($directory) || !is_dir($directory)) {
-          // @codeCoverageIgnoreStart
-          throw new \RuntimeException(sprintf('Unable to create directory "%s".', $directory));
-          // @codeCoverageIgnoreEnd
-        }
+    }
+    else {
+      (new Filesystem())->mkdir($directory, $permissions);
+      if (!is_readable($directory) || !is_dir($directory)) {
+        // @codeCoverageIgnoreStart
+        throw new \RuntimeException(sprintf('Unable to create directory "%s".', $directory));
+        // @codeCoverageIgnoreEnd
       }
     }
 
@@ -138,13 +166,13 @@ class File {
   }
 
   public static function dirIsEmpty(string $directory): bool {
-    return is_dir($directory) && count(scandir($directory) ?: []) === 2;
+    return static::dir($directory) && count(scandir($directory) ?: []) === 2;
   }
 
-  public static function tmpdir(?string $directory = NULL, string $prefix = 'tmp_', int $mode = 0700, int $max_attempts = 1000): string {
+  public static function tmpdir(?string $directory = NULL, string $prefix = 'tmp_', int $permissions = 0700, int $max_attempts = 1000): string {
     $directory = $directory ?: sys_get_temp_dir();
     $directory = rtrim($directory, DIRECTORY_SEPARATOR);
-    static::dir($directory, TRUE);
+    static::mkdir($directory, $permissions);
 
     if (strpbrk($prefix, '\\/:*?"<>|') !== FALSE) {
       // @codeCoverageIgnoreStart
@@ -155,9 +183,9 @@ class File {
 
     do {
       $path = sprintf('%s%s%s%s', $directory, DIRECTORY_SEPARATOR, $prefix, mt_rand(100000, mt_getrandmax()));
-    } while (!mkdir($path, $mode) && $attempts++ < $max_attempts);
+    } while (!static::mkdir($path, $permissions) && $attempts++ < $max_attempts);
 
-    if (!is_dir($path) || !is_writable($path)) {
+    if (!static::dir($path) || !is_writable($path)) {
       // @codeCoverageIgnoreStart
       throw new \RuntimeException(sprintf('Unable to create temporary directory "%s".', $path));
       // @codeCoverageIgnoreEnd
@@ -193,7 +221,7 @@ class File {
 
   public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
     $parent = dirname($dest);
-    $parent = static::dir($parent, TRUE, $permissions);
+    $parent = static::mkdir($parent, $permissions);
 
     // Note that symlink target must exist.
     if (is_link($source)) {
@@ -557,7 +585,7 @@ class File {
   }
 
   public static function diff(string $baseline, string $destination, string $diff, ?callable $before_match_content = NULL): void {
-    static::dir($diff, TRUE);
+    static::mkdir($diff);
 
     $differ = self::compare($baseline, $destination, NULL, $before_match_content)->getDiffer();
 
@@ -565,7 +593,7 @@ class File {
       foreach (array_keys($differ->getAbsentLeftDiffs()) as $file) {
         $file_dst = $destination . DIRECTORY_SEPARATOR . $file;
         $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-        static::dir(dirname($file_diff), TRUE);
+        static::mkdir(dirname($file_diff));
         static::copy($file_dst, $file_diff);
       }
     }
@@ -573,7 +601,7 @@ class File {
     if (!empty($differ->getAbsentRightDiffs())) {
       foreach (array_keys($differ->getAbsentRightDiffs()) as $file) {
         $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-        static::dir(dirname($file_diff), TRUE);
+        static::mkdir(dirname($file_diff));
         static::dump(dirname($file_diff) . DIRECTORY_SEPARATOR . '-' . basename($file_diff), '');
       }
     }
@@ -599,7 +627,7 @@ class File {
   public static function compare(string $src, string $dst, ?Rules $rules = NULL, ?callable $before_match_content = NULL): Comparer {
     $src_index = new Index($src, $rules, $before_match_content);
 
-    static::dir($dst, TRUE);
+    static::mkdir($dst);
     $dst_index = new Index($dst, $rules ?: $src_index->getRules(), $before_match_content);
 
     $comparer = new Comparer($src_index, $dst_index);
@@ -608,7 +636,7 @@ class File {
   }
 
   public static function patch(string $baseline, string $diff, string $destination, ?callable $before_match_content = NULL): void {
-    static::dir($destination, TRUE);
+    static::mkdir($destination);
 
     static::sync($baseline, $destination);
 

@@ -13,6 +13,7 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversClass(File::class)]
 #[CoversMethod(File::class, 'cwd')]
 #[CoversMethod(File::class, 'realpath')]
+#[CoversMethod(File::class, 'mkdir')]
 class FileTest extends UnitTestBase {
 
   protected string $testTmpDir;
@@ -99,7 +100,7 @@ class FileTest extends UnitTestBase {
   }
 
   #[DataProvider('dataProviderDir')]
-  public function testDir(string $directory, bool $create, int $permissions, bool $should_exist, bool $expect_exception): void {
+  public function testDir(string $directory, int $permissions, bool $expect_exception): void {
     if ($expect_exception) {
       $this->expectException(\RuntimeException::class);
     }
@@ -107,35 +108,66 @@ class FileTest extends UnitTestBase {
     $path = $this->testTmpDir . DIRECTORY_SEPARATOR . $directory;
     if (basename($path) === 'existing_file') {
       touch($path);
-      $this->assertFalse(File::dirIsEmpty($path));
-      $this->assertTrue(File::exists($path));
+      $this->assertFileExists($path);
     }
     elseif (basename($path) === 'existing_dir') {
       mkdir($path, 0777, TRUE);
-      $this->assertTrue(File::dirIsEmpty($path));
-      $this->assertTrue(File::exists($path));
+      $this->assertDirectoryExists($path);
     }
     else {
-      $this->assertFalse(File::exists($path));
+      $this->assertFileDoesNotExist($path);
     }
 
-    $createdDir = File::dir($path, $create, $permissions);
+    $actual = File::dir($path);
 
     if (!$expect_exception) {
-      $this->assertDirectoryExists($createdDir);
-      $this->assertSame(realpath($createdDir), realpath($path));
-      $this->assertEquals($should_exist, File::exists($path));
+      $this->assertDirectoryExists($actual);
+      $this->assertSame(realpath($actual), realpath($path));
+      $this->assertFileExists($path);
     }
   }
 
   public static function dataProviderDir(): array {
     return [
-      ['existing_dir', TRUE, 0777, TRUE, FALSE],
-      ['existing_dir', FALSE, 0777, TRUE, FALSE],
-      ['non_existing_dir', TRUE, 0777, TRUE, FALSE],
-      ['non_existing_dir', FALSE, 0777, FALSE, TRUE],
-      ['existing_file', TRUE, 0777, TRUE, TRUE],
-      ['existing_file', FALSE, 0777, TRUE, TRUE],
+      ['existing_dir', 0777, FALSE],
+      ['non_existing_dir', 0777, TRUE],
+      ['existing_file', 0777, TRUE],
+    ];
+  }
+
+  #[DataProvider('dataProviderMkdir')]
+  public function testMkdir(string $directory, int $permissions, bool $expect_exception): void {
+    if ($expect_exception) {
+      $this->expectException(\RuntimeException::class);
+    }
+
+    $path = $this->testTmpDir . DIRECTORY_SEPARATOR . $directory;
+    if (basename($path) === 'existing_file') {
+      touch($path);
+      $this->assertFileExists($path);
+    }
+    elseif (basename($path) === 'existing_dir') {
+      mkdir($path, 0777, TRUE);
+      $this->assertDirectoryExists($path);
+    }
+    else {
+      $this->assertFileDoesNotExist($path);
+    }
+
+    $actual = File::mkdir($path, $permissions);
+
+    if (!$expect_exception) {
+      $this->assertDirectoryExists($actual);
+      $this->assertSame(realpath($actual), realpath($path));
+      $this->assertTrue(File::exists($path));
+    }
+  }
+
+  public static function dataProviderMkdir(): array {
+    return [
+      ['existing_dir', 0777, FALSE],
+      ['non_existing_dir', 0777, FALSE],
+      ['existing_file', 0777, TRUE],
     ];
   }
 
@@ -165,13 +197,13 @@ class FileTest extends UnitTestBase {
   }
 
   #[DataProvider('dataProviderFindMatchingPath')]
-  public function testFindMatchingPath(array|string $paths, ?string $needle, ?string $expectedFile): void {
+  public function testFindMatchingPath(array|string $paths, ?string $needle, ?string $expected_file): void {
     $result = File::findMatchingPath($paths, $needle);
 
-    if ($expectedFile) {
+    if ($expected_file) {
       $this->assertNotNull($result);
       $this->assertFileExists($result);
-      $this->assertSame(realpath($expectedFile), realpath($result));
+      $this->assertSame(realpath($expected_file), realpath($result));
     }
     else {
       $this->assertNull($result);
@@ -179,11 +211,11 @@ class FileTest extends UnitTestBase {
   }
 
   public static function dataProviderFindMatchingPath(): array {
-    $testDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_test_', TRUE);
-    mkdir($testDir, 0777, TRUE);
+    $test_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_test_', TRUE);
+    mkdir($test_dir, 0777, TRUE);
 
-    $file1 = $testDir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $testDir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file1 = $test_dir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $test_dir . DIRECTORY_SEPARATOR . 'file2.txt';
 
     file_put_contents($file1, "This is a test file containing needle.");
     file_put_contents($file2, "This is another file without the word.");
@@ -192,9 +224,9 @@ class FileTest extends UnitTestBase {
       'single path, no needle' => [$file1, NULL, $file1],
       'single path, with needle' => [$file1, 'needle', $file1],
       'single path, needle missing' => [$file2, 'needle', NULL],
-      'glob pattern, first match' => [$testDir . DIRECTORY_SEPARATOR . '*.txt', NULL, $file1],
-      'glob pattern, matching content' => [$testDir . DIRECTORY_SEPARATOR . '*.txt', 'needle', $file1],
-      'glob pattern, no match' => [$testDir . DIRECTORY_SEPARATOR . '*.md', NULL, NULL],
+      'glob pattern, first match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', NULL, $file1],
+      'glob pattern, matching content' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', 'needle', $file1],
+      'glob pattern, no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.md', NULL, NULL],
     ];
   }
 
