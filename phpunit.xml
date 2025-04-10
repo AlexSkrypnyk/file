@@ -13,7 +13,7 @@
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerDeprecations="true"
          displayDetailsOnPhpunitDeprecations="true">
-<testsuites>
+    <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
         </testsuite>
@@ -23,10 +23,11 @@
             ignoreIndirectDeprecations="true">
         <include>
             <directory>src</directory>
+            <directory>tests/Traits</directory>
             <file>File.php</file>
         </include>
         <exclude>
-            <directory>tests</directory>
+            <directory>tests/Unit</directory>
         </exclude>
     </source>
     <coverage pathCoverage="false"

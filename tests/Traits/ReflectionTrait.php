@@ -96,7 +96,7 @@ trait ReflectionTrait {
     $property = $class->getProperty($property);
     $property->setAccessible(TRUE);
 
-    return $property->getValue($class);
+    return $property->getValue($object);
   }
 
 }

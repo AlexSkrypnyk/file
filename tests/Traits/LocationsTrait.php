@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Traits;
 
 use AlexSkrypnyk\File\File;
-use PHPUnit\Framework\TestCase;
 
 /**
- * Trait ConsoleTrait.
+ * Trait Locations.
  *
- * Helpers to work with Console.
+ * Helpers to work with Locations during tests.
+ *
+ * Paths are static to allow for easy access from static methods such as
+ * data providers.
  */
 trait LocationsTrait {
 
@@ -25,12 +27,12 @@ trait LocationsTrait {
   protected static string $fixtures;
 
   /**
-   * Main build directory where the rest of the directories located.
+   * Main workspace directory where the rest of the directories located.
    *
-   * The "build" in this context is a place to store assets produced by a single
-   * test run.
+   * The "workspace" in this context is a place to store assets produced by a
+   * single test run.
    */
-  protected static string $build;
+  protected static string $workspace;
 
   /**
    * Directory used as a source in the operations.
@@ -52,8 +54,14 @@ trait LocationsTrait {
 
   /**
    * Path to the fixtures directory from the repository root.
+   *
+   * This method should be overridden in the child class to provide a custom
+   * fixtures directory path.
+   *
+   * @return string
+   *   The fixtures directory path relative to the repository root.
    */
-  protected static function locationsFixtures(): string {
+  protected static function locationsFixturesDir(): string {
     return 'tests/Fixtures';
   }
 
@@ -62,29 +70,50 @@ trait LocationsTrait {
    *
    * @param string $cwd
    *   The current working directory.
-   * @param callable|null $cb
-   *   Callback to run after initialization.
-   * @param \PHPUnit\Framework\TestCase|null $test
-   *   The test instance to pass to the callback.
+   * @param \Closure|null $after
+   *   Closure to run after initialization. Closure will be bound to the test
+   *   class where this trait is used.
    */
-  protected static function locationsInit(string $cwd, ?callable $cb = NULL, ?TestCase $test = NULL): void {
+  protected function locationsInit(string $cwd, ?callable $after = NULL): void {
     static::$root = File::dir($cwd, TRUE);
-    static::$build = File::dir(rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'vortex-' . microtime(TRUE), TRUE);
-    static::$repo = File::dir(static::$build . '/local_repo', TRUE);
-    static::$sut = File::dir(static::$build . '/star_wars', TRUE);
-    static::$tmp = File::dir(static::$build . '/tmp', TRUE);
+    static::$workspace = File::dir(rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'workspace-' . microtime(TRUE), TRUE);
+    static::$repo = File::dir(static::$workspace . DIRECTORY_SEPARATOR . 'repo', TRUE);
+    static::$sut = File::dir(static::$workspace . DIRECTORY_SEPARATOR . 'sut', TRUE);
+    static::$tmp = File::dir(static::$workspace . DIRECTORY_SEPARATOR . 'tmp', TRUE);
+    static::$fixtures = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir());
 
-    if ($cb !== NULL && $cb instanceof \Closure) {
-      \Closure::bind($cb, $test, self::class)();
+    if ($after !== NULL && $after instanceof \Closure) {
+      \Closure::bind($after, $this, self::class)();
     }
   }
 
-  protected static function locationsTearDown(): void {
-    File::remove(static::$build);
+  /**
+   * Tear down the locations.
+   *
+   * Will be skipped if the DEBUG environment variable is set.
+   */
+  protected function locationsTearDown(): void {
+    if (!getenv('DEBUG')) {
+      File::remove(static::$workspace);
+    }
   }
 
+  /**
+   * Get the fixtures' directory based on the custom name and a test name.
+   *
+   * If the test uses a data provider with named data sets, the name of the
+   * data set converted to a snake case will be appended to the fixture
+   * directory name.
+   *
+   * @param string|null $name
+   *   The name of the fixture directory. If not provided, the name will be
+   *   generated based on the test name as a snake_case string.
+   *
+   * @return string
+   *   The fixtures directory path.
+   */
   protected function locationsFixtureDir(?string $name = NULL): string {
-    $path = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixtures());
+    $path = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir());
 
     // Set the fixtures directory based on the passed name.
     if ($name) {
@@ -109,26 +138,46 @@ trait LocationsTrait {
     return File::dir($path);
   }
 
+  /**
+   * Get the locations' info.
+   *
+   * @return string
+   *   The locations' info.
+   */
   protected static function locationsInfo(): string {
     $lines[] = '-- LOCATIONS --';
     $lines[] = 'Root       : ' . static::$root;
     $lines[] = 'Fixtures   : ' . static::$fixtures;
-    $lines[] = 'Build      : ' . static::$build;
-    $lines[] = 'Local repo : ' . static::$repo;
+    $lines[] = 'Workspace  : ' . static::$workspace;
+    $lines[] = 'Repo       : ' . static::$repo;
     $lines[] = 'SUT        : ' . static::$sut;
-    $lines[] = 'TMP        : ' . static::$tmp;
+    $lines[] = 'Temp       : ' . static::$tmp;
     return implode(PHP_EOL, $lines) . PHP_EOL;
   }
 
+  /**
+   * Copy files to the SUT directory.
+   *
+   * @param array $files
+   *   The files to copy.
+   * @param string|null $basedir
+   *   The base directory to use for the files. If NULL, the base directory
+   *   of the first file will be used.
+   * @param bool $append_rand
+   *   Whether to append a random numeric suffix to the file names.
+   *
+   * @return array
+   *   The list of created file paths.
+   */
   protected static function locationsCopyFilesToSut(array $files, ?string $basedir = NULL, bool $append_rand = TRUE): array {
     $created = [];
 
     foreach ($files as $file) {
       $basedir = $basedir ?? dirname((string) $file);
-      $relative_dst = ltrim(str_replace($basedir, '', (string) $file), '/') . ($append_rand ? rand(1000, 9999) : '');
-      $new_name = static::$sut . DIRECTORY_SEPARATOR . $relative_dst;
-      File::copy($file, $new_name);
-      $created[] = $new_name;
+      $relative = ltrim(str_replace($basedir, '', (string) $file), DIRECTORY_SEPARATOR);
+      $dst = static::$sut . DIRECTORY_SEPARATOR . $relative . ($append_rand ? rand(1000, 9999) : '');
+      File::copy($file, $dst);
+      $created[] = $dst;
     }
 
     return $created;
