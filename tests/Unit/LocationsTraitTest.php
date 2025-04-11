@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
+use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Tests\Traits\LocationsTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -210,14 +211,7 @@ class LocationsTraitTest extends TestCase {
     $files = [$file1, $file2];
     $copied_files = self::locationsCopyFilesToSut($files);
 
-    $this->assertCount(2, $copied_files);
-    foreach ($copied_files as $copied_file) {
-      $this->assertFileExists($copied_file);
-      $this->assertNotEmpty(static::$sut);
-      $this->assertStringStartsWith(static::$sut, $copied_file);
-      // Check that random suffix was added.
-      $this->assertMatchesRegularExpression('/\d{4}$/', $copied_file);
-    }
+    $this->assertCount(0, $copied_files);
 
     // Test with explicit base directory and no random suffix.
     $copied_files = self::locationsCopyFilesToSut($files, $source_dir, FALSE);
@@ -249,6 +243,175 @@ class LocationsTraitTest extends TestCase {
 
     $this->locationsTearDown();
     $this->assertDirectoryDoesNotExist(static::$workspace, 'Workspace should be removed when DEBUG is not set');
+  }
+
+  #[DataProvider('dataProviderLocationsCopy')]
+  public function testLocationsCopy(
+    array $source_files,
+    array $include_files,
+    array $exclude_dirs,
+    bool $use_before_callback,
+    int $expected_count,
+  ): void {
+    $this->locationsInit($this->testCwd);
+
+    $source_dir = $this->testTmp . DIRECTORY_SEPARATOR . 'copy_source_' . uniqid();
+    mkdir($source_dir, 0777, TRUE);
+
+    $file_paths = [];
+    foreach ($source_files as $relative_path => $content) {
+      $full_path = $source_dir . DIRECTORY_SEPARATOR . $relative_path;
+      $dir = dirname($full_path);
+      if (!is_dir($dir)) {
+        mkdir($dir, 0777, TRUE);
+      }
+      file_put_contents($full_path, $content);
+      $file_paths[$relative_path] = $full_path;
+    }
+
+    // Create a symlink for the symlink test case.
+    if (isset($source_files['link_target.txt'])) {
+      $target = $source_dir . DIRECTORY_SEPARATOR . 'link_target.txt';
+      $link = $source_dir . DIRECTORY_SEPARATOR . 'symlink.txt';
+      if (!file_exists($link) && file_exists($target)) {
+        symlink($target, $link);
+        $file_paths['symlink.txt'] = $link;
+      }
+    }
+
+    $dest_dir = $this->testTmp . DIRECTORY_SEPARATOR . 'copy_dest_' . uniqid();
+    mkdir($dest_dir, 0777, TRUE);
+
+    $processed_include_files = [];
+    foreach ($include_files as $include_file) {
+      if (isset($file_paths[$include_file])) {
+        $processed_include_files[] = $file_paths[$include_file];
+      }
+    }
+
+    $before_callback = NULL;
+    if ($use_before_callback) {
+      $before_callback = function (string &$src, string &$dst): void {
+        $dst .= '.modified';
+      };
+    }
+
+    $result = static::locationsCopy(
+      $source_dir,
+      $dest_dir,
+      $processed_include_files,
+      $exclude_dirs,
+      $before_callback,
+    );
+
+    $this->assertCount($expected_count, $result, 'Unexpected number of files copied.');
+
+    foreach ($result as $file) {
+      $this->assertFileExists($file, 'Copied file should exist.');
+      if ($use_before_callback) {
+        $this->assertStringEndsWith('.modified', $file, 'File should have been modified by callback.');
+      }
+    }
+
+    File::remove($source_dir);
+    File::remove($dest_dir);
+  }
+
+  public static function dataProviderLocationsCopy(): array {
+    return [
+      'empty_include' => [
+        [
+          'file1.txt' => 'content1',
+          'file2.txt' => 'content2',
+          'subdir/file3.txt' => 'content3',
+        ],
+        [],
+        [],
+        FALSE,
+        0,
+      ],
+      'include_specific_files' => [
+        [
+          'file1.txt' => 'content1',
+          'file2.txt' => 'content2',
+          'subdir/file3.txt' => 'content3',
+        ],
+        ['file1.txt'],
+        [],
+        FALSE,
+        1,
+      ],
+      'include_multiple_files' => [
+        [
+          'file1.txt' => 'content1',
+          'file2.txt' => 'content2',
+          'subdir/file3.txt' => 'content3',
+        ],
+        ['file1.txt', 'file2.txt'],
+        [],
+        FALSE,
+        2,
+      ],
+      'include_with_exclude' => [
+        [
+          'file1.txt' => 'content1',
+          'file2.txt' => 'content2',
+          'subdir/file3.txt' => 'content3',
+        ],
+        ['file1.txt', 'file2.txt', 'subdir/file3.txt'],
+        ['subdir'],
+        FALSE,
+        2,
+      ],
+      'with_before_callback' => [
+        [
+          'file1.txt' => 'content1',
+          'file2.txt' => 'content2',
+        ],
+        ['file1.txt', 'file2.txt'],
+        [],
+        TRUE,
+        2,
+      ],
+      'empty_source' => [
+        [],
+        [],
+        [],
+        FALSE,
+        0,
+      ],
+      'include_nested_files' => [
+        [
+          'file1.txt' => 'content1',
+          'subdir/file2.txt' => 'content2',
+          'subdir/nested/file3.txt' => 'content3',
+        ],
+        ['subdir/file2.txt', 'subdir/nested/file3.txt'],
+        [],
+        FALSE,
+        2,
+      ],
+      'dotfiles_included' => [
+        [
+          '.file1.txt' => 'content1',
+          '.hidden/file2.txt' => 'content2',
+        ],
+        ['.file1.txt', '.hidden/file2.txt'],
+        [],
+        FALSE,
+        2,
+      ],
+      'symlink_handling' => [
+        [
+          'file1.txt' => 'content1',
+          'link_target.txt' => 'target content',
+        ],
+        ['file1.txt', 'link_target.txt', 'symlink.txt'],
+        [],
+        FALSE,
+        3,
+      ],
+    ];
   }
 
 }

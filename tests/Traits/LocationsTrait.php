@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Traits;
 
 use AlexSkrypnyk\File\File;
+use Symfony\Component\Finder\Finder;
 
 /**
  * Trait Locations.
@@ -166,6 +167,73 @@ trait LocationsTrait {
   }
 
   /**
+   * Copy files from the source to the destination directory.
+   *
+   * @param string $src
+   *   The source directory to copy files from.
+   * @param string $dst
+   *   The destination directory.
+   * @param array $include
+   *   An array of files to include in the copy. If empty, no files will be
+   *   copied.
+   * @param array $exclude
+   *   An array of excluded directories or files.
+   * @param callable|null $before
+   *   A callback function to modify the source and destination paths before
+   *   copying.
+   *
+   * @return array
+   *   An array of created file paths.
+   */
+  protected static function locationsCopy(string $src, string $dst, array $include = [], array $exclude = [], ?callable $before = NULL): array {
+    $created = [];
+
+    // Default exclusions.
+    $exclusions = array_merge([
+      '.git',
+      'node_modules',
+      'vendor',
+    ], $exclude);
+
+    $src = File::dir($src);
+
+    $finder = new Finder();
+    $finder->files()
+      ->in($src)
+      ->ignoreDotFiles(FALSE)
+      ->ignoreVCS(FALSE)
+      ->filter(function (\SplFileInfo $file) use ($src, $include): bool {
+        $real_path = $file->getRealPath();
+        if (!$real_path) {
+          return FALSE;
+        }
+        $relative_path = str_starts_with($real_path, $src)
+          ? str_replace($src . DIRECTORY_SEPARATOR, '', $real_path)
+          : $real_path;
+        foreach ($include as $path) {
+          $path = File::realpath($path);
+          if ($path === $real_path || $path === $relative_path) {
+            return TRUE;
+          }
+        }
+        return FALSE;
+      })
+      ->exclude($exclusions);
+
+    foreach ($finder as $file) {
+      $src_path = $file->getRealPath();
+      $dst_path = $dst . DIRECTORY_SEPARATOR . $file->getRelativePathname();
+      if (is_callable($before)) {
+        $before($src_path, $dst_path);
+      }
+      File::copy($src_path, $dst_path);
+      $created[] = File::realpath($dst_path);
+    }
+
+    return $created;
+  }
+
+  /**
    * Copy files to the SUT directory.
    *
    * @param array $files
@@ -180,17 +248,9 @@ trait LocationsTrait {
    *   The list of created file paths.
    */
   protected static function locationsCopyFilesToSut(array $files, ?string $basedir = NULL, bool $append_rand = TRUE): array {
-    $created = [];
-
-    foreach ($files as $file) {
-      $basedir = $basedir ?? dirname((string) $file);
-      $relative = ltrim(str_replace($basedir, '', (string) $file), DIRECTORY_SEPARATOR);
-      $dst = static::$sut . DIRECTORY_SEPARATOR . $relative . ($append_rand ? rand(1000, 9999) : '');
-      File::copy($file, $dst);
-      $created[] = $dst;
-    }
-
-    return $created;
+    return static::locationsCopy($basedir ?: File::cwd(), static::$sut, $files, [], function (string &$src, string &$dst) use ($append_rand): void {
+      $dst .= ($append_rand ? rand(1000, 9999) : '');
+    });
   }
 
 }
