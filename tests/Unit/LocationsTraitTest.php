@@ -328,7 +328,7 @@ class LocationsTraitTest extends TestCase {
         [],
         [],
         FALSE,
-        0,
+        3,
       ],
       'include_specific_files' => [
         [
