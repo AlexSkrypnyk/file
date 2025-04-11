@@ -53,7 +53,9 @@ class LocationsTraitTest extends TestCase {
     $this->assertDirectoryExists(static::$sut);
     $this->assertDirectoryExists(static::$tmp);
 
-    // Test with closure parameter.
+    $this->assertNotEmpty(static::$fixtures);
+    $this->assertSame(realpath($this->testFixtures), realpath(static::$fixtures));
+
     $after_called = FALSE;
     $after = function () use (&$after_called): void {
       $after_called = TRUE;
@@ -80,6 +82,37 @@ class LocationsTraitTest extends TestCase {
 
     $this->locationsInit($this->testCwd, $after);
     $this->assertTrue($after_called, 'Closure was called after initialization');
+  }
+
+  public function testLocationsInitWithoutFixturesDir(): void {
+    $testCwdNoFixtures = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('locations_trait_test_no_fixtures_', TRUE);
+    mkdir($testCwdNoFixtures, 0777, TRUE);
+
+    $mockFixtureDir = 'nonexistent_fixtures_directory';
+
+    $originalFixtures = static::$fixtures;
+
+    static::$fixtures = NULL;
+
+    try {
+      $mock = $this->createPartialMock(static::class, ['locationsFixturesDir']);
+      $mock->expects($this->any())
+        ->method('locationsFixturesDir')
+        ->willReturn($mockFixtureDir);
+
+      $reflectionMethod = new \ReflectionMethod(static::class, 'locationsInit');
+      $reflectionMethod->setAccessible(TRUE);
+      $reflectionMethod->invoke($this, $testCwdNoFixtures);
+
+      $this->assertNull(static::$fixtures, 'Fixtures property should be null when directory does not exist.');
+    }
+    finally {
+      static::$fixtures = $originalFixtures;
+
+      if (is_dir($testCwdNoFixtures)) {
+        rmdir($testCwdNoFixtures);
+      }
+    }
   }
 
   public function testLocationsFixtureDirCustomName(): void {
