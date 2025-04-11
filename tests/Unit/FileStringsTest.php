@@ -198,6 +198,9 @@ class FileStringsTest extends UnitTestBase {
 
     File::replaceContentInDir(static::$sut, $from, $to);
 
+    sort($expected_files);
+    sort($sut_files);
+
     foreach (array_keys($sut_files) as $k) {
       $this->assertFileEquals($expected_files[$k], $sut_files[$k]);
     }
@@ -302,7 +305,7 @@ class FileStringsTest extends UnitTestBase {
     $sut_files = static::locationsCopyFilesToSut($fixture_files, $dir, FALSE);
 
     if (count($sut_files) !== count($expected_files)) {
-      throw new \RuntimeException('Provided files number is not equal to expected files number.');
+      throw new \RuntimeException('Provided files count is not equal to expected files count.');
     }
 
     File::renameInDir(static::$sut, 'foo', 'bar');
