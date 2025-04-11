@@ -188,11 +188,11 @@ class File {
     try {
       return static::dir($path);
     }
-    catch (\RuntimeException $runtimeException) {
       // @codeCoverageIgnoreStart
+    catch (\RuntimeException $runtimeException) {
       throw new \RuntimeException(sprintf('Unable to create temporary directory "%s".', $path), $runtimeException->getCode(), $runtimeException);
-      // @codeCoverageIgnoreEnd
     }
+      // @codeCoverageIgnoreEnd
   }
 
   public static function findMatchingPath(array|string $paths, ?string $needle = NULL): ?string {

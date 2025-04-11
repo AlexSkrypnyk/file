@@ -121,6 +121,219 @@ class IndexTest extends UnitTestBase {
     ];
   }
 
+  public function testGetDirectoryAndRules(): void {
+    $dir = File::dir($this->locationsFixtureDir('compare') . DIRECTORY_SEPARATOR . 'files_equal_advanced' . DIRECTORY_SEPARATOR . 'directory2');
+    $rules = new Rules();
+
+    $index = new Index($dir, $rules);
+
+    $this->assertSame($dir, $index->getDirectory());
+    $this->assertSame($rules, $index->getRules());
+  }
+
+  public function testGetFilesWithCallback(): void {
+    $dir = File::dir($this->locationsFixtureDir('compare') . DIRECTORY_SEPARATOR . 'files_equal_advanced' . DIRECTORY_SEPARATOR . 'directory2');
+
+    $index = new Index($dir);
+
+    $result = $index->getFiles(function (ExtendedSplFileInfo $file): string {
+      return 'Modified content for ' . $file->getPathname();
+    });
+
+    foreach ($result as $modified_content) {
+      $this->assertIsString($modified_content);
+      $this->assertStringStartsWith('Modified content for ', $modified_content);
+    }
+
+    $index = new Index($dir);
+    $result = $index->getFiles();
+
+    $this->assertNotEmpty($result);
+    foreach ($result as $file) {
+      $this->assertInstanceOf(ExtendedSplFileInfo::class, $file);
+    }
+  }
+
+  public function testGetFilesCalledTwice(): void {
+    $dir = File::dir($this->locationsFixtureDir('compare') . DIRECTORY_SEPARATOR . 'files_equal_advanced' . DIRECTORY_SEPARATOR . 'directory2');
+
+    $index = new Index($dir);
+
+    $result1 = $index->getFiles();
+    $result2 = $index->getFiles();
+
+    $this->assertSame($result1, $result2);
+    $this->assertNotEmpty($result1);
+  }
+
+  public function testConstructorWithIgnoreContentFile(): void {
+    $test_dir = $this->locationsTmp() . DIRECTORY_SEPARATOR . 'test_dir_with_ignorecontent';
+    File::mkdir($test_dir);
+
+    $ignorecontent_file = $test_dir . DIRECTORY_SEPARATOR . Index::IGNORECONTENT;
+    file_put_contents($ignorecontent_file, "*.txt\n!important.txt\n^content-only.txt");
+
+    $index = new Index($test_dir);
+
+    $rules = $index->getRules();
+    $this->assertInstanceOf(Rules::class, $rules);
+
+    $skip_rules = $rules->getSkip();
+    $this->assertContains(Index::IGNORECONTENT, $skip_rules);
+    $this->assertContains('.git/', $skip_rules);
+
+    unlink($ignorecontent_file);
+    rmdir($test_dir);
+  }
+
+  public function testBeforeMatchContentCallback(): void {
+    $dir = File::dir($this->locationsFixtureDir('compare') . DIRECTORY_SEPARATOR . 'files_equal_advanced' . DIRECTORY_SEPARATOR . 'directory2');
+
+    $before_match_content = function (ExtendedSplFileInfo $file): bool {
+      // Only include files containing the text "specific content"
+      // Skip files that don't contain the specific content.
+      return str_contains($file->getContent(), 'specific content');
+    };
+
+    $test_file = $dir . DIRECTORY_SEPARATOR . 'test_before_match.txt';
+    file_put_contents($test_file, 'This file contains specific content that should be included');
+
+    try {
+      $index = new Index($dir, NULL, $before_match_content);
+
+      $files = $index->getFiles();
+
+      $this->assertArrayHasKey('test_before_match.txt', $files);
+
+      $control_index = new Index($dir);
+      $control_files = $control_index->getFiles();
+
+      $this->assertGreaterThan(count($files), count($control_files));
+    } finally {
+      if (file_exists($test_file)) {
+        unlink($test_file);
+      }
+    }
+  }
+
+  public function testIterator(): void {
+    $test_dir = $this->locationsTmp() . DIRECTORY_SEPARATOR . 'test_iterator_dir';
+    File::mkdir($test_dir);
+
+    $test_files = [
+      $test_dir . DIRECTORY_SEPARATOR . 'file1.txt',
+      $test_dir . DIRECTORY_SEPARATOR . 'file2.log',
+      $test_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'file3.txt',
+    ];
+
+    File::mkdir($test_dir . DIRECTORY_SEPARATOR . 'subdir');
+    file_put_contents($test_files[0], 'Test content 1');
+    file_put_contents($test_files[1], 'Test content 2');
+    file_put_contents($test_files[2], 'Test content 3');
+
+    try {
+      $index = new Index($test_dir);
+
+      $iterator = $this->callProtectedMethod($index, 'iterator', [$test_dir]);
+
+      $this->assertInstanceOf(\RecursiveIteratorIterator::class, $iterator);
+
+      $found_files = [];
+      foreach ($iterator as $file) {
+        if ($file instanceof \SplFileInfo) {
+          $found_files[] = $file->getPathname();
+        }
+      }
+
+      foreach ($test_files as $test_file) {
+        $this->assertContains($test_file, $found_files);
+      }
+    } finally {
+      foreach ($test_files as $file) {
+        if (file_exists($file)) {
+          unlink($file);
+        }
+      }
+
+      if (is_dir($test_dir . DIRECTORY_SEPARATOR . 'subdir')) {
+        rmdir($test_dir . DIRECTORY_SEPARATOR . 'subdir');
+      }
+
+      if (is_dir($test_dir)) {
+        rmdir($test_dir);
+      }
+    }
+  }
+
+  public function testScanWithSymlinks(): void {
+    if (!function_exists('symlink')) {
+      $this->markTestSkipped('Symlinks are not supported on this system.');
+    }
+
+    $test_dir = $this->locationsTmp() . DIRECTORY_SEPARATOR . 'test_symlinks_dir';
+    File::mkdir($test_dir);
+    File::mkdir($test_dir . DIRECTORY_SEPARATOR . 'dir1');
+
+    $file1 = $test_dir . DIRECTORY_SEPARATOR . 'dir1' . DIRECTORY_SEPARATOR . 'file1.txt';
+    file_put_contents($file1, 'Original file content');
+
+    // Create a symlink to the file.
+    $symlink_file = $test_dir . DIRECTORY_SEPARATOR . 'symlink_file.txt';
+    symlink($file1, $symlink_file);
+
+    // Create a symlink to the directory.
+    $symlink_dir = $test_dir . DIRECTORY_SEPARATOR . 'symlink_dir';
+    symlink($test_dir . DIRECTORY_SEPARATOR . 'dir1', $symlink_dir);
+
+    // Create a broken symlink to test handling of non-existent targets.
+    $broken_symlink = $test_dir . DIRECTORY_SEPARATOR . 'broken_symlink';
+    symlink($test_dir . DIRECTORY_SEPARATOR . 'nonexistent_file.txt', $broken_symlink);
+
+    try {
+      $index = new Index($test_dir);
+
+      $files = $index->getFiles();
+
+      $this->assertArrayHasKey('symlink_file.txt', $files);
+
+      $this->assertArrayHasKey('symlink_dir', $files);
+
+      // Note: Whether a broken symlink is included depends on implementation
+      // details.
+      // So we don't test for its presence or absence here.
+      // The original file should be indexed through both the direct path and
+      // the symlink.
+      $this->assertArrayHasKey('dir1/file1.txt', $files);
+
+      // Verify that symlinked files have the correct content.
+      $this->assertSame('Original file content', $files['dir1/file1.txt']->getContent());
+
+      // Check that symlinks are properly identified.
+      $this->assertTrue($files['symlink_file.txt']->isLink());
+      $this->assertTrue($files['symlink_dir']->isLink());
+    } finally {
+      // Clean up.
+      if (file_exists($symlink_file)) {
+        unlink($symlink_file);
+      }
+      if (file_exists($symlink_dir)) {
+        unlink($symlink_dir);
+      }
+      if (file_exists($broken_symlink)) {
+        unlink($broken_symlink);
+      }
+      if (file_exists($file1)) {
+        unlink($file1);
+      }
+      if (is_dir($test_dir . DIRECTORY_SEPARATOR . 'dir1')) {
+        rmdir($test_dir . DIRECTORY_SEPARATOR . 'dir1');
+      }
+      if (is_dir($test_dir)) {
+        rmdir($test_dir);
+      }
+    }
+  }
+
   #[DataProvider('dataProviderIsPathMatchesPattern')]
   public function testIsPathMatchesPattern(string $path, string $pattern, bool $expected): void {
     $result = self::callProtectedMethod(Index::class, 'isPathMatchesPattern', [$path, $pattern]);
@@ -159,6 +372,13 @@ class IndexTest extends UnitTestBase {
       ['dir/file.txt', 'dir/f*.txt', TRUE],
       ['dir/afile.txt', 'dir/f*.txt', FALSE],
     ];
+  }
+
+  /**
+   * Helper method to get a temporary directory path.
+   */
+  protected function locationsTmp(): string {
+    return static::$tmp;
   }
 
 }

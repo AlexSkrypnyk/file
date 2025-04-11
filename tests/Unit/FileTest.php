@@ -14,6 +14,18 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'cwd')]
 #[CoversMethod(File::class, 'realpath')]
 #[CoversMethod(File::class, 'mkdir')]
+#[CoversMethod(File::class, 'dir')]
+#[CoversMethod(File::class, 'exists')]
+#[CoversMethod(File::class, 'rmdir')]
+#[CoversMethod(File::class, 'rmdirEmpty')]
+#[CoversMethod(File::class, 'findMatchingPath')]
+#[CoversMethod(File::class, 'copyIfExists')]
+#[CoversMethod(File::class, 'scandirRecursive')]
+#[CoversMethod(File::class, 'replaceContent')]
+#[CoversMethod(File::class, 'removeToken')]
+#[CoversMethod(File::class, 'diff')]
+#[CoversMethod(File::class, 'tmpdir')]
+#[CoversMethod(File::class, 'copy')]
 class FileTest extends UnitTestBase {
 
   protected string $testTmpDir;
@@ -231,28 +243,196 @@ class FileTest extends UnitTestBase {
   }
 
   public function testRmdirAndRmdirEmpty(): void {
-    // Create a directory with a nested empty subdirectory.
     $dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_dir';
     $subdir = $dir . DIRECTORY_SEPARATOR . 'empty_subdir';
     mkdir($subdir, 0777, TRUE);
     $file = $dir . DIRECTORY_SEPARATOR . 'file.txt';
     file_put_contents($file, 'test');
 
-    // Ensure directory and subdirectory exist.
     $this->assertDirectoryExists($dir);
     $this->assertDirectoryExists($subdir);
 
     File::rmdirEmpty($subdir);
 
     $this->assertDirectoryDoesNotExist($subdir);
-    // Parent should remain.
     $this->assertDirectoryExists($dir);
-    // Parent should remain.
     $this->assertDirectoryExists($this->testTmpDir);
 
-    // Test rmdir() - should remove everything.
     File::rmdir($dir);
     $this->assertDirectoryDoesNotExist($dir);
+  }
+
+  public function testCopyIfExists(): void {
+    $source_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source.txt';
+    $dest_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'dest.txt';
+    file_put_contents($source_file, 'test content');
+
+    $result = File::copyIfExists($source_file, $dest_file);
+    $this->assertTrue($result);
+    $this->assertFileExists($dest_file);
+    $this->assertEquals('test content', file_get_contents($dest_file));
+
+    $nonexistent_source = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
+    $nonexistent_dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent_dest.txt';
+
+    $result = File::copyIfExists($nonexistent_source, $nonexistent_dest);
+    $this->assertFalse($result);
+    $this->assertFileDoesNotExist($nonexistent_dest);
+  }
+
+  public function testScandirRecursive(): void {
+    $base_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_scandir';
+    mkdir($base_dir, 0777, TRUE);
+
+    $subdir1 = $base_dir . DIRECTORY_SEPARATOR . 'subdir1';
+    $subdir2 = $base_dir . DIRECTORY_SEPARATOR . 'subdir2';
+    $ignored_dir = $base_dir . DIRECTORY_SEPARATOR . 'ignored_dir';
+    mkdir($subdir1, 0777);
+    mkdir($subdir2, 0777);
+    mkdir($ignored_dir, 0777);
+
+    file_put_contents($base_dir . DIRECTORY_SEPARATOR . 'file1.txt', 'test content');
+    file_put_contents($subdir1 . DIRECTORY_SEPARATOR . 'file2.txt', 'test content');
+    file_put_contents($subdir2 . DIRECTORY_SEPARATOR . 'file3.txt', 'test content');
+    file_put_contents($ignored_dir . DIRECTORY_SEPARATOR . 'ignored_file.txt', 'test content');
+
+    $files = File::scandirRecursive($base_dir);
+    $this->assertCount(4, $files);
+
+    $files = File::scandirRecursive($base_dir, ['ignored_dir']);
+    $this->assertCount(3, $files);
+
+    $files = File::scandirRecursive($base_dir, [], TRUE);
+    $this->assertCount(7, $files);
+
+    $files = File::scandirRecursive($base_dir . DIRECTORY_SEPARATOR . 'nonexistent');
+    $this->assertEmpty($files);
+
+    $file_path = $base_dir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $files = File::scandirRecursive($file_path);
+    $this->assertEmpty($files);
+  }
+
+  public function testReplaceContent(): void {
+    $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_replace.txt';
+    file_put_contents($file_path, 'Hello, world!');
+
+    File::replaceContent($file_path, 'world', 'everyone');
+    $this->assertEquals('Hello, everyone!', file_get_contents($file_path));
+
+    File::replaceContent($file_path, '/Hello, (\w+)!/', 'Greetings, $1!');
+    $this->assertEquals('Greetings, everyone!', file_get_contents($file_path));
+
+    $empty_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'empty.txt';
+    file_put_contents($empty_file, '');
+    File::replaceContent($empty_file, 'test', 'replacement');
+    $this->assertEquals('', file_get_contents($empty_file));
+
+    $nonexistent_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
+    File::replaceContent($nonexistent_file, 'test', 'replacement');
+    $this->assertFileDoesNotExist($nonexistent_file);
+
+    $image_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test.jpg';
+    file_put_contents($image_file, 'fake image content');
+    File::replaceContent($image_file, 'fake', 'real');
+    $this->assertEquals('fake image content', file_get_contents($image_file));
+  }
+
+  public function testRemoveToken(): void {
+    $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_token.txt';
+    $content = <<<EOT
+This is line 1
+#; TOKEN_START
+This is content inside a token
+#; TOKEN_END
+This is line 3
+#; ANOTHER_TOKEN
+More content inside another token
+#; ANOTHER_TOKEN
+Final line
+EOT;
+    file_put_contents($file_path, $content);
+
+    File::removeToken($file_path, '#; TOKEN_START', '#; TOKEN_END', FALSE);
+    $file_content = (string) file_get_contents($file_path);
+    $this->assertStringNotContainsString('#; TOKEN_START', $file_content);
+    $this->assertStringNotContainsString('#; TOKEN_END', $file_content);
+    $this->assertStringContainsString('This is content inside a token', $file_content);
+
+    File::removeToken($file_path, '#; ANOTHER_TOKEN', '#; ANOTHER_TOKEN', TRUE);
+    $file_content = (string) file_get_contents($file_path);
+    $this->assertStringNotContainsString('#; ANOTHER_TOKEN', $file_content);
+    $this->assertStringNotContainsString('More content inside another token', $file_content);
+
+    $mismatched_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'mismatched_tokens.txt';
+    $mismatched_content = <<<EOT
+START
+START
+END
+EOT;
+    file_put_contents($mismatched_file, $mismatched_content);
+
+    $this->expectException(\RuntimeException::class);
+    File::removeToken($mismatched_file, 'START', 'END', FALSE);
+  }
+
+  public function testDiff(): void {
+    $baseline_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'baseline';
+    $destination_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+    $diff_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'diff';
+
+    mkdir($baseline_dir, 0777, TRUE);
+    mkdir($destination_dir, 0777, TRUE);
+
+    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'common.txt', 'Common content');
+    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'common.txt', 'Common content');
+
+    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'modified.txt', 'Original content');
+    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'modified.txt', 'Modified content');
+
+    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'removed.txt', 'This file is removed');
+
+    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'added.txt', 'This file is added');
+
+    mkdir($baseline_dir . DIRECTORY_SEPARATOR . 'subdir', 0777);
+    mkdir($destination_dir . DIRECTORY_SEPARATOR . 'subdir', 0777);
+    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt', 'Subfile content');
+    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt', 'Changed subfile content');
+
+    File::diff($baseline_dir, $destination_dir, $diff_dir);
+
+    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . 'added.txt');
+    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . '-removed.txt');
+    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . 'modified.txt');
+    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt');
+  }
+
+  public function testCopy(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    mkdir($source_dir, 0777, TRUE);
+
+    file_put_contents($source_dir . DIRECTORY_SEPARATOR . 'file.txt', 'file content');
+
+    $symlink_target = $source_dir . DIRECTORY_SEPARATOR . 'target.txt';
+    $symlink = $source_dir . DIRECTORY_SEPARATOR . 'symlink.txt';
+    file_put_contents($symlink_target, 'target content');
+    symlink($symlink_target, $symlink);
+
+    $subdir = $source_dir . DIRECTORY_SEPARATOR . 'subdir';
+    mkdir($subdir, 0777);
+    file_put_contents($subdir . DIRECTORY_SEPARATOR . 'subfile.txt', 'subfile content');
+
+    $result = File::copy($source_dir . DIRECTORY_SEPARATOR . 'file.txt', $dest_dir . DIRECTORY_SEPARATOR . 'file.txt');
+    $this->assertTrue($result);
+    $this->assertFileExists($dest_dir . DIRECTORY_SEPARATOR . 'file.txt');
+    $this->assertEquals('file content', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . 'file.txt'));
+
+    $dest_symlink = $dest_dir . DIRECTORY_SEPARATOR . 'symlink.txt';
+    $result = File::copy($symlink, $dest_symlink);
+    $this->assertTrue($result);
+    $this->assertTrue(is_link($dest_symlink));
   }
 
 }
