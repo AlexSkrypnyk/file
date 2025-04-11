@@ -203,6 +203,9 @@ trait LocationsTrait {
       ->ignoreDotFiles(FALSE)
       ->ignoreVCS(FALSE)
       ->filter(function (\SplFileInfo $file) use ($src, $include): bool {
+        if (empty($include)) {
+          return TRUE;
+        }
         $real_path = $file->getRealPath();
         if (!$real_path) {
           return FALSE;
