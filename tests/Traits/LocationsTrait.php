@@ -68,14 +68,15 @@ trait LocationsTrait {
   /**
    * Initialize the locations.
    *
-   * @param string $cwd
-   *   The current working directory.
+   * @param string|null $cwd
+   *   The current working directory to use. If NULL, the current working
+   *   directory will be used.
    * @param \Closure|null $after
    *   Closure to run after initialization. Closure will be bound to the test
    *   class where this trait is used.
    */
-  protected function locationsInit(string $cwd, ?callable $after = NULL): void {
-    static::$root = File::mkdir($cwd);
+  protected function locationsInit(?string $cwd = NULL, ?callable $after = NULL): void {
+    static::$root = File::dir($cwd ?? (string) getcwd());
     static::$workspace = File::mkdir(rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'workspace-' . microtime(TRUE));
     static::$repo = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'repo');
     static::$sut = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'sut');
