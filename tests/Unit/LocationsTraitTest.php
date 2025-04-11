@@ -84,33 +84,64 @@ class LocationsTraitTest extends TestCase {
     $this->assertTrue($after_called, 'Closure was called after initialization');
   }
 
+  public function testLocationsInitWithDefaultCwd(): void {
+    $original_cwd = getcwd();
+    if ($original_cwd === FALSE) {
+      $this->markTestSkipped('Could not determine current working directory.');
+    }
+
+    chdir($this->testCwd);
+
+    try {
+      $this->locationsInit();
+
+      $this->assertSame(realpath($this->testCwd), realpath(static::$root));
+      $this->assertDirectoryExists(static::$workspace);
+      $this->assertDirectoryExists(static::$repo);
+      $this->assertDirectoryExists(static::$sut);
+      $this->assertDirectoryExists(static::$tmp);
+    }
+    finally {
+      // Restore original working directory.
+      chdir($original_cwd);
+    }
+  }
+
   public function testLocationsInitWithoutFixturesDir(): void {
-    $testCwdNoFixtures = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('locations_trait_test_no_fixtures_', TRUE);
-    mkdir($testCwdNoFixtures, 0777, TRUE);
+    $test_cwd_no_fixtures = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('locations_trait_test_no_fixtures_', TRUE);
+    mkdir($test_cwd_no_fixtures, 0777, TRUE);
 
-    $mockFixtureDir = 'nonexistent_fixtures_directory';
-
-    $originalFixtures = static::$fixtures;
+    $mock_fixture_dir = 'nonexistent_fixtures_directory';
+    $original_fixtures = static::$fixtures;
+    $original_cwd = getcwd();
+    if ($original_cwd === FALSE) {
+      $this->markTestSkipped('Could not determine current working directory.');
+    }
 
     static::$fixtures = NULL;
 
     try {
+      // Change to the test directory.
+      chdir($test_cwd_no_fixtures);
+
       $mock = $this->createPartialMock(static::class, ['locationsFixturesDir']);
       $mock->expects($this->any())
         ->method('locationsFixturesDir')
-        ->willReturn($mockFixtureDir);
+        ->willReturn($mock_fixture_dir);
 
-      $reflectionMethod = new \ReflectionMethod(static::class, 'locationsInit');
-      $reflectionMethod->setAccessible(TRUE);
-      $reflectionMethod->invoke($this, $testCwdNoFixtures);
+      $reflection_method = new \ReflectionMethod(static::class, 'locationsInit');
+      $reflection_method->setAccessible(TRUE);
+      $reflection_method->invoke($this);
 
       $this->assertNull(static::$fixtures, 'Fixtures property should be null when directory does not exist.');
     }
     finally {
-      static::$fixtures = $originalFixtures;
+      // Restore original state.
+      static::$fixtures = $original_fixtures;
+      chdir($original_cwd);
 
-      if (is_dir($testCwdNoFixtures)) {
-        rmdir($testCwdNoFixtures);
+      if (is_dir($test_cwd_no_fixtures)) {
+        rmdir($test_cwd_no_fixtures);
       }
     }
   }
