@@ -24,7 +24,7 @@ trait LocationsTrait {
   /**
    * Path to the fixtures directory from the root of this project.
    */
-  protected static string $fixtures;
+  protected static ?string $fixtures = NULL;
 
   /**
    * Main workspace directory where the rest of the directories located.
@@ -80,7 +80,11 @@ trait LocationsTrait {
     static::$repo = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'repo');
     static::$sut = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'sut');
     static::$tmp = File::mkdir(static::$workspace . DIRECTORY_SEPARATOR . 'tmp');
-    static::$fixtures = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir());
+
+    $fixtures_dir = static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir();
+    if (is_dir($fixtures_dir)) {
+      static::$fixtures = File::dir($fixtures_dir);
+    }
 
     if ($after !== NULL && $after instanceof \Closure) {
       \Closure::bind($after, $this, self::class)();
@@ -113,7 +117,12 @@ trait LocationsTrait {
    *   The fixtures directory path.
    */
   protected function locationsFixtureDir(?string $name = NULL): string {
-    $path = File::dir(static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir());
+    $fixtures_dir = static::$root . DIRECTORY_SEPARATOR . static::locationsFixturesDir();
+    if (!is_dir($fixtures_dir)) {
+      throw new \RuntimeException(sprintf('Fixtures directory "%s" does not exist.', $fixtures_dir));
+    }
+
+    $path = File::dir($fixtures_dir);
 
     // Set the fixtures directory based on the passed name.
     if ($name) {
@@ -147,7 +156,7 @@ trait LocationsTrait {
   protected static function locationsInfo(): string {
     $lines[] = '-- LOCATIONS --';
     $lines[] = 'Root       : ' . static::$root;
-    $lines[] = 'Fixtures   : ' . static::$fixtures;
+    $lines[] = 'Fixtures   : ' . (static::$fixtures ?? 'Not set');
     $lines[] = 'Workspace  : ' . static::$workspace;
     $lines[] = 'Repo       : ' . static::$repo;
     $lines[] = 'SUT        : ' . static::$sut;
