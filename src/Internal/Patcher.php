@@ -51,7 +51,7 @@ class Patcher {
    *   TRUE if the file is a patch file, FALSE otherwise.
    */
   public static function isPatchFile(string $filepath): bool {
-    if (is_dir($filepath) || is_link($filepath)) {
+    if (!File::exists($filepath) || is_dir($filepath) || is_link($filepath)) {
       return FALSE;
     }
     return File::contains($filepath, '@@');

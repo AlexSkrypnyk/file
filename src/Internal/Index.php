@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\File;
+
 /**
  * Collect and index of the files in the directory respecting the rules.
  *
@@ -29,7 +31,7 @@ class Index {
   ) {
     $this->rules = $rules ??
       (
-      file_exists($directory . DIRECTORY_SEPARATOR . static::IGNORECONTENT)
+      File::exists($directory . DIRECTORY_SEPARATOR . static::IGNORECONTENT)
         ? Rules::fromFile($directory . DIRECTORY_SEPARATOR . static::IGNORECONTENT)
         : new Rules()
       );

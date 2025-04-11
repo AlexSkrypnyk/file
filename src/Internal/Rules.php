@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\File;
+
 class Rules {
 
   protected array $ignoreContent = [];
@@ -103,16 +105,18 @@ class Rules {
   }
 
   public static function fromFile(string $file): self {
-    if (!file_exists($file)) {
+    if (!File::exists($file)) {
       throw new \Exception(sprintf('File %s does not exist.', $file));
     }
 
-    $content = file_get_contents($file);
-
-    if ($content === FALSE) {
-      throw new \Exception(sprintf('Failed to read the %s file.', $file));
+    try {
+      $content = File::read($file);
     }
-
+    // @codeCoverageIgnoreStart
+    catch (\Exception $exception) {
+      throw new \Exception(sprintf('Failed to read the %s file.', $file), $exception->getCode(), $exception);
+    }
+    // @codeCoverageIgnoreEnd
     return (new self())->parse($content);
   }
 
@@ -120,7 +124,9 @@ class Rules {
     $lines = preg_split('/(\r\n)|(\r)|(\n)/', $content);
 
     if ($lines === FALSE) {
+      // @codeCoverageIgnoreStart
       throw new \Exception('Failed to split lines.');
+      // @codeCoverageIgnoreEnd
     }
 
     return $lines;
