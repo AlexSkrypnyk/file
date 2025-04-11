@@ -125,8 +125,12 @@ class File {
   public static function dir(string $directory): string {
     $directory = static::realpath($directory);
 
-    if (!is_dir($directory)) {
+    if (!static::exists($directory)) {
       throw new \RuntimeException(sprintf('Directory "%s" does not exist.', $directory));
+    }
+
+    if (!is_dir($directory)) {
+      throw new \RuntimeException(sprintf('Path "%s" is not a directory.', $directory));
     }
 
     return $directory;
@@ -148,31 +152,27 @@ class File {
    */
   public static function mkdir(string $directory, int $permissions = 0777): string {
     $directory = static::absolute($directory);
-    if (static::exists($directory)) {
-      if (!is_dir($directory)) {
-        throw new \RuntimeException(sprintf('Directory "%s" is a file.', $directory));
-      }
+
+    try {
+      static::dir($directory);
     }
-    else {
+    catch (\RuntimeException $runtimeException) {
       (new Filesystem())->mkdir($directory, $permissions);
-      if (!is_readable($directory) || !is_dir($directory)) {
-        // @codeCoverageIgnoreStart
-        throw new \RuntimeException(sprintf('Unable to create directory "%s".', $directory));
-        // @codeCoverageIgnoreEnd
-      }
+      static::dir($directory);
     }
 
     return $directory;
   }
 
   public static function dirIsEmpty(string $directory): bool {
-    return static::dir($directory) && count(scandir($directory) ?: []) === 2;
+    $directory = static::dir($directory);
+    return count(static::scandirRecursive($directory) ?: []) === 0;
   }
 
   public static function tmpdir(?string $directory = NULL, string $prefix = 'tmp_', int $permissions = 0700, int $max_attempts = 1000): string {
     $directory = $directory ?: sys_get_temp_dir();
     $directory = rtrim($directory, DIRECTORY_SEPARATOR);
-    static::mkdir($directory, $permissions);
+    $directory = static::mkdir($directory, $permissions);
 
     if (strpbrk($prefix, '\\/:*?"<>|') !== FALSE) {
       // @codeCoverageIgnoreStart
@@ -185,13 +185,14 @@ class File {
       $path = sprintf('%s%s%s%s', $directory, DIRECTORY_SEPARATOR, $prefix, mt_rand(100000, mt_getrandmax()));
     } while (!static::mkdir($path, $permissions) && $attempts++ < $max_attempts);
 
-    if (!static::dir($path) || !is_writable($path)) {
+    try {
+      return static::dir($path);
+    }
+    catch (\RuntimeException $runtimeException) {
       // @codeCoverageIgnoreStart
-      throw new \RuntimeException(sprintf('Unable to create temporary directory "%s".', $path));
+      throw new \RuntimeException(sprintf('Unable to create temporary directory "%s".', $path), $runtimeException->getCode(), $runtimeException);
       // @codeCoverageIgnoreEnd
     }
-
-    return static::realpath($path);
   }
 
   public static function findMatchingPath(array|string $paths, ?string $needle = NULL): ?string {
@@ -220,6 +221,7 @@ class File {
   }
 
   public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
+    $filesystem = new Filesystem();
     $parent = dirname($dest);
     $parent = static::mkdir($parent, $permissions);
 
@@ -236,7 +238,7 @@ class File {
         $link = readlink($source);
         if ($link) {
           try {
-            (new Filesystem())->symlink($link, basename($dest));
+            $filesystem->symlink($link, basename($dest));
           }
             // @codeCoverageIgnoreStart
           catch (\Exception $e) {
@@ -252,19 +254,19 @@ class File {
     }
 
     if (is_file($source)) {
-      $ret = copy($source, $dest);
-      if ($ret) {
-        $perms = fileperms($source);
-        if ($perms !== FALSE) {
-          chmod($dest, $perms);
-        }
+      try {
+        $filesystem->copy($source, $dest);
+        return TRUE;
       }
-
-      return $ret;
+        // @codeCoverageIgnoreStart
+      catch (\Exception $e) {
+        return FALSE;
+      }
+      // @codeCoverageIgnoreEnd
     }
 
-    if (!is_dir($dest) && $copy_empty_dirs) {
-      mkdir($dest, $permissions, TRUE);
+    if ($copy_empty_dirs) {
+      static::mkdir($dest, $permissions);
     }
 
     $dir = dir($source);
@@ -303,33 +305,38 @@ class File {
   public static function scandirRecursive(string $directory, array $ignore_paths = [], bool $include_dirs = FALSE): array {
     $discovered = [];
 
-    if (is_dir($directory)) {
-      $files = scandir($directory);
-      if (empty($files)) {
-        return [];
+    try {
+      $directory = static::dir($directory);
+    }
+    catch (\RuntimeException $runtimeException) {
+      return [];
+    }
+
+    $files = scandir($directory);
+    if (empty($files)) {
+      return [];
+    }
+
+    $paths = array_diff($files, ['.', '..']);
+
+    foreach ($paths as $path) {
+      $path = $directory . '/' . $path;
+
+      foreach ($ignore_paths as $ignore_path) {
+        // Exclude based on sub-path match.
+        if (str_contains($path, (string) $ignore_path)) {
+          continue(2);
+        }
       }
 
-      $paths = array_diff($files, ['.', '..']);
-
-      foreach ($paths as $path) {
-        $path = $directory . '/' . $path;
-
-        foreach ($ignore_paths as $ignore_path) {
-          // Exclude based on sub-path match.
-          if (str_contains($path, (string) $ignore_path)) {
-            continue(2);
-          }
-        }
-
-        if (is_dir($path)) {
-          if ($include_dirs) {
-            $discovered[] = $path;
-          }
-          $discovered = array_merge($discovered, static::scandirRecursive($path, $ignore_paths, $include_dirs));
-        }
-        else {
+      if (is_dir($path)) {
+        if ($include_dirs) {
           $discovered[] = $path;
         }
+        $discovered = array_merge($discovered, static::scandirRecursive($path, $ignore_paths, $include_dirs));
+      }
+      else {
+        $discovered[] = $path;
       }
     }
 
@@ -362,7 +369,7 @@ class File {
   }
 
   public static function contains(string $file, string $needle): bool {
-    if (!is_readable($file)) {
+    if (!static::exists($file) || !is_readable($file)) {
       // @codeCoverageIgnoreStart
       return FALSE;
       // @codeCoverageIgnoreEnd
@@ -403,10 +410,10 @@ class File {
         $new_dir = dirname($new_filename);
 
         if (!is_dir($new_dir)) {
-          mkdir($new_dir, 0777, TRUE);
+          static::mkdir($new_dir, 0777);
         }
 
-        rename($filename, $new_filename);
+        (new Filesystem())->rename($filename, $new_filename);
 
         static::rmdirEmpty(dirname($filename));
       }
@@ -421,7 +428,7 @@ class File {
   }
 
   public static function replaceContent(string $file, string $needle, string $replacement): void {
-    if (!is_readable($file) || static::isExcluded($file)) {
+    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
       return;
     }
 
@@ -442,7 +449,7 @@ class File {
   }
 
   public static function removeLine(string $file, string $needle): void {
-    if (!is_readable($file) || static::isExcluded($file)) {
+    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
       return;
     }
 
@@ -475,14 +482,14 @@ class File {
       return;
     }
 
-    if (!is_readable($file)) {
+    if (!static::exists($file) || !is_readable($file)) {
       return;
     }
 
     $token_end = $token_end ?? $token_begin;
 
-    $content = file_get_contents($file);
-    if (!$content) {
+    $content = static::read($file);
+    if ($content === '' || $content === '0') {
       return;
     }
 
