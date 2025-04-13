@@ -18,6 +18,16 @@ use Symfony\Component\Finder\Finder;
 trait LocationsTrait {
 
   /**
+   * Baseline dataset name to be used in the data provider.
+   */
+  public const string BASELINE_DATASET = 'baseline';
+
+  /**
+   * Baseline fixture directory name.
+   */
+  public const string BASELINE_DIR = '_baseline';
+
+  /**
    * Path to the root directory of this project.
    */
   protected static string $root;
@@ -99,9 +109,7 @@ trait LocationsTrait {
    * Will be skipped if the DEBUG environment variable is set.
    */
   protected function locationsTearDown(): void {
-    if (!getenv('DEBUG')) {
-      File::remove(static::$workspace);
-    }
+    File::remove(static::$workspace);
   }
 
   /**
@@ -141,12 +149,19 @@ trait LocationsTrait {
 
     // Further adjust the fixtures directory name if the test uses a
     // data provider with named data sets.
-    if (!empty($this->dataName()) && !is_numeric($this->dataName())) {
-      $path_suffix = strtolower(str_replace(['-', ' '], '_', (string) preg_replace('/[^a-zA-Z0-9_\- ]/', '', (string) $this->dataName())));
+    $data_name = $this->dataName();
+    if (!empty($data_name) && !is_numeric($data_name)) {
+      if ($data_name === self::BASELINE_DATASET) {
+        $path_suffix = self::BASELINE_DIR;
+      }
+      else {
+        // Convert the data name to a snake case string.
+        $path_suffix = strtolower(str_replace(['-', ' '], '_', (string) preg_replace('/[^a-zA-Z0-9_\- ]/', '', $data_name)));
+      }
       $path .= DIRECTORY_SEPARATOR . $path_suffix;
     }
 
-    return File::dir($path);
+    return File::mkdir($path);
   }
 
   /**
@@ -156,7 +171,7 @@ trait LocationsTrait {
    *   The locations' info.
    */
   protected static function locationsInfo(): string {
-    $lines[] = '-- LOCATIONS --';
+    $lines[] = 'LOCATIONS';
     $lines[] = 'Root       : ' . static::$root;
     $lines[] = 'Fixtures   : ' . (static::$fixtures ?? 'Not set');
     $lines[] = 'Workspace  : ' . static::$workspace;
