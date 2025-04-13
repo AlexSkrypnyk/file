@@ -7,6 +7,7 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\Internal\Patcher;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 

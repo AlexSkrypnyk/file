@@ -6,6 +6,7 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\Diff;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Diff::class)]
