@@ -11,6 +11,8 @@ use AlexSkrypnyk\File\Internal\Differ;
 use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Patcher;
 use AlexSkrypnyk\File\Internal\Syncer;
+use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -24,6 +26,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 #[CoversClass(Diff::class)]
 #[CoversClass(Differ::class)]
 class FileDiffTest extends UnitTestBase {
+
+  use DirectoryAssertionsTrait;
 
   #[DataProvider('dataProviderCompare')]
   public function testCompare(array $expected_diffs = []): void {

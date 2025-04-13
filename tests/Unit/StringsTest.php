@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\Strings;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 

@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Filesystem\Filesystem;
 
 #[CoversClass(File::class)]
 class FileStringsTest extends UnitTestBase {
+
+  use DirectoryAssertionsTrait;
 
   public function testCopy(): void {
     static::$fixtures = $this->locationsFixtureDir();

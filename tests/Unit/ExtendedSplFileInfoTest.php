@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(ExtendedSplFileInfo::class)]

@@ -8,6 +8,7 @@ use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Rules;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
