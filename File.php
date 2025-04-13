@@ -15,6 +15,12 @@ use Symfony\Component\Filesystem\Filesystem;
 
 class File {
 
+  /**
+   * Get current working directory with absolute path.
+   *
+   * @return string
+   *   Absolute path to current working directory.
+   */
   public static function cwd(): string {
     return static::absolute($_SERVER['PWD'] ?? (string) getcwd());
   }
@@ -93,6 +99,14 @@ class File {
 
   /**
    * Get absolute path for provided absolute or relative file.
+   *
+   * @param string $file
+   *   File path to convert to absolute.
+   * @param string|null $base
+   *   Optional base directory. If not provided, current working directory is used.
+   *
+   * @return string
+   *   Absolute file path.
    */
   public static function absolute(string $file, ?string $base = NULL): string {
     if ((new Filesystem())->isAbsolutePath($file)) {
@@ -106,6 +120,15 @@ class File {
     return static::realpath($file);
   }
 
+  /**
+   * Check if file or directory exists.
+   *
+   * @param string|array $files
+   *   Path or array of paths to check.
+   *
+   * @return bool
+   *   TRUE if file exists, FALSE otherwise.
+   */
   public static function exists(string|array $files): bool {
     return (new Filesystem())->exists($files);
   }
@@ -164,11 +187,41 @@ class File {
     return $directory;
   }
 
+  /**
+   * Check if directory is empty.
+   *
+   * @param string $directory
+   *   Directory path to check.
+   *
+   * @return bool
+   *   TRUE if directory is empty, FALSE otherwise.
+   */
   public static function dirIsEmpty(string $directory): bool {
     $directory = static::dir($directory);
     return count(static::scandirRecursive($directory) ?: []) === 0;
   }
 
+  /**
+   * Create temporary directory.
+   *
+   * @param string|null $directory
+   *   Optional base directory to create temporary directory in. If not provided, 
+   *   system temporary directory is used.
+   * @param string $prefix
+   *   Prefix for temporary directory name.
+   * @param int $permissions
+   *   Directory permissions.
+   * @param int $max_attempts
+   *   Maximum number of attempts to create unique directory.
+   *
+   * @return string
+   *   Path to created temporary directory.
+   *
+   * @throws \InvalidArgumentException
+   *   When prefix contains invalid characters.
+   * @throws \RuntimeException
+   *   When directory cannot be created.
+   */
   public static function tmpdir(?string $directory = NULL, string $prefix = 'tmp_', int $permissions = 0700, int $max_attempts = 1000): string {
     $directory = $directory ?: sys_get_temp_dir();
     $directory = rtrim($directory, DIRECTORY_SEPARATOR);
@@ -195,6 +248,17 @@ class File {
       // @codeCoverageIgnoreEnd
   }
 
+  /**
+   * Find first path that matches a needle among provided paths.
+   *
+   * @param array|string $paths
+   *   Path or array of paths to search in.
+   * @param string|null $needle
+   *   Optional search needle. If provided, will look for files containing this string.
+   *
+   * @return string|null
+   *   First matching path or NULL if no matches found.
+   */
   public static function findMatchingPath(array|string $paths, ?string $needle = NULL): ?string {
     $paths = is_array($paths) ? $paths : [$paths];
 
@@ -220,6 +284,21 @@ class File {
     return NULL;
   }
 
+  /**
+   * Copy file or directory.
+   *
+   * @param string $source
+   *   Source file or directory path.
+   * @param string $dest
+   *   Destination file or directory path.
+   * @param int $permissions
+   *   Permissions to set on created directories.
+   * @param bool $copy_empty_dirs
+   *   Whether to copy empty directories.
+   *
+   * @return bool
+   *   TRUE if copying was successful, FALSE otherwise.
+   */
   public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
     $filesystem = new Filesystem();
     $parent = dirname($dest);
@@ -282,6 +361,21 @@ class File {
     return TRUE;
   }
 
+  /**
+   * Copy file or directory if it exists.
+   *
+   * @param string $source
+   *   Source file or directory path.
+   * @param string $dest
+   *   Destination file or directory path.
+   * @param int $permissions
+   *   Permissions to set on created directories.
+   * @param bool $copy_empty_dirs
+   *   Whether to copy empty directories.
+   *
+   * @return bool
+   *   TRUE if copying was successful, FALSE otherwise.
+   */
   public static function copyIfExists(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
     if (static::exists($source)) {
       return static::copy($source, $dest, $permissions, $copy_empty_dirs);
@@ -345,6 +439,9 @@ class File {
 
   /**
    * Remove directory recursively.
+   *
+   * @param string $directory
+   *   Directory path to remove.
    */
   public static function rmdir(string $directory): void {
     (new Filesystem())->remove($directory);
@@ -352,6 +449,9 @@ class File {
 
   /**
    * Remove directory recursively if empty.
+   *
+   * @param string $directory
+   *   Directory path to remove if empty.
    */
   public static function rmdirEmpty(string $directory): void {
     if (static::dirIsEmpty($directory)) {
@@ -360,14 +460,39 @@ class File {
     }
   }
 
+  /**
+   * Remove file or directory.
+   *
+   * @param string|iterable $files
+   *   File or directory path, or iterable of paths to remove.
+   */
   public static function remove(string|iterable $files): void {
     (new Filesystem())->remove($files);
   }
 
+  /**
+   * Write content to a file.
+   *
+   * @param string $file
+   *   File path to write to.
+   * @param string $content
+   *   Content to write to the file.
+   */
   public static function dump(string $file, string $content = ''): void {
     (new Filesystem())->dumpFile($file, $content);
   }
 
+  /**
+   * Check if file contains a specific string or matches a pattern.
+   *
+   * @param string $file
+   *   File path to check.
+   * @param string $needle
+   *   String or regex pattern to search for.
+   *
+   * @return bool
+   *   TRUE if file contains the needle, FALSE otherwise.
+   */
   public static function contains(string $file, string $needle): bool {
     if (!static::exists($file) || !is_readable($file)) {
       // @codeCoverageIgnoreStart
@@ -387,6 +512,19 @@ class File {
     return str_contains($content, $needle);
   }
 
+  /**
+   * Find all files in directory containing a specific string.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   * @param string $needle
+   *   String to search for in files.
+   * @param array $excluded
+   *   Additional paths to exclude from search.
+   *
+   * @return array
+   *   Array of files containing the needle.
+   */
   public static function containsInDir(string $directory, string $needle, array $excluded = []): array {
     $contains = [];
 
@@ -400,6 +538,16 @@ class File {
     return $contains;
   }
 
+  /**
+   * Rename files in directory by replacing part of the filename.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   * @param string $search
+   *   String to search for in filenames.
+   * @param string $replace
+   *   String to replace with.
+   */
   public static function renameInDir(string $directory, string $search, string $replace): void {
     $files = static::scandirRecursive($directory, static::ignoredPaths());
 
@@ -420,6 +568,16 @@ class File {
     }
   }
 
+  /**
+   * Replace content in all files in a directory.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   * @param string $needle
+   *   String to search for in file content.
+   * @param string $replacement
+   *   String to replace with.
+   */
   public static function replaceContentInDir(string $directory, string $needle, string $replacement): void {
     $files = static::scandirRecursive($directory, static::ignoredPaths());
     foreach ($files as $filename) {
@@ -427,6 +585,16 @@ class File {
     }
   }
 
+  /**
+   * Replace content in a file.
+   *
+   * @param string $file
+   *   File path to process.
+   * @param string $needle
+   *   String or regex pattern to search for.
+   * @param string $replacement
+   *   String to replace with.
+   */
   public static function replaceContent(string $file, string $needle, string $replacement): void {
     if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
       return;
@@ -448,6 +616,14 @@ class File {
     }
   }
 
+  /**
+   * Remove lines containing a specific string from a file.
+   *
+   * @param string $file
+   *   File path to process.
+   * @param string $needle
+   *   String to search for in lines.
+   */
   public static function removeLine(string $file, string $needle): void {
     if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
       return;
@@ -477,6 +653,21 @@ class File {
     static::dump($file, $content);
   }
 
+  /**
+   * Remove tokens and optionally content between tokens from a file.
+   *
+   * @param string $file
+   *   File path to process.
+   * @param string $token_begin
+   *   Begin token to search for.
+   * @param string|null $token_end
+   *   End token to search for. If not provided, same as begin token.
+   * @param bool $with_content
+   *   Whether to remove content between tokens.
+   *
+   * @throws \RuntimeException
+   *   When begin and end token counts don't match.
+   */
   public static function removeToken(string $file, string $token_begin, ?string $token_end = NULL, bool $with_content = FALSE): void {
     if (static::isExcluded($file)) {
       return;
@@ -534,6 +725,15 @@ class File {
     self::dump($file, implode('', $out));
   }
 
+  /**
+   * Remove tokens and optionally content between tokens from all files in a directory.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   * @param string|null $token
+   *   Optional token name. If provided, removes content between '#;< token' and '#;> token'.
+   *   If not provided, removes all '#;' tokens.
+   */
   public static function removeTokenInDir(string $directory, ?string $token = NULL): void {
     $token_start = '#;';
     $token_end = '#;';
@@ -587,10 +787,31 @@ class File {
     return (bool) preg_match('/^(' . implode('|', $excluded_patterns) . ')$/', $file);
   }
 
+  /**
+   * Read file contents.
+   *
+   * @param string $file
+   *   File path to read.
+   *
+   * @return string
+   *   File contents.
+   */
   public static function read(string $file): string {
     return (new Filesystem())->readFile($file);
   }
 
+  /**
+   * Create diff files between baseline and destination directories.
+   *
+   * @param string $baseline
+   *   Baseline directory path.
+   * @param string $destination
+   *   Destination directory path.
+   * @param string $diff
+   *   Directory to write diff files to.
+   * @param callable|null $before_match_content
+   *   Optional callback to process file content before comparison.
+   */
   public static function diff(string $baseline, string $destination, string $diff, ?callable $before_match_content = NULL): void {
     static::mkdir($diff);
 
@@ -623,6 +844,18 @@ class File {
     }
   }
 
+  /**
+   * Synchronize files from source to destination directory.
+   *
+   * @param string $src
+   *   Source directory path.
+   * @param string $dst
+   *   Destination directory path.
+   * @param int $permissions
+   *   Permissions to set on created directories.
+   * @param bool $copy_empty_dirs
+   *   Whether to copy empty directories.
+   */
   public static function sync(string $src, string $dst, int $permissions = 0755, bool $copy_empty_dirs = FALSE): void {
     $src_index = new Index($src);
 
@@ -631,6 +864,21 @@ class File {
     $syncer->sync($dst, $permissions, $copy_empty_dirs);
   }
 
+  /**
+   * Compare files between source and destination directories.
+   *
+   * @param string $src
+   *   Source directory path.
+   * @param string $dst
+   *   Destination directory path.
+   * @param \AlexSkrypnyk\File\Internal\Rules|null $rules
+   *   Optional rules for file comparison.
+   * @param callable|null $before_match_content
+   *   Optional callback to process file content before comparison.
+   *
+   * @return \AlexSkrypnyk\File\Internal\Comparer
+   *   Configured and executed comparer object.
+   */
   public static function compare(string $src, string $dst, ?Rules $rules = NULL, ?callable $before_match_content = NULL): Comparer {
     $src_index = new Index($src, $rules, $before_match_content);
 
@@ -642,6 +890,18 @@ class File {
     return $comparer->compare();
   }
 
+  /**
+   * Apply patch files to a baseline and produce a destination.
+   *
+   * @param string $baseline
+   *   Baseline directory path.
+   * @param string $diff
+   *   Directory containing diff/patch files.
+   * @param string $destination
+   *   Destination directory path where patched files will be written.
+   * @param callable|null $before_match_content
+   *   Optional callback to process file content before patching.
+   */
   public static function patch(string $baseline, string $diff, string $destination, ?callable $before_match_content = NULL): void {
     static::mkdir($destination);
 

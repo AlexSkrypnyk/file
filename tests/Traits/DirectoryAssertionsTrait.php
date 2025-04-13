@@ -12,6 +12,18 @@ use AlexSkrypnyk\File\Internal\Index;
  */
 trait DirectoryAssertionsTrait {
 
+  /**
+   * Assert that a directory contains files with a specific string.
+   *
+   * @param string $needle
+   *   The string to search for in files.
+   * @param string $directory
+   *   The directory to search in.
+   * @param array $excluded
+   *   An array of paths to exclude from the search.
+   * @param string $message
+   *   Optional custom failure message.
+   */
   protected function assertDirectoryContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, $needle, $excluded);
 
@@ -20,6 +32,18 @@ trait DirectoryAssertionsTrait {
     }
   }
 
+  /**
+   * Assert that a directory does not contain files with a specific string.
+   *
+   * @param string $needle
+   *   The string to search for in files.
+   * @param string $directory
+   *   The directory to search in.
+   * @param array $excluded
+   *   An array of paths to exclude from the search.
+   * @param string $message
+   *   Optional custom failure message.
+   */
   protected function assertDirectoryNotContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, $needle, $excluded);
 
@@ -28,6 +52,21 @@ trait DirectoryAssertionsTrait {
     }
   }
 
+  /**
+   * Assert that a directory contains files with a specific word.
+   *
+   * This method uses word boundaries to ensure the needle is found as a
+   * complete word, not as part of another word.
+   *
+   * @param string $needle
+   *   The word to search for in files.
+   * @param string $directory
+   *   The directory to search in.
+   * @param array $excluded
+   *   An array of paths to exclude from the search.
+   * @param string $message
+   *   Optional custom failure message.
+   */
   protected function assertDirectoryContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle) . '\b/i', $excluded);
 
@@ -36,6 +75,21 @@ trait DirectoryAssertionsTrait {
     }
   }
 
+  /**
+   * Assert that a directory does not contain files with a specific word.
+   *
+   * This method uses word boundaries to ensure the needle is found as a
+   * complete word, not as part of another word.
+   *
+   * @param string $needle
+   *   The word to search for in files.
+   * @param string $directory
+   *   The directory to search in.
+   * @param array $excluded
+   *   An array of paths to exclude from the search.
+   * @param string $message
+   *   Optional custom failure message.
+   */
   protected function assertDirectoryNotContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle) . '\b/i', $excluded);
 
@@ -44,6 +98,20 @@ trait DirectoryAssertionsTrait {
     }
   }
 
+  /**
+   * Assert that two directories have identical structure and content.
+   *
+   * @param string $dir1
+   *   First directory path to compare.
+   * @param string $dir2
+   *   Second directory path to compare.
+   * @param string|null $message
+   *   Optional custom failure message.
+   * @param callable|null $match_content
+   *   Optional callback to process file content before comparison.
+   * @param bool $show_diff
+   *   Whether to include diff output in failure messages.
+   */
   protected function assertDirectoryEqualsDirectory(string $dir1, string $dir2, ?string $message = NULL, ?callable $match_content = NULL, bool $show_diff = TRUE): void {
     $text = File::compare($dir1, $dir2, NULL, $match_content)->render(['show_diff' => $show_diff]);
     if (!empty($text)) {
@@ -54,6 +122,22 @@ trait DirectoryAssertionsTrait {
 
   /**
    * Assert that a directory is equal to the patched baseline (baseline + diff).
+   *
+   * This method applies patch files to a baseline directory and then compares
+   * the resulting directory with an actual directory to verify they match.
+   *
+   * @param string $actual
+   *   Actual directory path to compare.
+   * @param string $baseline
+   *   Baseline directory path.
+   * @param string $diffs
+   *   Directory containing diff/patch files to apply to the baseline.
+   * @param string|null $expected
+   *   Optional path where to create the expected directory. If not provided,
+   *   a '.expected' directory will be created next to the baseline.
+   *
+   * @throws \RuntimeException
+   *   When baseline directory does not exist.
    */
   protected function assertDirectoryEqualsPatchedBaseline(string $actual, string $baseline, string $diffs, ?string $expected = NULL): void {
     if (!is_dir($baseline)) {
