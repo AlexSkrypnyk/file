@@ -232,7 +232,7 @@ DIFF,
 
     $expected = File::dir($this->locationsFixtureDir() . DIRECTORY_SEPARATOR . 'diff');
 
-    $this->assertDirectoriesEqual($expected, static::$sut);
+    $this->assertDirectoryEqualsDirectory($expected, static::$sut);
   }
 
   public static function dataProviderDiff(): array {
@@ -250,7 +250,7 @@ DIFF,
 
     File::sync($src, static::$sut);
 
-    $this->assertDirectoriesEqual($expected, static::$sut);
+    $this->assertDirectoryEqualsDirectory($expected, static::$sut);
   }
 
   public function testSyncFile(): void {
@@ -272,7 +272,7 @@ DIFF,
 
     $expected = File::dir($this->locationsFixtureDir('diff') . DIRECTORY_SEPARATOR . 'result');
 
-    $this->assertDirectoriesEqual($expected, static::$sut);
+    $this->assertDirectoryEqualsDirectory($expected, static::$sut);
   }
 
   public static function dataProviderPatch(): array {

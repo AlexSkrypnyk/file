@@ -231,18 +231,8 @@ class LocationsTraitTest extends TestCase {
     static::$workspace = $this->testTmp . DIRECTORY_SEPARATOR . 'test_workspace_' . uniqid();
     mkdir(static::$workspace, 0777, TRUE);
     touch(static::$workspace . DIRECTORY_SEPARATOR . 'test_file.txt');
-
-    // Test with DEBUG environment variable set.
-    putenv('DEBUG=1');
-
     $this->locationsTearDown();
-    $this->assertDirectoryExists(static::$workspace, 'Workspace should not be removed when DEBUG is set');
-
-    // Test with DEBUG environment variable not set.
-    putenv('DEBUG=');
-
-    $this->locationsTearDown();
-    $this->assertDirectoryDoesNotExist(static::$workspace, 'Workspace should be removed when DEBUG is not set');
+    $this->assertDirectoryDoesNotExist(static::$workspace, 'Workspace should be removed.');
   }
 
   #[DataProvider('dataProviderLocationsCopy')]

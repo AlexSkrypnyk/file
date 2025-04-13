@@ -19,13 +19,17 @@ trait LocationsTrait {
 
   /**
    * Baseline dataset name to be used in the data provider.
+   *
+   * @var string
    */
-  public const string BASELINE_DATASET = 'baseline';
+  const BASELINE_DATASET = 'baseline';
 
   /**
    * Baseline fixture directory name.
+   *
+   * @var string
    */
-  public const string BASELINE_DIR = '_baseline';
+  const BASELINE_DIR = '_baseline';
 
   /**
    * Path to the root directory of this project.
