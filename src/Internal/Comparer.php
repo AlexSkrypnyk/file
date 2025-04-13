@@ -45,13 +45,16 @@ class Comparer implements RenderInterface {
   }
 
   protected static function doRender(Index $left, Index $right, Differ $differ, array $options = []): ?string {
+    $options += [
+      'show_diff' => TRUE,
+      // Number of files to include in the diff output. This allows to prevent
+      // an output that could potentially eat a lot of memory.
+      'show_diff_file_limit' => 10,
+    ];
+
     if (empty($differ->getAbsentLeftDiffs()) && empty($differ->getAbsentRightDiffs()) && empty($differ->getContentDiffs())) {
       return NULL;
     }
-
-    $options += [
-      'show_diff' => TRUE,
-    ];
 
     $render = sprintf("Differences between directories \n[left] %s\nand\n[right] %s\n", $left->getDirectory(), $right->getDirectory());
 
@@ -69,17 +72,23 @@ class Comparer implements RenderInterface {
       }
     }
 
-    if (!empty($differ->getContentDiffs())) {
+    $file_diffs = $differ->getContentDiffs();
+    if (!empty($file_diffs)) {
       $render .= "Files that differ in content:\n";
-      foreach ($differ->getContentDiffs() as $file => $diff) {
+
+      $file_diffs_render_count = is_int($options['show_diff_file_limit']) ? $options['show_diff_file_limit'] : count($file_diffs);
+      foreach ($file_diffs as $file => $diff) {
         if (!$diff instanceof Diff) {
           continue;
         }
+
         $render .= sprintf("  %s\n", $file);
-        if ($options['show_diff']) {
+
+        if ($options['show_diff'] && $file_diffs_render_count > 0) {
           $render .= '--- DIFF START ---' . PHP_EOL;
           $render .= $diff->render();
           $render .= '--- DIFF END ---' . PHP_EOL;
+          $file_diffs_render_count--;
         }
       }
     }
