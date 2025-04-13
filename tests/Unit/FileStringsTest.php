@@ -113,7 +113,7 @@ class FileStringsTest extends UnitTestBase {
 
     File::removeTokenInDir(static::$sut, $token);
 
-    $this->assertDirectoriesEqual(static::$fixtures, static::$sut);
+    $this->assertDirectoryEqualsDirectory(static::$fixtures, static::$sut);
   }
 
   public static function dataProviderRemoveTokenInDir(): array {
