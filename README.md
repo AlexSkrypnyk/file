@@ -19,6 +19,19 @@
 
 ---
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Available Functions](#available-functions)
+  - [Diff Operations](#diff-operations)
+    - [Ignoring Files and Content Changes](#ignoring-files-and-content-changes)
+  - [Assertion Traits](#assertion-traits)
+    - [Directory Assertions Trait](#directory-assertions-trait)
+    - [File Assertions Trait](#file-assertions-trait)
+- [Maintenance](#maintenance)
+
+
 ## Installation
 
 ```bash
