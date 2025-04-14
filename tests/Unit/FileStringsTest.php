@@ -340,17 +340,6 @@ class FileStringsTest extends UnitTestBase {
     ];
   }
 
-  /**
-   * Flatten file tree.
-   *
-   * @param array<string|int, string|array> $tree
-   *   File tree.
-   * @param string $parent
-   *   Parent directory.
-   *
-   * @return array
-   *   Flattened file tree.
-   */
   protected function flattenFileTree(array $tree, string $parent = '.'): array {
     $flatten = [];
 

@@ -125,9 +125,11 @@ Prefix meanings:
 - `!`: Exception - do not ignore this file/directory
 - `!^`: Exception - do not ignore content changes in this file/directory
 
-### Directory Assertions Trait
+### Assertion Traits
 
-The library includes a PHPUnit trait for directory testing assertions:
+The library includes PHPUnit traits for testing files and directories:
+
+#### Directory Assertions Trait
 
 | Assertion Method | Description |
 |------------------|-------------|
@@ -153,6 +155,45 @@ class MyTest extends TestCase {
     
     // Assert two directories are identical
     $this->assertDirectoryEqualsDirectory('/path/to/dir1', '/path/to/dir2');
+  }
+}
+```
+
+#### File Assertions Trait
+
+| Assertion Method | Description |
+|------------------|-------------|
+| `assertFileContainsString()` | Assert that a file contains a specific string. |
+| `assertFileNotContainsString()` | Assert that a file does not contain a specific string. |
+| `assertFileContainsWord()` | Assert that a file contains a specific word (bounded by word boundaries). |
+| `assertFileNotContainsWord()` | Assert that a file does not contain a specific word. |
+| `assertFileEqualsFile()` | Assert that a file equals another file in contents. |
+| `assertFileNotEqualsFile()` | Assert that a file does not equal another file in contents. |
+
+Usage example:
+
+```php
+use PHPUnit\Framework\TestCase;
+use AlexSkrypnyk\File\Tests\Traits\FileAssertionsTrait;
+
+class MyTest extends TestCase {
+  use FileAssertionsTrait;
+  
+  public function testFiles(): void {
+    // Assert file contains "example" string
+    $this->assertFileContainsString('example', '/path/to/file.txt');
+    
+    // Assert file contains "test" as a complete word
+    $this->assertFileContainsWord('test', '/path/to/file.txt');
+    
+    // Assert file does not contain a partial word
+    $this->assertFileNotContainsWord('exampl', '/path/to/file.txt');
+    
+    // Assert two files have identical content
+    $this->assertFileEqualsFile('/path/to/expected.txt', '/path/to/actual.txt');
+    
+    // Assert two files have different content
+    $this->assertFileNotEqualsFile('/path/to/expected.txt', '/path/to/actual.txt');
   }
 }
 ```

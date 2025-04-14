@@ -4,15 +4,35 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+/**
+ * Manages file differences between source and destination directories.
+ */
 class Differ {
 
+  /**
+   * Collection of file differences.
+   *
+   * @var \AlexSkrypnyk\File\Internal\Diff[]
+   */
   protected array $diffs = [];
 
+  /**
+   * Adds a file from the left (source) directory to the diff collection.
+   *
+   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   *   The file to add.
+   */
   public function addLeftFile(ExtendedSplFileInfo $file): void {
     $this->diffs[$file->getPathnameFromBasepath()] = $this->diffs[$file->getPathnameFromBasepath()] ?? new Diff();
     $this->diffs[$file->getPathnameFromBasepath()]->setLeft($file);
   }
 
+  /**
+   * Adds a file from the right (destination) directory to the diff collection.
+   *
+   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   *   The file to add.
+   */
   public function addRightFile(ExtendedSplFileInfo $file): void {
     $this->diffs[$file->getPathnameFromBasepath()] = $this->diffs[$file->getPathnameFromBasepath()] ?? new Diff();
     $this->diffs[$file->getPathnameFromBasepath()]->setRight($file);
@@ -57,6 +77,17 @@ class Differ {
     }, $cb);
   }
 
+  /**
+   * Filters the diffs collection using a callback.
+   *
+   * @param callable $filter
+   *   The filter callback. Should return TRUE to include an item.
+   * @param callable|null $cb
+   *   Optional transformation callback applied to each filtered diff.
+   *
+   * @return array
+   *   Filtered (and optionally transformed) array of diffs.
+   */
   protected function filter(callable $filter, ?callable $cb = NULL): array {
     $diffs = array_filter($this->diffs, $filter);
 

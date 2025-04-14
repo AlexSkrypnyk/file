@@ -9,6 +9,8 @@ use AlexSkrypnyk\File\Internal\Index;
 
 /**
  * Assertions for testing directory contents.
+ *
+ * @mixin \PHPUnit\Framework\TestCase
  */
 trait DirectoryAssertionsTrait {
 

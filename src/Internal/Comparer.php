@@ -4,10 +4,24 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+/**
+ * Compares two directories and provides difference information.
+ */
 class Comparer implements RenderInterface {
 
+  /**
+   * The differ instance used to manage file differences.
+   */
   protected Differ $differ;
 
+  /**
+   * Constructs a new Comparer instance.
+   *
+   * @param \AlexSkrypnyk\File\Internal\Index $left
+   *   The left (source) index.
+   * @param \AlexSkrypnyk\File\Internal\Index $right
+   *   The right (destination) index.
+   */
   public function __construct(
     protected Index $left,
     protected Index $right,
@@ -15,6 +29,15 @@ class Comparer implements RenderInterface {
     $this->differ = new Differ();
   }
 
+  /**
+   * Compares the left and right directories.
+   *
+   * Iterates through all files in both directories and adds them to the differ
+   * for comparison.
+   *
+   * @return $this
+   *   Return self for chaining.
+   */
   public function compare(): static {
     $dir_left_files = $this->left->getFiles();
     $dir_right_files = $this->right->getFiles();
@@ -36,14 +59,38 @@ class Comparer implements RenderInterface {
     return $this;
   }
 
+  /**
+   * Gets the differ instance.
+   *
+   * @return \AlexSkrypnyk\File\Internal\Differ
+   *   The differ instance.
+   */
   public function getDiffer(): Differ {
     return $this->differ;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function render(array $options = [], ?callable $renderer = NULL): ?string {
     return call_user_func($renderer ?? [static::class, 'doRender'], $this->left, $this->right, $this->differ, $options);
   }
 
+  /**
+   * Default renderer for directory comparison results.
+   *
+   * @param \AlexSkrypnyk\File\Internal\Index $left
+   *   The left (source) index.
+   * @param \AlexSkrypnyk\File\Internal\Index $right
+   *   The right (destination) index.
+   * @param \AlexSkrypnyk\File\Internal\Differ $differ
+   *   The differ containing comparison results.
+   * @param array $options
+   *   Rendering options.
+   *
+   * @return string|null
+   *   The rendered comparison or NULL if there are no differences.
+   */
   protected static function doRender(Index $left, Index $right, Differ $differ, array $options = []): ?string {
     $options += [
       'show_diff' => TRUE,

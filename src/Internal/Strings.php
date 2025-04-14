@@ -4,8 +4,20 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+/**
+ * Class with string manipulation utilities.
+ */
 class Strings {
 
+  /**
+   * Checks if a string is a valid regular expression.
+   *
+   * @param string $string
+   *   The string to check.
+   *
+   * @return bool
+   *   TRUE if the string is a valid regex, FALSE otherwise.
+   */
   public static function isRegex(string $string): bool {
     if ($string === '' || strlen($string) < 3) {
       return FALSE;

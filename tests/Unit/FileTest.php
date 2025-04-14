@@ -65,7 +65,6 @@ class FileTest extends UnitTestBase {
     $symlink_target = $tmp_realpath . DIRECTORY_SEPARATOR . 'real_file.txt';
     $symlink_path = $tmp_realpath . DIRECTORY_SEPARATOR . 'symlink.txt';
 
-    // Create a real file and a symlink for testing.
     file_put_contents($symlink_target, 'test');
     if (!file_exists($symlink_path)) {
       symlink($symlink_target, $symlink_path);

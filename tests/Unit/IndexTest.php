@@ -375,9 +375,6 @@ class IndexTest extends UnitTestBase {
     ];
   }
 
-  /**
-   * Helper method to get a temporary directory path.
-   */
   protected function locationsTmp(): string {
     return static::$tmp;
   }
