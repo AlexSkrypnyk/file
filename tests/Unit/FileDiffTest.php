@@ -16,9 +16,7 @@ use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * @phpcs:disable Squiz.Arrays.ArrayDeclaration.KeySpecified
- */
+// @phpcs:disable Squiz.Arrays.ArrayDeclaration.KeySpecified
 #[CoversClass(File::class)]
 #[CoversClass(Syncer::class)]
 #[CoversClass(Patcher::class)]
@@ -261,7 +259,7 @@ DIFF,
     $this->expectException(\RuntimeException::class);
     $src = File::dir($this->locationsFixtureDir('compare') . DIRECTORY_SEPARATOR . 'files_equal' . DIRECTORY_SEPARATOR . 'directory2');
 
-    $dst = static::$sut .= DIRECTORY_SEPARATOR . 'file.txt';
+    $dst = static::$sut . DIRECTORY_SEPARATOR . 'file.txt';
     touch($dst);
 
     File::sync($src, $dst);

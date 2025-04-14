@@ -147,6 +147,18 @@ class Patcher {
     ];
   }
 
+  /**
+   * Applies a patch hunk to an array of lines.
+   *
+   * @param array &$lines
+   *   Array of file lines to modify.
+   * @param string $src
+   *   Source file path.
+   * @param string $dst
+   *   Destination file path.
+   * @param array $info
+   *   Hunk information containing src_idx, src_size, dst_idx, dst_size.
+   */
   protected function applyHunk(array &$lines, string $src, string $dst, array $info): void {
     $src_idx = $info['src_idx'];
     $src_size = $info['src_size'];
@@ -222,6 +234,12 @@ class Patcher {
     array_splice($this->dstLines[$dst], $dst_idx, count($src_hunk), $dst_hunk);
   }
 
+  /**
+   * Writes all modified destination files to disk.
+   *
+   * @return int
+   *   Number of files updated.
+   */
   protected function updateDestinations(): int {
     foreach ($this->dstLines as $file => $content) {
       $buffer = implode("\n", $content);
@@ -232,6 +250,18 @@ class Patcher {
     return count($this->dstLines);
   }
 
+  /**
+   * Splits a string into lines.
+   *
+   * @param string $content
+   *   The content to split.
+   *
+   * @return array
+   *   Array of lines.
+   *
+   * @throws \Exception
+   *   If the content cannot be split.
+   */
   protected static function splitLines(string $content): array {
     $lines = preg_split('/(\r\n)|(\r)|(\n)/', $content);
 

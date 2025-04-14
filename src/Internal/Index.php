@@ -22,6 +22,9 @@ class Index {
    */
   protected ?array $files = NULL;
 
+  /**
+   * The rules to apply when indexing files.
+   */
   protected Rules $rules;
 
   public function __construct(
@@ -38,6 +41,17 @@ class Index {
     $this->rules->addSkip(static::IGNORECONTENT)->addSkip('.git/');
   }
 
+  /**
+   * Gets the indexed files.
+   *
+   * If the files have not been indexed yet, this will trigger a scan.
+   *
+   * @param callable|null $cb
+   *   Optional callback to transform each file.
+   *
+   * @return array
+   *   Array of files indexed by path relative to base directory.
+   */
   public function getFiles(?callable $cb = NULL): array {
     if (is_null($this->files)) {
       $this->scan();
@@ -54,10 +68,22 @@ class Index {
     return $this->files;
   }
 
+  /**
+   * Gets the directory being indexed.
+   *
+   * @return string
+   *   The directory path.
+   */
   public function getDirectory(): string {
     return $this->directory;
   }
 
+  /**
+   * Gets the rules used by this index.
+   *
+   * @return \AlexSkrypnyk\File\Internal\Rules
+   *   The rules instance.
+   */
   public function getRules(): Rules {
     return $this->rules;
   }
@@ -144,6 +170,22 @@ class Index {
     return $this;
   }
 
+  /**
+   * Checks if a path matches a pattern.
+   *
+   * Handles several types of patterns:
+   * - Directory patterns ending with / (match all files inside directory)
+   * - Direct child patterns with /* (match only files directly in directory)
+   * - Standard file glob patterns (using fnmatch)
+   *
+   * @param string $path
+   *   The path to check.
+   * @param string $pattern
+   *   The pattern to match against.
+   *
+   * @return bool
+   *   TRUE if the path matches the pattern, FALSE otherwise.
+   */
   protected static function isPathMatchesPattern(string $path, string $pattern): bool {
     // Match directory pattern (e.g., "dir/").
     if (str_ends_with($pattern, DIRECTORY_SEPARATOR)) {

@@ -6,47 +6,122 @@ namespace AlexSkrypnyk\File\Internal;
 
 use AlexSkrypnyk\File\File;
 
+/**
+ * Handles file matching rules and patterns.
+ */
 class Rules {
 
+  /**
+   * Patterns for files where only content should be ignored.
+   */
   protected array $ignoreContent = [];
 
+  /**
+   * Patterns for files to skip.
+   */
   protected array $skip = [];
 
+  /**
+   * Global patterns that apply everywhere.
+   */
   protected array $global = [];
 
+  /**
+   * Patterns for files to explicitly include.
+   */
   protected array $include = [];
 
+  /**
+   * Gets patterns for files where only content should be ignored.
+   *
+   * @return array
+   *   Array of patterns.
+   */
   public function getIgnoreContent(): array {
     return $this->ignoreContent;
   }
 
+  /**
+   * Gets patterns for files to skip.
+   *
+   * @return array
+   *   Array of patterns.
+   */
   public function getSkip(): array {
     return $this->skip;
   }
 
+  /**
+   * Gets global patterns that apply everywhere.
+   *
+   * @return array
+   *   Array of patterns.
+   */
   public function getGlobal(): array {
     return $this->global;
   }
 
+  /**
+   * Gets patterns for files to explicitly include.
+   *
+   * @return array
+   *   Array of patterns.
+   */
   public function getInclude(): array {
     return $this->include;
   }
 
+  /**
+   * Adds a pattern for files where only content should be ignored.
+   *
+   * @param string $pattern
+   *   The pattern to add.
+   *
+   * @return $this
+   *   Return self for chaining.
+   */
   public function addIgnoreContent(string $pattern): static {
     $this->ignoreContent[] = $pattern;
     return $this;
   }
 
+  /**
+   * Adds a pattern for files to skip.
+   *
+   * @param string $pattern
+   *   The pattern to add.
+   *
+   * @return $this
+   *   Return self for chaining.
+   */
   public function addSkip(string $pattern): static {
     $this->skip[] = $pattern;
     return $this;
   }
 
+  /**
+   * Adds a global pattern that applies everywhere.
+   *
+   * @param string $pattern
+   *   The pattern to add.
+   *
+   * @return $this
+   *   Return self for chaining.
+   */
   public function addGlobal(string $pattern): static {
     $this->global[] = $pattern;
     return $this;
   }
 
+  /**
+   * Adds a pattern for files to explicitly include.
+   *
+   * @param string $pattern
+   *   The pattern to add.
+   *
+   * @return $this
+   *   Return self for chaining.
+   */
   public function addInclude(string $pattern): static {
     $this->include[] = $pattern;
     return $this;
@@ -104,6 +179,18 @@ class Rules {
     return $this;
   }
 
+  /**
+   * Creates a Rules instance from a file.
+   *
+   * @param string $file
+   *   The path to the rules file.
+   *
+   * @return self
+   *   A new Rules instance.
+   *
+   * @throws \Exception
+   *   If the file does not exist or cannot be read.
+   */
   public static function fromFile(string $file): self {
     if (!File::exists($file)) {
       throw new \Exception(sprintf('File %s does not exist.', $file));
@@ -120,6 +207,18 @@ class Rules {
     return (new self())->parse($content);
   }
 
+  /**
+   * Splits a string into lines.
+   *
+   * @param string $content
+   *   The content to split.
+   *
+   * @return array
+   *   Array of lines.
+   *
+   * @throws \Exception
+   *   If the content cannot be split.
+   */
   protected static function splitLines(string $content): array {
     $lines = preg_split('/(\r\n)|(\r)|(\n)/', $content);
 
