@@ -6,13 +6,13 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Filesystem\Filesystem;
 
 #[CoversClass(File::class)]
-class FileStringsTest extends UnitTestBase {
+class FileStringsTest extends UnitTestCase {
 
   use DirectoryAssertionsTrait;
 

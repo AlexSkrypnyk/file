@@ -21,7 +21,7 @@
         "symfony/filesystem": "^7.2"
     },
     "require-dev": {
-        "alexskrypnyk/phpunit-helpers": "^0.2.0",
+        "alexskrypnyk/phpunit-helpers": "^0.3.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1",
         "drupal/coder": "^8.3",
         "ergebnis/composer-normalize": "^2.42",

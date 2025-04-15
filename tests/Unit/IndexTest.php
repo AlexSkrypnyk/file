@@ -8,13 +8,13 @@ use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Rules;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Index::class)]
 #[CoversClass(ExtendedSplFileInfo::class)]
-class IndexTest extends UnitTestBase {
+class IndexTest extends UnitTestCase {
 
   #[DataProvider('dataProviderIndexScan')]
   public function testIndexScan(?callable $rules, ?callable $before_match_content, array $expected): void {

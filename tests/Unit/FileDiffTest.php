@@ -12,7 +12,7 @@ use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Patcher;
 use AlexSkrypnyk\File\Internal\Syncer;
 use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 #[CoversClass(Comparer::class)]
 #[CoversClass(Diff::class)]
 #[CoversClass(Differ::class)]
-class FileDiffTest extends UnitTestBase {
+class FileDiffTest extends UnitTestCase {
 
   use DirectoryAssertionsTrait;
 

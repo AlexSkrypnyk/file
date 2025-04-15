@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\Rules;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Rules::class)]
-class RulesTest extends UnitTestBase {
+class RulesTest extends UnitTestCase {
 
   #[DataProvider('dataProviderRulesFromFile')]
   public function testRulesFromFile(?string $content, array $expected): void {

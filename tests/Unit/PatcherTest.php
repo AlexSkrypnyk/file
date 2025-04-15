@@ -7,12 +7,12 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\Internal\Patcher;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Patcher::class)]
-class PatcherTest extends UnitTestBase {
+class PatcherTest extends UnitTestCase {
 
   #[DataProvider('dataProviderIsPatchFile')]
   public function testIsPatchFile(string $file_path, bool $expected): void {

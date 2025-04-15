@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(ExtendedSplFileInfo::class)]
-class ExtendedSplFileInfoTest extends UnitTestBase {
+class ExtendedSplFileInfoTest extends UnitTestCase {
 
   public function testConstructor(): void {
     $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
