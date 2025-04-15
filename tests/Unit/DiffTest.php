@@ -6,11 +6,11 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\Diff;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(Diff::class)]
-class DiffTest extends UnitTestBase {
+class DiffTest extends UnitTestCase {
 
   public function testSetGetLeft(): void {
     $diff = new Diff();

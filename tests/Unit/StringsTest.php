@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Internal\Strings;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Strings::class)]
-class StringsTest extends UnitTestBase {
+class StringsTest extends UnitTestCase {
 
   #[DataProvider('dataProviderIsRegex')]
   public function testIsRegex(string $value, mixed $expected): void {

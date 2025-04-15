@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\PhpunitHelpers\UnitTestBase;
+use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -27,7 +27,7 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'diff')]
 #[CoversMethod(File::class, 'tmpdir')]
 #[CoversMethod(File::class, 'copy')]
-class FileTest extends UnitTestBase {
+class FileTest extends UnitTestCase {
 
   protected string $testTmpDir;
 
