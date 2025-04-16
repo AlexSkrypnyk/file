@@ -245,7 +245,9 @@ class FileTest extends UnitTestCase {
   public function testRmdirAndRmdirEmpty(): void {
     $dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_dir';
     $subdir = $dir . DIRECTORY_SEPARATOR . 'empty_subdir';
+    $subsubdir = $subdir . DIRECTORY_SEPARATOR . 'empty_sub_subdir';
     mkdir($subdir, 0777, TRUE);
+    mkdir($subsubdir, 0777, TRUE);
     $file = $dir . DIRECTORY_SEPARATOR . 'file.txt';
     file_put_contents($file, 'test');
 
@@ -253,6 +255,7 @@ class FileTest extends UnitTestCase {
     $this->assertDirectoryExists($subdir);
 
     File::rmdirEmpty($subdir);
+    File::rmdirEmpty($subsubdir);
 
     $this->assertDirectoryDoesNotExist($subdir);
     $this->assertDirectoryExists($dir);
