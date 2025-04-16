@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\Exception\FileException;
+use AlexSkrypnyk\File\Exception\RulesException;
 use AlexSkrypnyk\File\File;
 
 /**
@@ -193,7 +195,7 @@ class Rules {
    */
   public static function fromFile(string $file): self {
     if (!File::exists($file)) {
-      throw new \Exception(sprintf('File %s does not exist.', $file));
+      throw new FileException(sprintf('File %s does not exist.', $file));
     }
 
     try {
@@ -201,7 +203,7 @@ class Rules {
     }
     // @codeCoverageIgnoreStart
     catch (\Exception $exception) {
-      throw new \Exception(sprintf('Failed to read the %s file.', $file), $exception->getCode(), $exception);
+      throw new RulesException(sprintf('Failed to read the %s file.', $file), $exception->getCode(), $exception);
     }
     // @codeCoverageIgnoreEnd
     return (new self())->parse($content);
@@ -216,7 +218,7 @@ class Rules {
    * @return array
    *   Array of lines.
    *
-   * @throws \Exception
+   * @throws \AlexSkrypnyk\File\Exception\RulesException
    *   If the content cannot be split.
    */
   protected static function splitLines(string $content): array {
@@ -224,7 +226,7 @@ class Rules {
 
     if ($lines === FALSE) {
       // @codeCoverageIgnoreStart
-      throw new \Exception('Failed to split lines.');
+      throw new RulesException('Failed to split lines.');
       // @codeCoverageIgnoreEnd
     }
 

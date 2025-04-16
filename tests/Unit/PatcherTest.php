@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
+use AlexSkrypnyk\File\Exception\PatchException;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\Internal\Patcher;
@@ -81,7 +82,7 @@ class PatcherTest extends UnitTestCase {
     $patcher = new Patcher(static::$sut, static::$sut);
 
     $this->expectException(\Exception::class);
-    $this->expectExceptionMessage(sprintf('Invalid patch file: %s', $file_path));
+    $this->expectExceptionMessage(sprintf('Invalid patch file in file "%s"', $file_path));
 
     $patcher->addPatchFile($file_info);
   }
@@ -150,7 +151,8 @@ class PatcherTest extends UnitTestCase {
     ];
     reset($lines);
 
-    $result = self::callProtectedMethod(Patcher::class, 'findHunk', [&$lines]);
+    $patcher = new Patcher(static::$sut, static::$sut);
+    $result = self::callProtectedMethod($patcher, 'findHunk', [&$lines]);
 
     $expected = [
       'src_idx' => 1,
@@ -166,7 +168,8 @@ class PatcherTest extends UnitTestCase {
     $lines = ["Not a hunk header"];
     reset($lines);
 
-    $result = self::callProtectedMethod(Patcher::class, 'findHunk', [&$lines]);
+    $patcher = new Patcher(static::$sut, static::$sut);
+    $result = self::callProtectedMethod($patcher, 'findHunk', [&$lines]);
 
     $this->assertNull($result);
   }
@@ -175,10 +178,11 @@ class PatcherTest extends UnitTestCase {
     $lines = ["@@ -1,3 +1,3 @@"];
     reset($lines);
 
-    $this->expectException(\Exception::class);
-    $this->expectExceptionMessage('Unexpected EOF.');
+    $patcher = new Patcher(static::$sut, static::$sut);
+    $this->expectException(PatchException::class);
+    $this->expectExceptionMessage('Unexpected EOF');
 
-    self::callProtectedMethod(Patcher::class, 'findHunk', [&$lines]);
+    self::callProtectedMethod($patcher, 'findHunk', [&$lines]);
   }
 
   public function testApplyHunk(): void {
@@ -290,7 +294,7 @@ class PatcherTest extends UnitTestCase {
     $patcher = new Patcher($source_dir, $dest_dir);
     $dst_file = $dest_dir . DIRECTORY_SEPARATOR . 'test.txt';
 
-    $this->expectException(\Exception::class);
+    $this->expectException(PatchException::class);
     $this->expectExceptionMessageMatches('/Source file verification failed/');
 
     self::callProtectedMethod($patcher, 'applyHunk', [
@@ -326,7 +330,7 @@ class PatcherTest extends UnitTestCase {
     $patcher = new Patcher($source_dir, $dest_dir);
     $dst_file = $dest_dir . DIRECTORY_SEPARATOR . 'test.txt';
 
-    $this->expectException(\Exception::class);
+    $this->expectException(PatchException::class);
     $this->expectExceptionMessageMatches('/Hunk mismatch/');
 
     self::callProtectedMethod($patcher, 'applyHunk', [
@@ -355,6 +359,132 @@ class PatcherTest extends UnitTestCase {
     $this->assertFileExists($dest_file2);
     $this->assertEquals("line1\nline2", file_get_contents($dest_file1));
     $this->assertEquals("line3\nline4", file_get_contents($dest_file2));
+  }
+
+  /**
+   * Tests the unexpected removal line exception.
+   */
+  public function testUnexpectedRemovalLine(): void {
+    $source_dir = static::$sut . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = static::$sut . DIRECTORY_SEPARATOR . 'dest';
+    mkdir($source_dir, 0777, TRUE);
+    mkdir($dest_dir, 0777, TRUE);
+
+    $source_file = $source_dir . DIRECTORY_SEPARATOR . 'test.txt';
+    file_put_contents($source_file, "line1\nline2\nline3\n");
+
+    // Create a diff with too many removal lines.
+    $diff = [
+      " line1",
+      "-line2",
+      "-extra removal line",
+      " line3",
+    ];
+    reset($diff);
+
+    $info = [
+      'src_idx' => 1,
+    // Source size is only 2, but we're trying to remove 3 lines.
+      'src_size' => 2,
+      'dst_idx' => 1,
+      'dst_size' => 2,
+    ];
+
+    $patcher = new Patcher($source_dir, $dest_dir);
+    $dst_file = $dest_dir . DIRECTORY_SEPARATOR . 'test.txt';
+
+    try {
+      self::callProtectedMethod($patcher, 'applyHunk', [
+        &$diff,
+        $source_file,
+        $dst_file,
+        $info,
+      ]);
+      $this->fail('Expected PatchException was not thrown');
+    }
+    catch (PatchException $patchException) {
+      $this->assertStringContainsString('Unexpected removal line', $patchException->getMessage());
+      $this->assertEquals($source_file, $patchException->getFilePath());
+      $this->assertNotNull($patchException->getLineNumber());
+      $this->assertNotNull($patchException->getLineContent());
+    }
+  }
+
+  /**
+   * Tests the unexpected addition line exception.
+   */
+  public function testUnexpectedAdditionLine(): void {
+    $source_dir = static::$sut . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = static::$sut . DIRECTORY_SEPARATOR . 'dest';
+    mkdir($source_dir, 0777, TRUE);
+    mkdir($dest_dir, 0777, TRUE);
+
+    $source_file = $source_dir . DIRECTORY_SEPARATOR . 'test.txt';
+    file_put_contents($source_file, "line1\nline2\nline3\n");
+
+    // Create a diff with too many addition lines.
+    $diff = [
+      " line1",
+      "+new line",
+      "+extra addition line",
+      " line3",
+    ];
+    reset($diff);
+
+    $info = [
+      'src_idx' => 1,
+      'src_size' => 2,
+      'dst_idx' => 1,
+    // Destination size is only 2, but we're trying to add 3 lines.
+      'dst_size' => 2,
+    ];
+
+    $patcher = new Patcher($source_dir, $dest_dir);
+    $dst_file = $dest_dir . DIRECTORY_SEPARATOR . 'test.txt';
+
+    try {
+      self::callProtectedMethod($patcher, 'applyHunk', [
+        &$diff,
+        $source_file,
+        $dst_file,
+        $info,
+      ]);
+      $this->fail('Expected PatchException was not thrown');
+    }
+    catch (PatchException $patchException) {
+      $this->assertStringContainsString('Unexpected addition line', $patchException->getMessage());
+      $this->assertEquals($source_file, $patchException->getFilePath());
+      $this->assertNotNull($patchException->getLineNumber());
+      $this->assertNotNull($patchException->getLineContent());
+    }
+  }
+
+  /**
+   * Tests PatchException constructor and properties.
+   */
+  public function testPatchExceptionProperties(): void {
+    $message = 'Test message';
+    $file_path = '/path/to/file.txt';
+    $line_number = 42;
+    $line_content = 'Test line content';
+
+    $exception = new PatchException(
+      $message,
+      $file_path,
+      $line_number,
+      $line_content
+    );
+
+    // Test getters.
+    $this->assertEquals($file_path, $exception->getFilePath());
+    $this->assertEquals($line_number, $exception->getLineNumber());
+    $this->assertEquals($line_content, $exception->getLineContent());
+
+    // Test message formatting.
+    $this->assertStringContainsString($message, $exception->getMessage());
+    $this->assertStringContainsString($file_path, $exception->getMessage());
+    $this->assertStringContainsString((string) $line_number, $exception->getMessage());
+    $this->assertStringContainsString($line_content, $exception->getMessage());
   }
 
 }

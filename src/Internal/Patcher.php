@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\Exception\PatchException;
 use AlexSkrypnyk\File\File;
 
 /**
@@ -67,7 +68,7 @@ class Patcher {
    */
   public function addPatchFile(ExtendedSplFileInfo $file): static {
     if (!static::isPatchFile($file->getPathname())) {
-      throw new \Exception(sprintf('Invalid patch file: %s', $file->getPathname()));
+      throw new PatchException('Invalid patch file', $file->getPathname());
     }
 
     return $this->addDiff($file->getContent(), $file->getPathnameFromBasepath());
@@ -100,7 +101,7 @@ class Patcher {
       $src = $this->source . DIRECTORY_SEPARATOR . $path;
       $dst = $this->destination . DIRECTORY_SEPARATOR . $path;
 
-      while ($info = static::findHunk($diff)) {
+      while ($info = $this->findHunk($diff)) {
         $this->applyHunk($diff, $src, $dst, $info);
       }
     }
@@ -121,8 +122,11 @@ class Patcher {
    *   - src_size: (int) The source line size.
    *   - dst_idx: (int) The destination line index.
    *   - dst_size: (int) The destination line size.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\PatchException
+   *   When unexpected EOF is encountered.
    */
-  protected static function findHunk(array &$lines): ?array {
+  protected function findHunk(array &$lines): ?array {
     $line = current($lines);
 
     if (!preg_match('/@@ -(\\d+)(,(\\d+))?\\s+\\+(\\d+)(,(\\d+))?\\s+@@($)/A', $line, $m)) {
@@ -136,7 +140,9 @@ class Patcher {
     $dst_size = $m[6] !== '' ? (int) $m[6] : 1;
 
     if (next($lines) === FALSE) {
-      throw new \Exception('Unexpected EOF.');
+      $current_key = key($lines);
+      $source_file = count($this->diffs) > 0 ? array_key_first($this->diffs) : '';
+      throw new PatchException('Unexpected EOF', $source_file, $current_key);
     }
 
     return [
@@ -191,7 +197,7 @@ class Patcher {
       switch ($operation) {
         case '-':
           if ($src_remaining <= 0) {
-            throw new \Exception(sprintf('Unexpected removal line "%s"[%d] in %s.', $line, key($lines), $src));
+            throw new PatchException('Unexpected removal line', $src, key($lines), $line);
           }
           $src_hunk[] = $content;
           $src_remaining--;
@@ -199,7 +205,7 @@ class Patcher {
 
         case '+':
           if ($dst_remaining <= 0) {
-            throw new \Exception(sprintf('Unexpected addition line "%s"[%d] in %s.', $line, key($lines), $src));
+            throw new PatchException('Unexpected addition line', $src, key($lines), $line);
           }
           $dst_hunk[] = $content;
           $dst_remaining--;
@@ -221,13 +227,13 @@ class Patcher {
     }
 
     if ($src_remaining !== 0 || $dst_remaining !== 0) {
-      throw new \Exception(sprintf('Hunk mismatch at line "%s"[%d] in %s.', $src_idx, key($lines), $src));
+      throw new PatchException('Hunk mismatch', $src, key($lines));
     }
 
     // Verify source lines match the expected ones before applying.
     $source_hunk_slice = array_slice($this->srcLines[$src], $src_idx, count($src_hunk));
     if ($source_hunk_slice !== $src_hunk) {
-      throw new \Exception(sprintf('Source file verification failed at line "%s"[%d] in %s.', $src_idx, key($lines), $src));
+      throw new PatchException('Source file verification failed', $src, key($lines));
     }
 
     // Replace lines in destination lines with the lines from the hunk.
@@ -266,7 +272,7 @@ class Patcher {
     $lines = preg_split('/(\r\n)|(\r)|(\n)/', $content);
 
     if ($lines === FALSE) {
-      throw new \Exception('Failed to split lines.');
+      throw new PatchException('Failed to split lines.');
     }
 
     return $lines;

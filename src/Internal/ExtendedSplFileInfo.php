@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\Exception\FileException;
+
 /**
  * Extended SplFileInfo class with additional file handling capabilities.
  */
@@ -92,7 +94,7 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    * @return string
    *   The path relative to the base path.
    */
-  public function getPathFromBasepath():string {
+  public function getPathFromBasepath(): string {
     return static::stripBasepath($this->getBasepath(), $this->getPath());
   }
 
@@ -102,7 +104,7 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    * @return string
    *   The pathname relative to the base path.
    */
-  public function getPathnameFromBasepath():string {
+  public function getPathnameFromBasepath(): string {
     return static::stripBasepath($this->getBasepath(), $this->getPathname());
   }
 
@@ -175,7 +177,7 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    */
   protected static function stripBasepath(string $basepath, string $path): string {
     if (!str_starts_with($path, $basepath)) {
-      throw new \Exception(sprintf('Path %s does not start with basepath %s', $path, $basepath));
+      throw new FileException(sprintf('Path %s does not start with basepath %s', $path, $basepath));
     }
 
     return ltrim(str_replace($basepath, '', $path), DIRECTORY_SEPARATOR);

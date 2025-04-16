@@ -45,16 +45,22 @@ All methods are available through the `AlexSkrypnyk\File\File` class.
 
 ```php
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Exception\FileException;
 
-// Get current working directory
-$cwd = File::cwd();
+try {
+  // Get current working directory
+  $cwd = File::cwd();
 
-// Copy a directory recursively
-File::copy('/path/to/source', '/path/to/destination');
+  // Copy a directory recursively
+  File::copy('/path/to/source', '/path/to/destination');
 
-// Check if a file contains a string
-if (File::contains('/path/to/file.txt', 'search term')) {
-  // Do something
+  // Check if a file contains a string
+  if (File::contains('/path/to/file.txt', 'search term')) {
+    // Do something
+  }
+} catch (FileException $exception) {
+  // Handle any file operation errors
+  echo $exception->getMessage();
 }
 ```
 
@@ -98,6 +104,7 @@ The `diff()`, `patch()`, and `compare()` functions provide powerful tools for wo
 
 ```php
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Exception\PatchException;
 
 // Generate diff files between baseline and destination directories
 File::diff('/path/to/baseline', '/path/to/destination', '/path/to/diff');
@@ -106,13 +113,24 @@ File::diff('/path/to/baseline', '/path/to/destination', '/path/to/diff');
 $result = File::compare('/path/to/source', '/path/to/destination');
 
 // Apply patches to transform a baseline directory
-File::patch('/path/to/baseline', '/path/to/diff', '/path/to/patched');
+try {
+  File::patch('/path/to/baseline', '/path/to/diff', '/path/to/patched');
+} catch (PatchException $exception) {
+  echo $exception->getMessage(); // Returns a detailed error message.
+
+  // Additional contextual information
+  $path = $exception->getFilePath();    // Gets the affected file path.
+  $line_number = $exception->getLineNumber(); // Gets the line number where the error occurred.
+  $line_content = $exception->getLineContent(); // Gets the content of the problematic line.
+}
 ```
 
 The diff functionality allows you to:
 1. Generate differences between two directory structures
 2. Store those differences as patch files
 3. Apply those patches to recreate directory structures elsewhere
+
+The `PatchException` provides detailed error messages with contextual information when patch operations fail, making debugging easier.
 
 #### Ignoring Files and Content Changes
 
@@ -138,6 +156,21 @@ Prefix meanings:
 - `!`: Exception - do not ignore this file/directory
 - `!^`: Exception - do not ignore content changes in this file/directory
 
+When parsing these rules, the library may throw a `RulesException` if there are issues:
+
+```php
+use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Exception\RulesException;
+
+try {
+  // Operations using .ignorecontent rules
+  File::compare('/path/to/source', '/path/to/destination');
+} catch (RulesException $exception) {
+  // Handle rules parsing errors
+  echo $exception->getMessage();
+}
+```
+
 ### Assertion Traits
 
 The library includes PHPUnit traits for testing files and directories:
@@ -161,11 +194,11 @@ use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
 
 class MyTest extends TestCase {
   use DirectoryAssertionsTrait;
-  
+
   public function testDirectories(): void {
     // Assert directory contains "example" string in at least one file
     $this->assertDirectoryContainsString('example', '/path/to/directory');
-    
+
     // Assert two directories are identical
     $this->assertDirectoryEqualsDirectory('/path/to/dir1', '/path/to/dir2');
   }
@@ -191,20 +224,20 @@ use AlexSkrypnyk\File\Tests\Traits\FileAssertionsTrait;
 
 class MyTest extends TestCase {
   use FileAssertionsTrait;
-  
+
   public function testFiles(): void {
     // Assert file contains "example" string
     $this->assertFileContainsString('example', '/path/to/file.txt');
-    
+
     // Assert file contains "test" as a complete word
     $this->assertFileContainsWord('test', '/path/to/file.txt');
-    
+
     // Assert file does not contain a partial word
     $this->assertFileNotContainsWord('exampl', '/path/to/file.txt');
-    
+
     // Assert two files have identical content
     $this->assertFileEqualsFile('/path/to/expected.txt', '/path/to/actual.txt');
-    
+
     // Assert two files have different content
     $this->assertFileNotEqualsFile('/path/to/expected.txt', '/path/to/actual.txt');
   }
