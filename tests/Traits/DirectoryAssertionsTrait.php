@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Traits;
 
+use AlexSkrypnyk\File\Exception\PatchException;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\Index;
 
@@ -137,20 +138,22 @@ trait DirectoryAssertionsTrait {
    * @param string|null $expected
    *   Optional path where to create the expected directory. If not provided,
    *   a '.expected' directory will be created next to the baseline.
-   *
-   * @throws \RuntimeException
-   *   When baseline directory does not exist.
    */
   protected function assertDirectoryEqualsPatchedBaseline(string $actual, string $baseline, string $diffs, ?string $expected = NULL): void {
     if (!is_dir($baseline)) {
-      throw new \RuntimeException('The baseline directory does not exist: ' . $baseline);
+      $this->fail(sprintf('The baseline directory does not exist: %s', $baseline));
     }
 
     // We use the .expected dir to easily assess the combined expected fixture.
     $expected = $expected ?: File::realpath($baseline . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '.expected');
     File::rmdir($expected);
 
-    File::patch($baseline, $diffs, $expected);
+    try {
+      File::patch($baseline, $diffs, $expected);
+    }
+    catch (PatchException $patchException) {
+      $this->fail(sprintf('Failed to apply patch: %s', $patchException->getMessage()));
+    }
 
     // Do not override .ignorecontent file from the baseline directory.
     if (file_exists($baseline . DIRECTORY_SEPARATOR . Index::IGNORECONTENT)) {
