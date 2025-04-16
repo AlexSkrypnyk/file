@@ -332,10 +332,78 @@ class DirectoryAssertionsTraitTest extends TestCase {
   public function testAssertDirectoryEqualsPatchedBaselineWithNonexistentBaseline(): void {
     $nonexistentDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent';
 
-    $this->expectException(\RuntimeException::class);
-    $this->expectExceptionMessage('The baseline directory does not exist: ' . $nonexistentDir);
+    try {
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistentDir, $this->diffDir);
+      $this->fail('Assertion should have failed for nonexistent baseline directory');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('The baseline directory does not exist', $assertionFailedError->getMessage());
+      $this->assertStringContainsString($nonexistentDir, $assertionFailedError->getMessage());
+    }
+  }
 
-    $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistentDir, $this->diffDir);
+  public function testAssertDirectoryEqualsPatchedBaselineWithInvalidPatch(): void {
+    mkdir($this->baselineDir . DIRECTORY_SEPARATOR . 'subdir', 0777, TRUE);
+    file_put_contents($this->baselineDir . DIRECTORY_SEPARATOR . 'file1.txt', "line1\nline2\nline3\n");
+
+    // Create an invalid patch file with incorrect line indices.
+    mkdir($this->diffDir, 0777, TRUE);
+    $diff_content = "@@ -1,3 +1,3 @@\n line1\n-wrong line\n+new line 2\n line3\n";
+    file_put_contents($this->diffDir . DIRECTORY_SEPARATOR . 'file1.txt', $diff_content);
+
+    mkdir($this->actualDir, 0777, TRUE);
+
+    try {
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir);
+      $this->fail('Assertion should have failed for invalid patch');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Failed to apply patch', $assertionFailedError->getMessage());
+    }
+  }
+
+  public function testAssertDirectoryEqualsPatchedBaselineWithHunkMismatch(): void {
+    mkdir($this->baselineDir, 0777, TRUE);
+    file_put_contents($this->baselineDir . DIRECTORY_SEPARATOR . 'file1.txt', "line1\nline2\nline3\n");
+
+    // Create a patch file with a hunk mismatch (incomplete hunk)
+    mkdir($this->diffDir, 0777, TRUE);
+    // Missing the rest of the hunk.
+    $diff_content = "@@ -1,3 +1,3 @@\n line1\n-line2\n";
+    file_put_contents($this->diffDir . DIRECTORY_SEPARATOR . 'file1.txt', $diff_content);
+
+    mkdir($this->actualDir, 0777, TRUE);
+
+    try {
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir);
+      $this->fail('Assertion should have failed for hunk mismatch');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Failed to apply patch', $assertionFailedError->getMessage());
+      $this->assertStringContainsString('Hunk mismatch', $assertionFailedError->getMessage());
+    }
+  }
+
+  public function testAssertDirectoryEqualsPatchedBaselineWithUnexpectedEof(): void {
+    mkdir($this->baselineDir, 0777, TRUE);
+    file_put_contents($this->baselineDir . DIRECTORY_SEPARATOR . 'file1.txt', "line1\nline2\nline3\n");
+
+    // Create a patch file with unexpected EOF.
+    mkdir($this->diffDir, 0777, TRUE);
+    // Missing the content completely.
+    $diff_content = "@@ -1,3 +1,3 @@";
+    file_put_contents($this->diffDir . DIRECTORY_SEPARATOR . 'file1.txt', $diff_content);
+
+    mkdir($this->actualDir, 0777, TRUE);
+
+    try {
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir);
+      $this->fail('Assertion should have failed for unexpected EOF');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Failed to apply patch', $assertionFailedError->getMessage());
+      $this->assertStringContainsString('Unexpected EOF', $assertionFailedError->getMessage());
+    }
   }
 
   public function testAssertDirectoryEqualsPatchedBaselineWithIgnoreContent(): void {
