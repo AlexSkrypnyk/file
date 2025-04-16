@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File;
 
+use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\Internal\Comparer;
 use AlexSkrypnyk\File\Internal\Diff;
 use AlexSkrypnyk\File\Internal\Index;
@@ -82,7 +83,7 @@ class File {
 
       if (!$path) {
         // @codeCoverageIgnoreStart
-        throw new \Exception(sprintf('Could not resolve symlink for path: %s', $path));
+        throw new FileException(sprintf('Could not resolve symlink for path: %s', $path));
         // @codeCoverageIgnoreEnd
       }
     }
@@ -205,7 +206,7 @@ class File {
    * Create temporary directory.
    *
    * @param string|null $directory
-   *   Optional base directory to create temporary directory in. If not provided, 
+   *   Optional base directory to create temporary directory in. If not provided,
    *   system temporary directory is used.
    * @param string $prefix
    *   Prefix for temporary directory name.
@@ -245,7 +246,7 @@ class File {
     catch (\RuntimeException $runtimeException) {
       throw new \RuntimeException(sprintf('Unable to create temporary directory "%s".', $path), $runtimeException->getCode(), $runtimeException);
     }
-      // @codeCoverageIgnoreEnd
+    // @codeCoverageIgnoreEnd
   }
 
   /**
