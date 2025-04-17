@@ -455,7 +455,7 @@ class File {
    *   Directory path to remove if empty.
    */
   public static function rmdirEmpty(string $directory): void {
-    if (is_dir($directory) && static::dirIsEmpty($directory)) {
+    if (is_dir($directory) && !is_link($directory) && static::dirIsEmpty($directory)) {
       static::rmdir($directory);
       static::rmdirEmpty(dirname($directory));
     }

@@ -251,16 +251,29 @@ class FileTest extends UnitTestCase {
     $file = $dir . DIRECTORY_SEPARATOR . 'file.txt';
     file_put_contents($file, 'test');
 
+    // Create a symlink directory.
+    $symlink_target = $dir . DIRECTORY_SEPARATOR . 'symlink_target';
+    mkdir($symlink_target, 0777, TRUE);
+    $symlink_dir = $dir . DIRECTORY_SEPARATOR . 'symlink_dir';
+    symlink($symlink_target, $symlink_dir);
+
     $this->assertDirectoryExists($dir);
     $this->assertDirectoryExists($subdir);
+    $this->assertTrue(is_link($symlink_dir));
 
+    // Test that rmdirEmpty works on real directories but not on symlinks.
     File::rmdirEmpty($subdir);
     File::rmdirEmpty($subsubdir);
+    // Symlink should be skipped.
+    File::rmdirEmpty($symlink_dir);
 
     $this->assertDirectoryDoesNotExist($subdir);
     $this->assertDirectoryExists($dir);
     $this->assertDirectoryExists($this->testTmpDir);
+    // Symlink should still exist.
+    $this->assertTrue(is_link($symlink_dir));
 
+    // Clean up.
     File::rmdir($dir);
     $this->assertDirectoryDoesNotExist($dir);
   }
