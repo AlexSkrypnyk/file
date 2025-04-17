@@ -562,7 +562,7 @@ class File {
           static::mkdir($new_dir, 0777);
         }
 
-        (new Filesystem())->rename($filename, $new_filename);
+        (new Filesystem())->rename($filename, $new_filename, TRUE);
 
         static::rmdirEmpty(dirname($filename));
       }

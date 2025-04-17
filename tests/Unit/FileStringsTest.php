@@ -340,6 +340,29 @@ class FileStringsTest extends UnitTestCase {
     ];
   }
 
+  public function testRenameInDirOverwrite(): void {
+    $dir = $this->locationsFixtureDir('tokens');
+
+    $source_files = [
+      $dir . '/foo/foofoo_b.txt',
+      $dir . '/foobar_b.txt',
+    ];
+
+    File::mkdir(static::$sut . '/bar');
+    File::copy($source_files[0], static::$sut . '/foo/foofoo_b.txt');
+    File::copy($source_files[1], static::$sut . '/bar/barbar_b.txt');
+
+    $this->assertTrue(File::exists(static::$sut . '/foo/foofoo_b.txt'));
+    $this->assertTrue(File::exists(static::$sut . '/bar/barbar_b.txt'));
+    $this->assertTrue(File::contains(static::$sut . '/bar/barbar_b.txt', 'BAR'));
+
+    File::renameInDir(static::$sut, 'foo', 'bar');
+
+    $this->assertFileExists(static::$sut . '/bar/barbar_b.txt');
+    $this->assertTrue(File::contains(static::$sut . '/bar/barbar_b.txt', 'FOO'));
+    $this->assertFalse(File::contains(static::$sut . '/bar/barbar_b.txt', 'BAR'));
+  }
+
   protected function flattenFileTree(array $tree, string $parent = '.'): array {
     $flatten = [];
 
