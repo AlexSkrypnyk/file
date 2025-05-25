@@ -189,10 +189,18 @@ class FileTest extends UnitTestCase {
 
     $this->assertNotEmpty($prefix);
     $expected_base_dir = realpath($directory ?? sys_get_temp_dir());
+    $this->assertNotFalse($expected_base_dir);
     $this->assertNotEmpty($expected_base_dir);
     $this->assertDirectoryExists($path);
-    $this->assertStringStartsWith($prefix, basename($path));
-    $this->assertStringStartsWith($expected_base_dir, dirname($path));
+
+    $path_basename = basename($path);
+    $this->assertNotEmpty($path_basename);
+    assert($prefix !== '');
+    $this->assertStringStartsWith($prefix, $path_basename);
+
+    $path_dirname = dirname($path);
+    $this->assertNotEmpty($path_dirname);
+    $this->assertStringStartsWith($expected_base_dir, $path_dirname);
 
     rmdir($path);
   }

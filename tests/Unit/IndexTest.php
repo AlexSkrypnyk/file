@@ -375,7 +375,7 @@ class IndexTest extends UnitTestCase {
     ];
   }
 
-  protected function locationsTmp(): string {
+  public static function locationsTmp(): string {
     return static::$tmp;
   }
 
