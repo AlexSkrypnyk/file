@@ -27,7 +27,7 @@ trait DirectoryAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertDirectoryContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, $needle, $excluded);
 
     if (empty($files)) {
@@ -47,7 +47,7 @@ trait DirectoryAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertDirectoryNotContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryNotContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, $needle, $excluded);
 
     if (!empty($files)) {
@@ -70,7 +70,7 @@ trait DirectoryAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertDirectoryContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle) . '\b/i', $excluded);
 
     if (empty($files)) {
@@ -93,7 +93,7 @@ trait DirectoryAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertDirectoryNotContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryNotContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle) . '\b/i', $excluded);
 
     if (!empty($files)) {
@@ -115,7 +115,7 @@ trait DirectoryAssertionsTrait {
    * @param bool $show_diff
    *   Whether to include diff output in failure messages.
    */
-  protected function assertDirectoryEqualsDirectory(string $dir1, string $dir2, ?string $message = NULL, ?callable $match_content = NULL, bool $show_diff = TRUE): void {
+  public function assertDirectoryEqualsDirectory(string $dir1, string $dir2, ?string $message = NULL, ?callable $match_content = NULL, bool $show_diff = TRUE): void {
     $text = File::compare($dir1, $dir2, NULL, $match_content)->render(['show_diff' => $show_diff]);
     if (!empty($text)) {
       $this->fail($message ? $message . PHP_EOL . $text : $text);
@@ -139,7 +139,7 @@ trait DirectoryAssertionsTrait {
    *   Optional path where to create the expected directory. If not provided,
    *   a '.expected' directory will be created next to the baseline.
    */
-  protected function assertDirectoryEqualsPatchedBaseline(string $actual, string $baseline, string $diffs, ?string $expected = NULL): void {
+  public function assertDirectoryEqualsPatchedBaseline(string $actual, string $baseline, string $diffs, ?string $expected = NULL): void {
     if (!is_dir($baseline)) {
       $this->fail(sprintf('The baseline directory does not exist: %s', $baseline));
     }

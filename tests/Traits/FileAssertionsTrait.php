@@ -23,7 +23,7 @@ trait FileAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertFileContainsString(string $needle, string $file, string $message = ''): void {
+  public function assertFileContainsString(string $needle, string $file, string $message = ''): void {
     if (!File::contains($file, $needle)) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s", but it does not.', $file, $needle));
     }
@@ -40,7 +40,7 @@ trait FileAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertFileNotContainsString(string $needle, string $file, string $message = ''): void {
+  public function assertFileNotContainsString(string $needle, string $file, string $message = ''): void {
     if (File::contains($file, $needle)) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s", but it does.', $file, $needle));
     }
@@ -60,7 +60,7 @@ trait FileAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertFileContainsWord(string $needle, string $file, string $message = ''): void {
+  public function assertFileContainsWord(string $needle, string $file, string $message = ''): void {
     if (!File::contains($file, '/\b' . preg_quote($needle) . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s" word, but it does not.', $file, $needle));
     }
@@ -80,7 +80,7 @@ trait FileAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertFileNotContainsWord(string $needle, string $file, string $message = ''): void {
+  public function assertFileNotContainsWord(string $needle, string $file, string $message = ''): void {
     if (File::contains($file, '/\b' . preg_quote($needle) . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s" word, but it does.', $file, $needle));
     }
@@ -97,7 +97,7 @@ trait FileAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertFileEqualsFile(string $expected, string $actual, string $message = ''): void {
+  public function assertFileEqualsFile(string $expected, string $actual, string $message = ''): void {
     // Check that both files exist.
     if (!file_exists($expected)) {
       $this->fail($message ?: sprintf('Expected file "%s" does not exist.', $expected));
@@ -122,7 +122,7 @@ trait FileAssertionsTrait {
    * @param string $message
    *   Optional custom failure message.
    */
-  protected function assertFileNotEqualsFile(string $expected, string $actual, string $message = ''): void {
+  public function assertFileNotEqualsFile(string $expected, string $actual, string $message = ''): void {
     // Check that both files exist.
     if (!file_exists($expected)) {
       $this->fail($message ?: sprintf('Expected file "%s" does not exist.', $expected));
