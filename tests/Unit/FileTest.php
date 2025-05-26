@@ -44,6 +44,43 @@ class FileTest extends UnitTestCase {
     }
   }
 
+  public function testCwd(): void {
+    // Store the original working directory.
+    $original_cwd = getcwd();
+    $this->assertNotFalse($original_cwd, 'Failed to get current working directory');
+
+    // Verify that File::cwd() returns the current directory.
+    $file_cwd = File::cwd();
+    $this->assertSame(File::realpath($original_cwd), $file_cwd);
+
+    // Create a temporary directory to change to.
+    $temp_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'cwd_test';
+    mkdir($temp_dir, 0777, TRUE);
+    $this->assertDirectoryExists($temp_dir);
+
+    // Change to the temporary directory.
+    $change_result = chdir($temp_dir);
+    $this->assertTrue($change_result, 'Failed to change directory');
+
+    // Verify that File::cwd() now returns the new directory.
+    $new_file_cwd = File::cwd();
+    $expected_new_cwd = File::realpath($temp_dir);
+    $this->assertSame($expected_new_cwd, $new_file_cwd);
+
+    // Verify that getcwd() and File::cwd() are in sync.
+    $php_cwd = getcwd();
+    $this->assertNotFalse($php_cwd, 'Failed to get current working directory after chdir');
+    $this->assertSame(File::realpath($php_cwd), $new_file_cwd);
+
+    // Restore the original working directory.
+    $restore_result = chdir($original_cwd);
+    $this->assertTrue($restore_result, 'Failed to restore original directory');
+
+    // Verify that File::cwd() returns the original directory again.
+    $restored_file_cwd = File::cwd();
+    $this->assertSame(File::realpath($original_cwd), $restored_file_cwd);
+  }
+
   #[DataProvider('dataProviderRealpath')]
   public function testRealpath(string $path, string $expected): void {
     $this->assertSame($expected, File::realpath($path));
