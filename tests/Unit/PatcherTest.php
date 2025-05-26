@@ -487,4 +487,50 @@ class PatcherTest extends UnitTestCase {
     $this->assertStringContainsString($line_content, $exception->getMessage());
   }
 
+  /**
+   * Test applying hunk with "No newline at end of file" line in the middle.
+   */
+  public function testApplyHunkWithNoNewlineInMiddle(): void {
+    $source_dir = static::$sut . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = static::$sut . DIRECTORY_SEPARATOR . 'dest';
+    mkdir($source_dir, 0777, TRUE);
+    mkdir($dest_dir, 0777, TRUE);
+
+    $source_file = $source_dir . DIRECTORY_SEPARATOR . 'test.txt';
+    file_put_contents($source_file, "line1\nline2\nline3\n");
+
+    // Create a diff where "No newline at end of file" appears during
+    // processing.
+    $diff = [
+      " line1",
+      "\\ No newline at end of file",
+      "-line2",
+      "+new line 2",
+      " line3",
+    ];
+    reset($diff);
+
+    $info = [
+      'src_idx' => 1,
+      'src_size' => 3,
+      'dst_idx' => 1,
+      'dst_size' => 3,
+    ];
+
+    $patcher = new Patcher($source_dir, $dest_dir);
+    $dst_file = $dest_dir . DIRECTORY_SEPARATOR . 'test.txt';
+
+    self::callProtectedMethod($patcher, 'applyHunk', [
+      &$diff,
+      $source_file,
+      $dst_file,
+      $info,
+    ]);
+
+    self::callProtectedMethod($patcher, 'updateDestinations', []);
+
+    $this->assertFileExists($dst_file);
+    $this->assertEquals("line1\nnew line 2\nline3\n", file_get_contents($dst_file));
+  }
+
 }
