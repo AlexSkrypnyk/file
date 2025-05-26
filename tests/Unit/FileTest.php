@@ -400,6 +400,21 @@ EOT;
     File::removeToken($mismatched_file, 'START', 'END', FALSE);
   }
 
+  public function testRemoveTokenEdgeCases(): void {
+    // Test case 1: Non-existent file.
+    $non_existent_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'does_not_exist.txt';
+    // Should return early without throwing exception.
+    File::removeToken($non_existent_file, 'TOKEN', 'TOKEN', FALSE);
+    $this->assertFileDoesNotExist($non_existent_file);
+
+    // Test case 2: Excluded file (using image extension)
+    $excluded_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'image.png';
+    file_put_contents($excluded_file, "TOKEN\ncontent\nTOKEN");
+    // Should return early without modifying the file.
+    File::removeToken($excluded_file, 'TOKEN', 'TOKEN', FALSE);
+    $this->assertStringContainsString('TOKEN', (string) file_get_contents($excluded_file));
+  }
+
   public function testDiff(): void {
     $baseline_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'baseline';
     $destination_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
