@@ -375,6 +375,45 @@ class IndexTest extends UnitTestCase {
     ];
   }
 
+  public function testScanDirectorySkipLogic(): void {
+    // Create a test class that extends Index to override the iterator method.
+    $test_class = new class($this->locationsTmp()) extends Index {
+
+      protected function iterator(string $directory): \RecursiveIteratorIterator {
+        // Use SELF_FIRST to ensure directories are returned during iteration.
+        return new \RecursiveIteratorIterator(
+          new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+          \RecursiveIteratorIterator::SELF_FIRST
+        );
+      }
+
+    };
+
+    // Create test directory structure.
+    $test_dir = $this->locationsTmp() . DIRECTORY_SEPARATOR . 'test_dir_skip';
+    File::mkdir($test_dir);
+    File::mkdir($test_dir . DIRECTORY_SEPARATOR . 'sub_directory');
+    file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'test_file.txt', 'content');
+
+    try {
+      // Override the directory property using reflection.
+      $reflection = new \ReflectionClass($test_class);
+      $property = $reflection->getProperty('directory');
+      $property->setAccessible(TRUE);
+      $property->setValue($test_class, $test_dir);
+
+      $files = $test_class->getFiles();
+
+      // The file should be included.
+      $this->assertArrayHasKey('test_file.txt', $files);
+
+      // The directory should not be included (gets skipped)
+      $this->assertArrayNotHasKey('sub_directory', $files);
+    } finally {
+      File::rmdir($test_dir);
+    }
+  }
+
   public static function locationsTmp(): string {
     return static::$tmp;
   }
