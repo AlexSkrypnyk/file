@@ -408,11 +408,18 @@ class File {
     }
 
     $files = scandir($directory);
-    if (empty($files)) {
-      return [];
+    if ($files === FALSE) {
+      // @codeCoverageIgnoreStart
+      throw new FileException(sprintf('Failed to scan directory "%s".', $directory));
+      // @codeCoverageIgnoreEnd
     }
 
     $paths = array_diff($files, ['.', '..']);
+    
+    // If no files/directories remain after removing . and .., return empty array
+    if (empty($paths)) {
+      return [];
+    }
 
     foreach ($paths as $path) {
       $path = $directory . '/' . $path;
@@ -698,7 +705,9 @@ class File {
 
     $lines = file($file);
     if (!$lines) {
+      // @codeCoverageIgnoreStart
       return;
+      // @codeCoverageIgnoreEnd
     }
 
     foreach ($lines as $line) {
@@ -837,7 +846,9 @@ class File {
 
     foreach ($differ->getContentDiffs() as $file => $d) {
       if (!$d instanceof Diff) {
+        // @codeCoverageIgnoreStart
         continue;
+        // @codeCoverageIgnoreEnd
       }
 
       $file_diff = $diff . DIRECTORY_SEPARATOR . $file;

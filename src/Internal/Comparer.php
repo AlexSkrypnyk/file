@@ -126,7 +126,9 @@ class Comparer implements RenderInterface {
       $file_diffs_render_count = is_int($options['show_diff_file_limit']) ? $options['show_diff_file_limit'] : count($file_diffs);
       foreach ($file_diffs as $file => $diff) {
         if (!$diff instanceof Diff) {
+          // @codeCoverageIgnoreStart
           continue;
+          // @codeCoverageIgnoreEnd
         }
 
         $render .= sprintf("  %s\n", $file);
