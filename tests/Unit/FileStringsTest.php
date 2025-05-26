@@ -296,6 +296,18 @@ class FileStringsTest extends UnitTestCase {
         'remove me',
         "excluded\nremove me\n",
       ],
+      'remove line containing ###' => [
+        'test.txt',
+        "line1\nremove me ### other\nline3\n",
+        '###',
+        "line1\nline3\n",
+      ],
+      'remove line containing multiple  ###' => [
+        'test.txt',
+        "line1\nremove me ### other\nremove me ### other\nline3\n",
+        '###',
+        "line1\nline3\n",
+      ],
     ];
   }
 
