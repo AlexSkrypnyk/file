@@ -272,7 +272,9 @@ class Patcher {
     $lines = preg_split('/(\r\n)|(\r)|(\n)/', $content);
 
     if ($lines === FALSE) {
+      // @codeCoverageIgnoreStart
       throw new PatchException('Failed to split lines.');
+      // @codeCoverageIgnoreEnd
     }
 
     return $lines;

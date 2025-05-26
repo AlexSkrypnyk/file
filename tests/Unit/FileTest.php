@@ -457,6 +457,44 @@ EOT;
     $result = File::copy($symlink, $dest_symlink);
     $this->assertTrue($result);
     $this->assertTrue(is_link($dest_symlink));
+
+    // Test copying directory with copy_empty_dirs = TRUE.
+    $result = File::copy($subdir, $dest_dir . DIRECTORY_SEPARATOR . 'subdir', 0755, TRUE);
+    $this->assertTrue($result);
+    $this->assertDirectoryExists($dest_dir . DIRECTORY_SEPARATOR . 'subdir');
+    $this->assertFileExists($dest_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt');
+  }
+
+  public function testScandirRecursiveEmptyDirectory(): void {
+    // Create directory and make it unreadable to simulate empty scandir.
+    $empty_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'empty_dir_test';
+    mkdir($empty_dir, 0777);
+
+    // Create a directory and then remove it to test directory not existing.
+    $removed_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'removed_dir';
+    mkdir($removed_dir, 0777);
+    rmdir($removed_dir);
+
+    $files = File::scandirRecursive($removed_dir);
+    $this->assertEmpty($files);
+  }
+
+  public function testScandirRecursiveActuallyEmptyDirectory(): void {
+    // Test case for a directory that exists but contains no files/subdirs
+    // This covers the line where we check if $paths is empty after removing
+    // . and ..
+    $empty_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'truly_empty_dir';
+    mkdir($empty_dir, 0777);
+
+    // Ensure directory exists but has no contents (except . and ..)
+    $this->assertDirectoryExists($empty_dir);
+
+    // This should hit the new condition: if (empty($paths)) { return []; }.
+    $files = File::scandirRecursive($empty_dir);
+    $this->assertEmpty($files);
+
+    // Clean up.
+    rmdir($empty_dir);
   }
 
 }
