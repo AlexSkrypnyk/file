@@ -23,7 +23,13 @@ class File {
    *   Absolute path to current working directory.
    */
   public static function cwd(): string {
-    return static::absolute($_SERVER['PWD'] ?? (string) getcwd());
+    $current_dir = getcwd();
+    if ($current_dir === FALSE) {
+      // @codeCoverageIgnoreStart
+      throw new FileException('Unable to determine current working directory.');
+      // @codeCoverageIgnoreEnd
+    }
+    return static::absolute($current_dir);
   }
 
   /**
@@ -47,7 +53,7 @@ class File {
 
     // Attempt to detect if path is relative in which case, add cwd.
     if (!str_contains($path, ':') && $is_unix_path && !$unc) {
-      $path = getcwd() . DIRECTORY_SEPARATOR . $path;
+      $path = static::cwd() . DIRECTORY_SEPARATOR . $path;
       if ($path[0] === '/') {
         $is_unix_path = FALSE;
       }
@@ -415,7 +421,7 @@ class File {
     }
 
     $paths = array_diff($files, ['.', '..']);
-    
+
     // If no files/directories remain after removing . and .., return empty array
     if (empty($paths)) {
       return [];
