@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
+use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Internal\Comparer;
 use AlexSkrypnyk\File\Internal\Diff;
@@ -256,7 +257,7 @@ DIFF,
   }
 
   public function testSyncFile(): void {
-    $this->expectException(\RuntimeException::class);
+    $this->expectException(FileException::class);
     $src = File::dir($this->locationsFixtureDir('compare') . DIRECTORY_SEPARATOR . 'files_equal' . DIRECTORY_SEPARATOR . 'directory2');
 
     $dst = static::$sut . DIRECTORY_SEPARATOR . 'file.txt';

@@ -106,16 +106,27 @@ class RulesTest extends UnitTestCase {
     ];
   }
 
-  public function testParseMethodWithDifferentRules(): void {
+  #[DataProvider('dataProviderParseEdgeCases')]
+  public function testParseEdgeCases(string $input, array $expected_include, array $expected_content, array $expected_global, array $expected_skip): void {
     $rules = new Rules();
+    $rules->parse($input);
 
-    // Test with empty line.
-    $rules->parse("\n  \n\t\n");
-    $this->assertEmpty($rules->getInclude());
-    $this->assertEmpty($rules->getIgnoreContent());
-    $this->assertEmpty($rules->getGlobal());
-    $this->assertEmpty($rules->getSkip());
+    $this->assertSame($expected_include, $rules->getInclude());
+    $this->assertSame($expected_content, $rules->getIgnoreContent());
+    $this->assertSame($expected_global, $rules->getGlobal());
+    $this->assertSame($expected_skip, $rules->getSkip());
+  }
 
+  public static function dataProviderParseEdgeCases(): array {
+    return [
+      'empty lines and whitespace' => ["\n  \n\t\n", [], [], [], []],
+      'special characters in include rule' => ["!special@chars", ["special@chars"], [], [], []],
+      'regex special characters as global rule' => ["[regex].special+chars?{test}", [], [], ["[regex].special+chars?{test}"], []],
+      'very long pattern' => [str_repeat("a", 1000), [], [], [str_repeat("a", 1000)], []],
+    ];
+  }
+
+  public function testParseMethodChaining(): void {
     // Test chained parse calls.
     $rules = new Rules();
     $result = $rules->parse("!include-rule")
@@ -130,46 +141,23 @@ class RulesTest extends UnitTestCase {
     $this->assertSame(['some/path/'], $rules->getSkip());
   }
 
-  public function testDirectParseMethods(): void {
-    // Test direct parse methods with more edge cases.
+  #[DataProvider('dataProviderAddMethods')]
+  public function testAddMethods(string $method, string $getter, string $pattern): void {
     $rules = new Rules();
-
-    // Test with a line containing special characters
-    // The ! at the beginning means it's an include rule.
-    $rules->parse("!special@chars");
-    $this->assertSame(["special@chars"], $rules->getInclude());
-
-    // Special case with lines that might be problematic for regex.
-    $rules = new Rules();
-    $rules->parse("[regex].special+chars?{test}");
-    $this->assertSame(["[regex].special+chars?{test}"], $rules->getGlobal());
-
-    // Test with a very long line.
-    $rules = new Rules();
-    $long_pattern = str_repeat("a", 1000);
-    $rules->parse($long_pattern);
-    $this->assertSame([$long_pattern], $rules->getGlobal());
+    $rules->$method($pattern);
+    $this->assertSame([$pattern], $rules->$getter());
   }
 
-  public function testAddMethods(): void {
-    $rules = new Rules();
+  public static function dataProviderAddMethods(): array {
+    return [
+      'addIgnoreContent' => ['addIgnoreContent', 'getIgnoreContent', 'ignore-content-pattern'],
+      'addSkip' => ['addSkip', 'getSkip', 'skip-pattern'],
+      'addGlobal' => ['addGlobal', 'getGlobal', 'global-pattern'],
+      'addInclude' => ['addInclude', 'getInclude', 'include-pattern'],
+    ];
+  }
 
-    // Test addIgnoreContent.
-    $rules->addIgnoreContent('ignore-content-pattern');
-    $this->assertSame(['ignore-content-pattern'], $rules->getIgnoreContent());
-
-    // Test addSkip.
-    $rules->addSkip('skip-pattern');
-    $this->assertSame(['skip-pattern'], $rules->getSkip());
-
-    // Test addGlobal.
-    $rules->addGlobal('global-pattern');
-    $this->assertSame(['global-pattern'], $rules->getGlobal());
-
-    // Test addInclude.
-    $rules->addInclude('include-pattern');
-    $this->assertSame(['include-pattern'], $rules->getInclude());
-
+  public function testAddMethodChaining(): void {
     // Test method chaining.
     $rules = new Rules();
     $result = $rules->addIgnoreContent('pattern1')
@@ -198,21 +186,6 @@ class RulesTest extends UnitTestCase {
     $this->expectException(\Exception::class);
     $this->expectExceptionMessage('Failed to read the test-file.txt file.');
     $rules_class::fromFile('test-file.txt');
-  }
-
-  public function testEmptyLinesAfterSplitting(): void {
-    // Create a Rules instance that will test how empty lines are handled.
-    $rules = new Rules();
-
-    // Add empty lines and whitespace lines to make sure they're properly
-    // handled.
-    $rules->parse("  \n\t\n\r\n");
-
-    // All arrays should be empty since there are no actual rules.
-    $this->assertEmpty($rules->getInclude());
-    $this->assertEmpty($rules->getIgnoreContent());
-    $this->assertEmpty($rules->getGlobal());
-    $this->assertEmpty($rules->getSkip());
   }
 
   public function testCustomRulesImport(): void {

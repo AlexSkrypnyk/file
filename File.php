@@ -7,6 +7,8 @@ namespace AlexSkrypnyk\File;
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\Internal\Comparer;
 use AlexSkrypnyk\File\Internal\Diff;
+use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
+use AlexSkrypnyk\File\Internal\Tasker;
 use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Patcher;
 use AlexSkrypnyk\File\Internal\Rules;
@@ -149,18 +151,18 @@ class File {
    * @return string
    *   Absolute directory path.
    *
-   * @throws \RuntimeException
+   * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When directory does not exist.
    */
   public static function dir(string $directory): string {
     $directory = static::realpath($directory);
 
     if (!static::exists($directory)) {
-      throw new \RuntimeException(sprintf('Directory "%s" does not exist.', $directory));
+      throw new FileException(sprintf('Directory "%s" does not exist.', $directory));
     }
 
     if (!is_dir($directory)) {
-      throw new \RuntimeException(sprintf('Path "%s" is not a directory.', $directory));
+      throw new FileException(sprintf('Path "%s" is not a directory.', $directory));
     }
 
     return $directory;
@@ -177,7 +179,7 @@ class File {
    * @return string
    *   Created directory path.
    *
-   * @throws \RuntimeException
+   * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When directory cannot be created or is a file.
    */
   public static function mkdir(string $directory, int $permissions = 0777): string {
@@ -186,9 +188,21 @@ class File {
     try {
       static::dir($directory);
     }
-    catch (\RuntimeException $runtimeException) {
-      (new Filesystem())->mkdir($directory, $permissions);
-      static::dir($directory);
+    catch (\RuntimeException|FileException $runtimeException) {
+      // If path exists and is a file, throw exception immediately.
+      if (static::exists($directory) && is_file($directory)) {
+        throw new FileException(sprintf('Cannot create directory "%s": path exists and is a file.', $directory));
+      }
+
+      try {
+        (new Filesystem())->mkdir($directory, $permissions);
+        static::dir($directory);
+      }
+      // @codeCoverageIgnoreStart
+      catch (\Exception $e) {
+        throw new FileException(sprintf('Unable to create directory "%s": %s', $directory, $e->getMessage()), $e->getCode(), $e);
+      }
+      // @codeCoverageIgnoreEnd
     }
 
     return $directory;
@@ -226,7 +240,7 @@ class File {
    *
    * @throws \InvalidArgumentException
    *   When prefix contains invalid characters.
-   * @throws \RuntimeException
+   * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When directory cannot be created.
    */
   public static function tmpdir(?string $directory = NULL, string $prefix = 'tmp_', int $permissions = 0700, int $max_attempts = 1000): string {
@@ -249,8 +263,8 @@ class File {
       return static::dir($path);
     }
       // @codeCoverageIgnoreStart
-    catch (\RuntimeException $runtimeException) {
-      throw new \RuntimeException(sprintf('Unable to create temporary directory "%s".', $path), $runtimeException->getCode(), $runtimeException);
+    catch (\RuntimeException|FileException $runtimeException) {
+      throw new FileException(sprintf('Unable to create temporary directory "%s".', $path), $runtimeException->getCode(), $runtimeException);
     }
     // @codeCoverageIgnoreEnd
   }
@@ -409,7 +423,7 @@ class File {
     try {
       $directory = static::dir($directory);
     }
-    catch (\RuntimeException $runtimeException) {
+    catch (\RuntimeException|FileException $runtimeException) {
       return [];
     }
 
@@ -595,7 +609,7 @@ class File {
   public static function replaceContentInDir(string $directory, string $needle, string $replacement): void {
     $files = static::scandirRecursive($directory, static::ignoredPaths());
     foreach ($files as $filename) {
-      static::replaceContent($filename, $needle, $replacement);
+      static::replaceContentInFile($filename, $needle, $replacement);
     }
   }
 
@@ -609,7 +623,7 @@ class File {
    * @param string $replacement
    *   String to replace with.
    */
-  public static function replaceContent(string $file, string $needle, string $replacement): void {
+  public static function replaceContentInFile(string $file, string $needle, string $replacement): void {
     if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
       return;
     }
@@ -619,13 +633,9 @@ class File {
       return;
     }
 
-    if (Strings::isRegex($needle)) {
-      $replaced = preg_replace($needle, $replacement, $content);
-    }
-    else {
-      $replaced = str_replace($needle, $replacement, $content);
-    }
-    if ($replaced != $content) {
+    $replaced = static::replaceContent($content, $needle, $replacement);
+
+    if ($replaced !== $content) {
       static::dump($file, $replaced);
     }
   }
@@ -679,10 +689,10 @@ class File {
    * @param bool $with_content
    *   Whether to remove content between tokens.
    *
-   * @throws \RuntimeException
+   * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When begin and end token counts don't match.
    */
-  public static function removeToken(string $file, string $token_begin, ?string $token_end = NULL, bool $with_content = FALSE): void {
+  public static function removeTokenInFile(string $file, string $token_begin, ?string $token_end = NULL, bool $with_content = FALSE): void {
     if (static::isExcluded($file)) {
       return;
     }
@@ -691,29 +701,100 @@ class File {
       return;
     }
 
-    $token_end = $token_end ?? $token_begin;
-
     $content = static::read($file);
     if ($content === '' || $content === '0') {
       return;
     }
 
+    try {
+      $processed = static::removeToken($content, $token_begin, $token_end, $with_content);
+      if ($processed !== $content) {
+        static::dump($file, $processed);
+      }
+    }
+    catch (\RuntimeException|FileException $runtimeException) {
+      // Re-throw with file context
+      throw new FileException(sprintf('Error processing file %s: %s', $file, $runtimeException->getMessage()), $runtimeException->getCode(), $runtimeException);
+    }
+  }
+
+  /**
+   * Replace content in a string (string version).
+   *
+   * @param string $content
+   *   Content string to process.
+   * @param string $needle
+   *   String or regex pattern to search for.
+   * @param string $replacement
+   *   String to replace with.
+   *
+   * @return string
+   *   Processed content.
+   */
+  public static function replaceContent(string $content, string $needle, string $replacement): string {
+    if ($content === '') {
+      return $content;
+    }
+
+    if (Strings::isRegex($needle)) {
+      $replaced = preg_replace($needle, $replacement, $content);
+      return $replaced !== NULL ? $replaced : $content;
+    }
+    else {
+      return str_replace($needle, $replacement, $content);
+    }
+  }
+
+  /**
+   * Remove tokens from content string (string version).
+   *
+   * @param string $content
+   *   Content string to process.
+   * @param string $token_begin
+   *   Begin token to search for.
+   * @param string|null $token_end
+   *   End token to search for. If not provided, same as begin token.
+   * @param bool $with_content
+   *   Whether to remove content between tokens.
+   *
+   * @return string
+   *   Processed content.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When begin and end token counts don't match.
+   */
+  public static function removeToken(string $content, string $token_begin, ?string $token_end = NULL, bool $with_content = FALSE): string {
+    if ($content === '') {
+      return $content;
+    }
+
+    $token_end = $token_end ?? $token_begin;
+
     if ($token_begin !== $token_end) {
       $token_begin_count = preg_match_all('/' . preg_quote($token_begin) . '/', $content);
       $token_end_count = preg_match_all('/' . preg_quote($token_end) . '/', $content);
       if ($token_begin_count !== $token_end_count) {
-        throw new \RuntimeException(sprintf('Invalid begin and end token count in file %s: begin is %s(%s), end is %s(%s).', $file, $token_begin, $token_begin_count, $token_end, $token_end_count));
+        throw new FileException(sprintf('Invalid begin and end token count: begin is %s(%s), end is %s(%s).', $token_begin, $token_begin_count, $token_end, $token_end_count));
       }
     }
 
     $out = [];
     $within_token = FALSE;
 
-    $lines = file($file);
-    if (!$lines) {
+    $lines = preg_split("/\r\n|\r|\n/", $content);
+    if ($lines === FALSE) {
       // @codeCoverageIgnoreStart
-      return;
+      return $content;
       // @codeCoverageIgnoreEnd
+    }
+
+    // Preserve original line endings
+    $line_ending = "\n";
+    if (str_contains($content, "\r\n")) {
+      $line_ending = "\r\n";
+    }
+    elseif (str_contains($content, "\r")) {
+      $line_ending = "\r";
     }
 
     foreach ($lines as $line) {
@@ -738,7 +819,7 @@ class File {
       $out[] = $line;
     }
 
-    self::dump($file, implode('', $out));
+    return implode($line_ending, $out);
   }
 
   /**
@@ -763,7 +844,7 @@ class File {
 
     $files = static::scandirRecursive($directory, static::ignoredPaths());
     foreach ($files as $filename) {
-      static::removeToken($filename, $token_start, $token_end, $with_content);
+      static::removeTokenInFile($filename, $token_start, $token_end, $with_content);
     }
   }
 
@@ -796,7 +877,7 @@ class File {
       '.+\.png',
       '.+\.jpg',
       '.+\.jpeg',
-      '.+\.bpm',
+      '.+\.bmp',
       '.+\.tiff',
     ];
 
@@ -944,4 +1025,72 @@ class File {
 
     $patcher->patch();
   }
+
+  /**
+   * Add a task to the directory task queue.
+   *
+   * @param callable $callback
+   *   Callback function to execute.
+   */
+  public static function addTaskDirectory(callable $callback): void {
+    static::getTasker()->addTask($callback, 'directory');
+  }
+
+  /**
+   * Run all tasks for the directory batch.
+   *
+   * @param string $directory
+   *   Directory to scan and process.
+   */
+  public static function runTaskDirectory(string $directory): void {
+    $iterator = function () use ($directory) {
+      $files = static::scandirRecursive($directory, static::ignoredPaths());
+      foreach ($files as $path) {
+        if (File::isExcluded($path)) {
+          continue;
+        }
+
+        $file = new ExtendedSplFileInfo($path, $directory);
+        $original_content = $file->getContent();
+
+        $processed_file = yield $file;
+
+        if ($processed_file instanceof ExtendedSplFileInfo) {
+          $new_content = $processed_file->getContent();
+
+          if ($original_content !== $new_content) {
+            static::dump($processed_file->getPathname(), $new_content);
+          }
+        }
+      }
+    };
+
+    static::getTasker()
+      ->setIterator($iterator, 'directory')
+      ->process('directory');
+  }
+
+  /**
+   * Clear tasks from the directory batch.
+   */
+  public static function clearTaskDirectory(): void {
+    static::getTasker()->clear('directory');
+  }
+
+  /**
+   * Get the shared Tasker instance.
+   *
+   * @return \AlexSkrypnyk\File\Internal\Tasker
+   *   The shared tasker instance.
+   */
+  protected static function getTasker(): Tasker {
+    static $tasker = NULL;
+
+    if ($tasker === NULL) {
+      $tasker = new Tasker();
+    }
+
+    return $tasker;
+  }
+
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
@@ -22,8 +23,6 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'findMatchingPath')]
 #[CoversMethod(File::class, 'copyIfExists')]
 #[CoversMethod(File::class, 'scandirRecursive')]
-#[CoversMethod(File::class, 'replaceContent')]
-#[CoversMethod(File::class, 'removeToken')]
 #[CoversMethod(File::class, 'diff')]
 #[CoversMethod(File::class, 'tmpdir')]
 #[CoversMethod(File::class, 'copy')]
@@ -90,7 +89,7 @@ class FileTest extends UnitTestCase {
     $cwd = getcwd();
 
     if ($cwd === FALSE) {
-      throw new \RuntimeException('Failed to determine current working directory.');
+      throw new FileException('Failed to determine current working directory.');
     }
 
     do {
@@ -151,7 +150,7 @@ class FileTest extends UnitTestCase {
   #[DataProvider('dataProviderDir')]
   public function testDir(string $directory, int $permissions, bool $expect_exception): void {
     if ($expect_exception) {
-      $this->expectException(\RuntimeException::class);
+      $this->expectException(FileException::class);
     }
 
     $path = $this->testTmpDir . DIRECTORY_SEPARATOR . $directory;
@@ -187,7 +186,7 @@ class FileTest extends UnitTestCase {
   #[DataProvider('dataProviderMkdir')]
   public function testMkdir(string $directory, int $permissions, bool $expect_exception): void {
     if ($expect_exception) {
-      $this->expectException(\RuntimeException::class);
+      $this->expectException(FileException::class);
     }
 
     $path = $this->testTmpDir . DIRECTORY_SEPARATOR . $directory;
@@ -218,6 +217,17 @@ class FileTest extends UnitTestCase {
       ['non_existing_dir', 0777, FALSE],
       ['existing_file', 0777, TRUE],
     ];
+  }
+
+  public function testMkdirThrowsSpecificExceptionForExistingFile(): void {
+    $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_file.txt';
+    file_put_contents($file_path, 'test content');
+    $this->assertFileExists($file_path);
+
+    $this->expectException(FileException::class);
+    $this->expectExceptionMessage('Cannot create directory "' . realpath($file_path) . '": path exists and is a file.');
+
+    File::mkdir($file_path);
   }
 
   #[DataProvider('dataProviderTmpDir')]
@@ -372,84 +382,6 @@ class FileTest extends UnitTestCase {
     $file_path = $base_dir . DIRECTORY_SEPARATOR . 'file1.txt';
     $files = File::scandirRecursive($file_path);
     $this->assertEmpty($files);
-  }
-
-  public function testReplaceContent(): void {
-    $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_replace.txt';
-    file_put_contents($file_path, 'Hello, world!');
-
-    File::replaceContent($file_path, 'world', 'everyone');
-    $this->assertEquals('Hello, everyone!', file_get_contents($file_path));
-
-    File::replaceContent($file_path, '/Hello, (\w+)!/', 'Greetings, $1!');
-    $this->assertEquals('Greetings, everyone!', file_get_contents($file_path));
-
-    $empty_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'empty.txt';
-    file_put_contents($empty_file, '');
-    File::replaceContent($empty_file, 'test', 'replacement');
-    $this->assertEquals('', file_get_contents($empty_file));
-
-    $nonexistent_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
-    File::replaceContent($nonexistent_file, 'test', 'replacement');
-    $this->assertFileDoesNotExist($nonexistent_file);
-
-    $image_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test.jpg';
-    file_put_contents($image_file, 'fake image content');
-    File::replaceContent($image_file, 'fake', 'real');
-    $this->assertEquals('fake image content', file_get_contents($image_file));
-  }
-
-  public function testRemoveToken(): void {
-    $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test_token.txt';
-    $content = <<<EOT
-This is line 1
-#; TOKEN_START
-This is content inside a token
-#; TOKEN_END
-This is line 3
-#; ANOTHER_TOKEN
-More content inside another token
-#; ANOTHER_TOKEN
-Final line
-EOT;
-    file_put_contents($file_path, $content);
-
-    File::removeToken($file_path, '#; TOKEN_START', '#; TOKEN_END', FALSE);
-    $file_content = (string) file_get_contents($file_path);
-    $this->assertStringNotContainsString('#; TOKEN_START', $file_content);
-    $this->assertStringNotContainsString('#; TOKEN_END', $file_content);
-    $this->assertStringContainsString('This is content inside a token', $file_content);
-
-    File::removeToken($file_path, '#; ANOTHER_TOKEN', '#; ANOTHER_TOKEN', TRUE);
-    $file_content = (string) file_get_contents($file_path);
-    $this->assertStringNotContainsString('#; ANOTHER_TOKEN', $file_content);
-    $this->assertStringNotContainsString('More content inside another token', $file_content);
-
-    $mismatched_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'mismatched_tokens.txt';
-    $mismatched_content = <<<EOT
-START
-START
-END
-EOT;
-    file_put_contents($mismatched_file, $mismatched_content);
-
-    $this->expectException(\RuntimeException::class);
-    File::removeToken($mismatched_file, 'START', 'END', FALSE);
-  }
-
-  public function testRemoveTokenEdgeCases(): void {
-    // Test case 1: Non-existent file.
-    $non_existent_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'does_not_exist.txt';
-    // Should return early without throwing exception.
-    File::removeToken($non_existent_file, 'TOKEN', 'TOKEN', FALSE);
-    $this->assertFileDoesNotExist($non_existent_file);
-
-    // Test case 2: Excluded file (using image extension)
-    $excluded_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'image.png';
-    file_put_contents($excluded_file, "TOKEN\ncontent\nTOKEN");
-    // Should return early without modifying the file.
-    File::removeToken($excluded_file, 'TOKEN', 'TOKEN', FALSE);
-    $this->assertStringContainsString('TOKEN', (string) file_get_contents($excluded_file));
   }
 
   public function testDiff(): void {
