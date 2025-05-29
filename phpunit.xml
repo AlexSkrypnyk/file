@@ -12,10 +12,15 @@
          displayDetailsOnTestsThatTriggerErrors="true"
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerDeprecations="true"
-         displayDetailsOnPhpunitDeprecations="true">
+         displayDetailsOnPhpunitDeprecations="true"
+         defaultTestSuite="default">
     <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
+            <exclude>tests/Unit/FileTaskPerformanceTest.php</exclude>
+        </testsuite>
+        <testsuite name="performance">
+            <file>tests/Unit/FileTaskPerformanceTest.php</file>
         </testsuite>
     </testsuites>
     <source restrictNotices="true"

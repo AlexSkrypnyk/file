@@ -7,6 +7,7 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(ExtendedSplFileInfo::class)]
 class ExtendedSplFileInfoTest extends UnitTestCase {
@@ -23,15 +24,24 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     $this->assertNotNull($file_info->getHash());
   }
 
-  public function testGetHash(): void {
+  #[DataProvider('dataProviderHash')]
+  public function testHash(string $content, string $expected): void {
     $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
-    file_put_contents($file_path, 'test content');
+    file_put_contents($file_path, $content);
 
     $base_path = static::$sut;
     $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
-    $expected_hash = md5('test content');
-    $this->assertEquals($expected_hash, $file_info->getHash());
+    $this->assertEquals($expected, $file_info->getHash());
+  }
+
+  public static function dataProviderHash(): array {
+    return [
+      'basic content' => ['test content', md5('test content')],
+      'empty content' => ['', md5('')],
+      'content with newlines' => ["line1\nline2", md5("line1\nline2")],
+      'content with spaces (trimmed)' => ['  test  ', md5('test')],
+    ];
   }
 
   public function testSetGetBasepath(): void {
@@ -74,19 +84,32 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     $this->assertEquals('subdir' . DIRECTORY_SEPARATOR . 'test.txt', $file_info->getPathnameFromBasepath());
   }
 
-  public function testIsSetIgnoreContent(): void {
+  #[DataProvider('dataProviderIgnoreContent')]
+  public function testIgnoreContent(bool $ignore_content, bool $expected): void {
     $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
     file_put_contents($file_path, 'test content');
 
     $base_path = static::$sut;
     $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
-    $this->assertFalse($file_info->isIgnoreContent());
+    $file_info->setIgnoreContent($ignore_content);
+    $this->assertEquals($expected, $file_info->isIgnoreContent());
+  }
 
-    $file_info->setIgnoreContent(TRUE);
-    $this->assertTrue($file_info->isIgnoreContent());
+  public static function dataProviderIgnoreContent(): array {
+    return [
+      'ignore content true' => [TRUE, TRUE],
+      'ignore content false' => [FALSE, FALSE],
+    ];
+  }
 
-    $file_info->setIgnoreContent(FALSE);
+  public function testIgnoreContentDefault(): void {
+    $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
+    file_put_contents($file_path, 'test content');
+
+    $base_path = static::$sut;
+    $file_info = new ExtendedSplFileInfo($file_path, $base_path);
+
     $this->assertFalse($file_info->isIgnoreContent());
   }
 
@@ -136,22 +159,26 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     );
   }
 
-  public function testHash(): void {
+  #[DataProvider('dataProviderHashProtected')]
+  public function testHashProtected(string $input, string $expected): void {
     $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
     file_put_contents($file_path, 'test content');
 
     $base_path = static::$sut;
     $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
-    $result = self::callProtectedMethod($file_info, 'hash', ['test content']);
-    $expected = md5('test content');
-
+    $result = self::callProtectedMethod($file_info, 'hash', [$input]);
     $this->assertEquals($expected, $result);
+  }
 
-    $result = self::callProtectedMethod($file_info, 'hash', [' test content ']);
-    $expected = md5('test content');
-
-    $this->assertEquals($expected, $result);
+  public static function dataProviderHashProtected(): array {
+    return [
+      'basic content' => ['test content', md5('test content')],
+      'content with trailing spaces (trimmed)' => [' test content ', md5('test content')],
+      'content with leading spaces (trimmed)' => ['   test content', md5('test content')],
+      'empty content' => ['', md5('')],
+      'only spaces (trimmed to empty)' => ['   ', md5('')],
+    ];
   }
 
 }
