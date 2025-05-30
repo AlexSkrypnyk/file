@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Internal;
+namespace AlexSkrypnyk\File;
 
 use AlexSkrypnyk\File\Exception\FileException;
 

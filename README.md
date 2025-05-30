@@ -47,9 +47,7 @@ multiple files efficiently.
 All methods are available through the `AlexSkrypnyk\File\File` class.
 
 ```php
-use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Exception\FileException;
-use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
+use AlexSkrypnyk\File\Exception\FileException;use AlexSkrypnyk\File\ExtendedSplFileInfo;use AlexSkrypnyk\File\File;
 
 try {
   // Get current working directory
@@ -146,8 +144,7 @@ traditional file operations:
 #### Usage Example
 
 ```php
-use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
+use AlexSkrypnyk\File\ExtendedSplFileInfo;use AlexSkrypnyk\File\File;
 
 // Traditional approach (slow for multiple operations)
 File::replaceContentInDir('/path/to/dir', 'old1', 'new1');

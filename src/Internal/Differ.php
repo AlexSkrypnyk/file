@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\ExtendedSplFileInfo;
+
 /**
  * Manages file differences between source and destination directories.
  */
@@ -19,7 +21,7 @@ class Differ {
   /**
    * Adds a file from the left (source) directory to the diff collection.
    *
-   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   * @param \AlexSkrypnyk\File\ExtendedSplFileInfo $file
    *   The file to add.
    */
   public function addLeftFile(ExtendedSplFileInfo $file): void {
@@ -30,7 +32,7 @@ class Differ {
   /**
    * Adds a file from the right (destination) directory to the diff collection.
    *
-   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   * @param \AlexSkrypnyk\File\ExtendedSplFileInfo $file
    *   The file to add.
    */
   public function addRightFile(ExtendedSplFileInfo $file): void {

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
+use AlexSkrypnyk\File\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Rules;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;

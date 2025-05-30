@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\ExtendedSplFileInfo;
 use SebastianBergmann\Diff\Differ;
 use SebastianBergmann\Diff\Output\UnifiedDiffOutputBuilder;
 
@@ -27,7 +28,7 @@ class Diff implements RenderInterface {
   /**
    * Sets the left (source) file.
    *
-   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   * @param \AlexSkrypnyk\File\ExtendedSplFileInfo $file
    *   The file to set.
    *
    * @return $this
@@ -42,7 +43,7 @@ class Diff implements RenderInterface {
   /**
    * Sets the right (destination) file.
    *
-   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   * @param \AlexSkrypnyk\File\ExtendedSplFileInfo $file
    *   The file to set.
    *
    * @return $this
@@ -57,7 +58,7 @@ class Diff implements RenderInterface {
   /**
    * Gets the left (source) file.
    *
-   * @return \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo
+   * @return \AlexSkrypnyk\File\ExtendedSplFileInfo
    *   The left file.
    */
   public function getLeft(): ExtendedSplFileInfo {
@@ -67,7 +68,7 @@ class Diff implements RenderInterface {
   /**
    * Gets the right (destination) file.
    *
-   * @return \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo
+   * @return \AlexSkrypnyk\File\ExtendedSplFileInfo
    *   The right file.
    */
   public function getRight(): ExtendedSplFileInfo {
