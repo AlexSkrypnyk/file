@@ -7,13 +7,12 @@ namespace AlexSkrypnyk\File;
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\Internal\Comparer;
 use AlexSkrypnyk\File\Internal\Diff;
-use AlexSkrypnyk\File\Internal\ExtendedSplFileInfo;
-use AlexSkrypnyk\File\Internal\Tasker;
 use AlexSkrypnyk\File\Internal\Index;
 use AlexSkrypnyk\File\Internal\Patcher;
 use AlexSkrypnyk\File\Internal\Rules;
 use AlexSkrypnyk\File\Internal\Strings;
 use AlexSkrypnyk\File\Internal\Syncer;
+use AlexSkrypnyk\File\Internal\Tasker;
 use Symfony\Component\Filesystem\Filesystem;
 
 class File {

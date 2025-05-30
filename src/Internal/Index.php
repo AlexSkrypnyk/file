@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Internal;
 
+use AlexSkrypnyk\File\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\File;
 
 /**
@@ -18,7 +19,7 @@ class Index {
   /**
    * Files indexed by the path from the base directory.
    *
-   * @var array<string, \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo>|null
+   * @var array<string, \AlexSkrypnyk\File\ExtendedSplFileInfo>|null
    */
   protected ?array $files = NULL;
 

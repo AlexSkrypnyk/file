@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Internal;
 
 use AlexSkrypnyk\File\Exception\PatchException;
+use AlexSkrypnyk\File\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\File;
 
 /**
@@ -61,7 +62,7 @@ class Patcher {
   /**
    * Add a patch file.
    *
-   * @param \AlexSkrypnyk\File\Internal\ExtendedSplFileInfo $file
+   * @param \AlexSkrypnyk\File\ExtendedSplFileInfo $file
    *   The patch file.
    *
    * @return $this
