@@ -111,6 +111,7 @@ try {
 | `replaceContent()`      | Replace content in a string.                                                                                   |
 | `replaceContentInFile()` | Replace content in a file.                                                                                     |
 | `replaceContentInDir()` | Replace content in all files in a directory.                                                                   |
+| `collapseRepeatedEmptyLines()` | Remove multiple consecutive empty lines, keeping at most one empty line between content blocks.         |
 | `rmdir()`               | Remove directory recursively.                                                                                  |
 | `rmdirEmpty()`          | Remove directory recursively if empty.                                                                         |
 | `scandirRecursive()`    | Recursively scan directory for files.                                                                          |
@@ -129,6 +130,7 @@ batch operations that minimize directory scans and optimize I/O operations:
 | `clearTaskDirectory()`   | Clear all queued batch tasks.                                        |
 | `replaceContent()`       | Replace content in a string (base method for batch processing).       |
 | `removeToken()`          | Remove tokens from a string (base method for batch processing).       |
+| `collapseRepeatedEmptyLines()` | Remove multiple consecutive empty lines from a string (base method for batch processing). |
 
 #### Performance Benefits
 
@@ -156,6 +158,7 @@ File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFile
   $content = File::replaceContent($file_info->getContent(), 'old1', 'new1');
   $content = File::replaceContent($content, 'old2', 'new2');
   $content = File::removeToken($content, '# token');
+  $content = File::collapseRepeatedEmptyLines($content);
   $file_info->setContent($content);
   return $file_info;
 });

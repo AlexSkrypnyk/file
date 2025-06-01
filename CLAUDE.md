@@ -40,3 +40,8 @@ Coverage reports are stored in:
 - `.logs/cobertura.xml`
 - `.logs/.coverage-html/`
 
+## Development Process Learnings
+
+### Linting and Code Standards
+- **Auto-fixing workflow**: Use `composer lint-fix` to automatically fix PHPCS violations, then manually address remaining issues
+- **Drupal standards**: NULL constants must be uppercase, variable names in catch blocks should match the exception type name (e.g., `FileException $fileException`)

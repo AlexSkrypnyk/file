@@ -391,13 +391,13 @@ class FileStringsTest extends UnitTestCase {
     return $flatten;
   }
 
-  #[DataProvider('dataProviderReplaceContentString')]
-  public function testReplaceContentString(string $content, string $needle, string $replacement, string $expected): void {
+  #[DataProvider('dataProviderReplaceContent')]
+  public function testReplaceContent(string $content, string $needle, string $replacement, string $expected): void {
     $result = File::replaceContent($content, $needle, $replacement);
     $this->assertSame($expected, $result);
   }
 
-  public static function dataProviderReplaceContentString(): array {
+  public static function dataProviderReplaceContent(): array {
     return [
       // Basic string operations.
       'empty content' => ['', 'needle', 'replacement', ''],
@@ -425,8 +425,213 @@ class FileStringsTest extends UnitTestCase {
     ];
   }
 
-  #[DataProvider('dataProviderRemoveTokenString')]
-  public function testRemoveTokenString(string $content, string $token_begin, ?string $token_end, bool $with_content, string $expected, bool $expect_exception = FALSE, string $exception_message = ''): void {
+  #[DataProvider('dataProviderCollapseRepeatedEmptyLines')]
+  public function testCollapseRepeatedEmptyLines(string $input, string $expected): void {
+    $actual = File::collapseRepeatedEmptyLines($input);
+    $this->assertSame($expected, $actual);
+  }
+
+  public static function dataProviderCollapseRepeatedEmptyLines(): array {
+    return [
+      'empty lines' => [
+        '',
+        '',
+      ],
+      'empty lines, newlines preserved' => [
+        "\n\n",
+        "",
+      ],
+      'empty lines, newlines preserved and trimmed' => [
+        "\n\n\n",
+        "",
+      ],
+      'single line' => [
+        "line1",
+        "line1",
+      ],
+      'single line with trailing newlines' => [
+        "line1\n\n",
+        "line1\n",
+      ],
+      'single line with 3 trailing newlines' => [
+        "line1\n\n\n",
+        "line1\n",
+      ],
+      'single line with more trailing newlines' => [
+        "line1\n\n\n\n",
+        "line1\n",
+      ],
+      'multiple consecutive empty lines' => [
+        "line1\n\n\n\n\nline2",
+        "line1\n\nline2",
+      ],
+      'three consecutive empty lines' => [
+        "line1\n\n\n\nline2",
+        "line1\n\nline2",
+      ],
+      'single empty line unchanged' => [
+        "line1\n\nline2",
+        "line1\n\nline2",
+      ],
+      'no empty lines' => [
+        "line1\nline2\nline3",
+        "line1\nline2\nline3",
+      ],
+      'empty lines with spaces' => [
+        "line1\n  \n\t\n   \n\nline2",
+        "line1\n\nline2",
+      ],
+      'empty lines with mixed whitespace' => [
+        "line1\n \t \n\n \n\t\t\nline2",
+        "line1\n\nline2",
+      ],
+      'tabs and spaces mixed' => [
+        "line1\n\t\n  \n\t \n\nline2",
+        "line1\n\nline2",
+      ],
+      'empty lines at beginning' => [
+        "\n\n\nline1\nline2",
+        "line1\nline2",
+      ],
+      'empty lines at beginning longer' => [
+        "\n\n\n\n\n\nline1\nline2",
+        "line1\nline2",
+      ],
+      'empty lines at end' => [
+        "line1\nline2\n\n\n\n",
+        "line1\nline2\n",
+      ],
+      'single newline at end preserved' => [
+        "line1\nline2\n",
+        "line1\nline2\n",
+      ],
+      // \r line endings
+      'empty lines, carriage returns preserved' => [
+        "\r\r",
+        "",
+      ],
+      'empty lines, carriage returns preserved and trimmed' => [
+        "\r\r\r",
+        "",
+      ],
+      'single line with trailing carriage returns' => [
+        "line1\r\r",
+        "line1\r",
+      ],
+      'single line with more trailing carriage returns' => [
+        "line1\r\r\r\r",
+        "line1\r",
+      ],
+      'multiple consecutive empty lines with carriage returns' => [
+        "line1\r\r\r\r\rline2",
+        "line1\r\rline2",
+      ],
+      'three consecutive empty lines with carriage returns' => [
+        "line1\r\r\r\rline2",
+        "line1\r\rline2",
+      ],
+      'single empty line unchanged with carriage returns' => [
+        "line1\r\rline2",
+        "line1\r\rline2",
+      ],
+      'no empty lines with carriage returns' => [
+        "line1\rline2\rline3",
+        "line1\rline2\rline3",
+      ],
+      'empty lines with spaces and carriage returns' => [
+        "line1\r  \r\t\r   \r\rline2",
+        "line1\r\rline2",
+      ],
+      'empty lines with mixed whitespace and carriage returns' => [
+        "line1\r \t \r\r \r\t\t\rline2",
+        "line1\r\rline2",
+      ],
+      'tabs and spaces mixed with carriage returns' => [
+        "line1\r\t\r  \r\t \r\rline2",
+        "line1\r\rline2",
+      ],
+      'empty lines at beginning with carriage returns' => [
+        "\r\r\rline1\rline2",
+        "line1\rline2",
+      ],
+      'empty lines at beginning longer with carriage returns' => [
+        "\r\r\r\r\r\rline1\rline2",
+        "line1\rline2",
+      ],
+      'empty lines at end with carriage returns' => [
+        "line1\rline2\r\r\r\r",
+        "line1\rline2\r",
+      ],
+      'single carriage return at end preserved' => [
+        "line1\rline2\r",
+        "line1\rline2\r",
+      ],
+      // \r\n line endings
+      'empty lines, crlf preserved' => [
+        "\r\n\r\n",
+        "",
+      ],
+      'empty lines, crlf preserved and trimmed' => [
+        "\r\n\r\n\r\n",
+        "",
+      ],
+      'single line with trailing crlf' => [
+        "line1\r\n\r\n",
+        "line1\r\n",
+      ],
+      'single line with more trailing crlf' => [
+        "line1\r\n\r\n\r\n\r\n",
+        "line1\r\n",
+      ],
+      'multiple consecutive empty lines with crlf' => [
+        "line1\r\n\r\n\r\n\r\n\r\nline2",
+        "line1\r\nline2",
+      ],
+      'three consecutive empty lines with crlf' => [
+        "line1\r\n\r\n\r\n\r\nline2",
+        "line1\r\nline2",
+      ],
+      'single empty line unchanged with crlf' => [
+        "line1\r\n\r\nline2",
+        "line1\r\nline2",
+      ],
+      'no empty lines with crlf' => [
+        "line1\r\nline2\r\nline3",
+        "line1\r\nline2\r\nline3",
+      ],
+      'empty lines with spaces and crlf' => [
+        "line1\r\n  \r\n\t\r\n   \r\n\r\nline2",
+        "line1\r\n\r\nline2",
+      ],
+      'empty lines with mixed whitespace and crlf' => [
+        "line1\r\n \t \r\n\r\n \r\n\t\t\r\nline2",
+        "line1\r\n\r\nline2",
+      ],
+      'tabs and spaces mixed with crlf' => [
+        "line1\r\n\t\r\n  \r\n\t \r\n\r\nline2",
+        "line1\r\n\r\nline2",
+      ],
+      'empty lines at beginning with crlf' => [
+        "\r\n\r\n\r\nline1\r\nline2",
+        "line1\r\nline2",
+      ],
+      'empty lines at beginning longer with crlf' => [
+        "\r\n\r\n\r\n\r\n\r\n\r\nline1\r\nline2",
+        "line1\r\nline2",
+      ],
+      'empty lines at end with crlf' => [
+        "line1\r\nline2\r\n\r\n\r\n\r\n",
+        "line1\r\nline2\r\n",
+      ],
+      'single crlf at end preserved' => [
+        "line1\r\nline2\r\n",
+        "line1\r\nline2\r\n",
+      ],
+    ];
+  }
+
+  #[DataProvider('dataProviderRemoveToken')]
+  public function testRemoveToken(string $content, string $token_begin, ?string $token_end, bool $with_content, string $expected, bool $expect_exception = FALSE, string $exception_message = ''): void {
     if ($expect_exception) {
       $this->expectException(FileException::class);
       if ($exception_message !== '' && $exception_message !== '0') {
@@ -440,7 +645,7 @@ class FileStringsTest extends UnitTestCase {
     }
   }
 
-  public static function dataProviderRemoveTokenString(): array {
+  public static function dataProviderRemoveToken(): array {
     return [
       // Basic edge cases.
       'empty content' => ['', 'TOKEN', 'TOKEN', FALSE, ''],
@@ -478,7 +683,7 @@ class FileStringsTest extends UnitTestCase {
     ];
   }
 
-  public function testRemoveTokenStringComplexScenarios(): void {
+  public function testRemoveTokenComplexScenarios(): void {
     // Test consecutive tokens (requires multiple operations).
     $content = "line1\nTOKEN1\nTOKEN2\nline4";
     $result = File::removeToken($content, 'TOKEN1', 'TOKEN1', FALSE);
