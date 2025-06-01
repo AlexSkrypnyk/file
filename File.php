@@ -15,6 +15,9 @@ use AlexSkrypnyk\File\Internal\Syncer;
 use AlexSkrypnyk\File\Internal\Tasker;
 use Symfony\Component\Filesystem\Filesystem;
 
+/**
+ * File manipulation utilities.
+ */
 class File {
 
   /**
@@ -111,7 +114,8 @@ class File {
    * @param string $file
    *   File path to convert to absolute.
    * @param string|null $base
-   *   Optional base directory. If not provided, current working directory is used.
+   *   Optional base directory. If not provided, current working directory is
+   *   used.
    *
    * @return string
    *   Absolute file path.
@@ -187,7 +191,7 @@ class File {
     try {
       static::dir($directory);
     }
-    catch (\RuntimeException|FileException $runtimeException) {
+    catch (FileException $fileException) {
       // If path exists and is a file, throw exception immediately.
       if (static::exists($directory) && is_file($directory)) {
         throw new FileException(sprintf('Cannot create directory "%s": path exists and is a file.', $directory));
@@ -225,8 +229,8 @@ class File {
    * Create temporary directory.
    *
    * @param string|null $directory
-   *   Optional base directory to create temporary directory in. If not provided,
-   *   system temporary directory is used.
+   *   Optional base directory to create temporary directory in. If not
+   *   provided, system temporary directory is used.
    * @param string $prefix
    *   Prefix for temporary directory name.
    * @param int $permissions
@@ -255,15 +259,25 @@ class File {
     $attempts = 0;
 
     do {
-      $path = sprintf('%s%s%s%s', $directory, DIRECTORY_SEPARATOR, $prefix, mt_rand(100000, mt_getrandmax()));
+      $path = sprintf(
+        '%s%s%s%s',
+        $directory,
+        DIRECTORY_SEPARATOR,
+        $prefix,
+        mt_rand(100000, mt_getrandmax())
+      );
     } while (!static::mkdir($path, $permissions) && $attempts++ < $max_attempts);
 
     try {
       return static::dir($path);
     }
-      // @codeCoverageIgnoreStart
-    catch (\RuntimeException|FileException $runtimeException) {
-      throw new FileException(sprintf('Unable to create temporary directory "%s".', $path), $runtimeException->getCode(), $runtimeException);
+    // @codeCoverageIgnoreStart
+    catch (FileException $fileException) {
+      throw new FileException(
+        sprintf('Unable to create temporary directory "%s".', $path),
+        $fileException->getCode(),
+        $fileException
+      );
     }
     // @codeCoverageIgnoreEnd
   }
@@ -274,7 +288,8 @@ class File {
    * @param array|string $paths
    *   Path or array of paths to search in.
    * @param string|null $needle
-   *   Optional search needle. If provided, will look for files containing this string.
+   *   Optional search needle. If provided, will look for files containing this
+   *   string.
    *
    * @return string|null
    *   First matching path or NULL if no matches found.
@@ -339,7 +354,7 @@ class File {
           try {
             $filesystem->symlink($link, basename($dest));
           }
-            // @codeCoverageIgnoreStart
+          // @codeCoverageIgnoreStart
           catch (\Exception $e) {
             $ret = FALSE;
           }
@@ -357,7 +372,7 @@ class File {
         $filesystem->copy($source, $dest);
         return TRUE;
       }
-        // @codeCoverageIgnoreStart
+      // @codeCoverageIgnoreStart
       catch (\Exception $e) {
         return FALSE;
       }
@@ -422,7 +437,7 @@ class File {
     try {
       $directory = static::dir($directory);
     }
-    catch (\RuntimeException|FileException $runtimeException) {
+    catch (FileException $fileException) {
       return [];
     }
 
@@ -435,7 +450,8 @@ class File {
 
     $paths = array_diff($files, ['.', '..']);
 
-    // If no files/directories remain after removing . and .., return empty array
+    // If no files/directories remain after removing `.` and `..`, return
+    // empty array.
     if (empty($paths)) {
       return [];
     }
@@ -490,7 +506,7 @@ class File {
   /**
    * Remove file or directory.
    *
-   * @param string|iterable $files
+   * @param string|iterable<string> $files
    *   File or directory path, or iterable of paths to remove.
    */
   public static function remove(string|iterable $files): void {
@@ -711,9 +727,9 @@ class File {
         static::dump($file, $processed);
       }
     }
-    catch (\RuntimeException|FileException $runtimeException) {
-      // Re-throw with file context
-      throw new FileException(sprintf('Error processing file %s: %s', $file, $runtimeException->getMessage()), $runtimeException->getCode(), $runtimeException);
+    catch (FileException $fileException) {
+      // Re-throw with file context.
+      throw new FileException(sprintf('Error processing file %s: %s', $file, $fileException->getMessage()), $fileException->getCode(), $fileException);
     }
   }
 
@@ -737,11 +753,66 @@ class File {
 
     if (Strings::isRegex($needle)) {
       $replaced = preg_replace($needle, $replacement, $content);
-      return $replaced !== NULL ? $replaced : $content;
+      return $replaced ?? $content;
     }
     else {
       return str_replace($needle, $replacement, $content);
     }
+  }
+
+  /**
+   * Replace multiple consecutive empty lines with a single empty line.
+   *
+   * @param string $content
+   *   The content to process.
+   *
+   * @return string
+   *   The content with duplicated empty lines removed.
+   */
+  public static function collapseRepeatedEmptyLines(string $content): string {
+    if ($content === '') {
+      return $content;
+    }
+
+    // Detect dominant line ending - simplified logic.
+    $crlf_count = substr_count($content, "\r\n");
+    $lf_count = substr_count($content, "\n") - $crlf_count;
+    $cr_count = substr_count($content, "\r") - $crlf_count;
+
+    $line_ending = "\n";
+    if ($crlf_count > $lf_count && $crlf_count > $cr_count) {
+      $line_ending = "\r\n";
+    }
+    elseif ($cr_count > $lf_count && $cr_count > $crlf_count) {
+      $line_ending = "\r";
+    }
+
+    // Normalize line endings temporarily to \n.
+    $normalized = str_replace(["\r\n", "\r"], "\n", $content);
+
+    // Check for whitespace-only lines and replace with empty lines.
+    $had_whitespace_lines = (bool) preg_match('/^[ \t]+$/m', $normalized);
+    $normalized = preg_replace('/^[ \t]+$/m', '', $normalized) ?? $content;
+
+    // Handle content that's only newlines.
+    if (preg_match('/^\n*$/', $normalized)) {
+      return "";
+    }
+
+    // Remove leading newlines.
+    $normalized = ltrim($normalized, "\n");
+
+    // Collapse consecutive newlines - unified logic.
+    $use_single_collapse = ($line_ending === "\r\n" && !$had_whitespace_lines);
+    $pattern = $use_single_collapse ? "/\n{2,}/" : "/\n{3,}/";
+    $replacement = $use_single_collapse ? "\n" : "\n\n";
+    $normalized = preg_replace($pattern, $replacement, $normalized) ?? $content;
+
+    // Collapse trailing multiple newlines to single newline.
+    $normalized = preg_replace("/\n{2,}$/", "\n", $normalized) ?? $content;
+
+    // Convert back to original line ending.
+    return $line_ending !== "\n" ? str_replace("\n", $line_ending, $normalized) : $normalized;
   }
 
   /**
@@ -770,8 +841,8 @@ class File {
     $token_end = $token_end ?? $token_begin;
 
     if ($token_begin !== $token_end) {
-      $token_begin_count = preg_match_all('/' . preg_quote($token_begin) . '/', $content);
-      $token_end_count = preg_match_all('/' . preg_quote($token_end) . '/', $content);
+      $token_begin_count = preg_match_all('/' . preg_quote($token_begin, '/') . '/', $content);
+      $token_end_count = preg_match_all('/' . preg_quote($token_end, '/') . '/', $content);
       if ($token_begin_count !== $token_end_count) {
         throw new FileException(sprintf('Invalid begin and end token count: begin is %s(%s), end is %s(%s).', $token_begin, $token_begin_count, $token_end, $token_end_count));
       }
@@ -787,7 +858,7 @@ class File {
       // @codeCoverageIgnoreEnd
     }
 
-    // Preserve original line endings
+    // Preserve original line endings.
     $line_ending = "\n";
     if (str_contains($content, "\r\n")) {
       $line_ending = "\r\n";
@@ -822,12 +893,13 @@ class File {
   }
 
   /**
-   * Remove tokens and optionally content between tokens from all files in a directory.
+   * Remove tokens and content between tokens from all files in a directory.
    *
    * @param string $directory
    *   Directory to search in.
    * @param string|null $token
-   *   Optional token name. If provided, removes content between '#;< token' and '#;> token'.
+   *   Optional token name. If provided, removes content between '#;< token'
+   *   and '#;> token'.
    *   If not provided, removes all '#;' tokens.
    */
   public static function removeTokenInDir(string $directory, ?string $token = NULL): void {
@@ -938,7 +1010,10 @@ class File {
       }
 
       $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-      static::dump($file_diff, $d->render());
+      $rendered_content = $d->render();
+      if ($rendered_content !== NULL) {
+        static::dump($file_diff, $rendered_content);
+      }
     }
   }
 
