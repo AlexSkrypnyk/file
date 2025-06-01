@@ -155,10 +155,10 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    *   The content to hash.
    *
    * @return string
-   *   MD5 hash of the trimmed content.
+   *   A hash of the content.
    */
   protected function hash(string $content): string {
-    return md5(trim($content));
+    return md5($content);
   }
 
   /**

@@ -40,7 +40,7 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
       'basic content' => ['test content', md5('test content')],
       'empty content' => ['', md5('')],
       'content with newlines' => ["line1\nline2", md5("line1\nline2")],
-      'content with spaces (trimmed)' => ['  test  ', md5('test')],
+      'content with spaces (preserved)' => ['  test  ', md5('  test  ')],
     ];
   }
 
@@ -174,10 +174,13 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
   public static function dataProviderHashProtected(): array {
     return [
       'basic content' => ['test content', md5('test content')],
-      'content with trailing spaces (trimmed)' => [' test content ', md5('test content')],
-      'content with leading spaces (trimmed)' => ['   test content', md5('test content')],
+      'content with trailing spaces (preserved)' => [' test content ', md5(' test content ')],
+      'content with leading spaces (preserved)' => ['   test content', md5('   test content')],
+      'content with newlines (preserved)' => ["test\ncontent\r\nmore", md5("test\ncontent\r\nmore")],
+      'content with carriage returns (preserved)' => ["test\rcontent", md5("test\rcontent")],
       'empty content' => ['', md5('')],
-      'only spaces (trimmed to empty)' => ['   ', md5('')],
+      'only spaces (preserved)' => ['   ', md5('   ')],
+      'only newlines (preserved)' => ["\n\r\n\r", md5("\n\r\n\r")],
     ];
   }
 
