@@ -369,7 +369,7 @@ class File {
 
     if (is_file($source)) {
       try {
-        $filesystem->copy($source, $dest);
+        $filesystem->copy($source, $dest, TRUE);
         return TRUE;
       }
       // @codeCoverageIgnoreStart
