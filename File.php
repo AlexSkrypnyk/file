@@ -385,7 +385,7 @@ class File {
 
     $dir = dir($source);
     while ($dir && FALSE !== $entry = $dir->read()) {
-      if ($entry == '.' || $entry == '..') {
+      if ($entry === '.' || $entry === '..') {
         continue;
       }
       static::copy(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE);
