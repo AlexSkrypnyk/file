@@ -65,7 +65,7 @@ class File {
 
     // Resolve path parts (single dot, double dot and double delimiters).
     $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
-    $parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), static function ($part): bool {
+    $parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), static function (string $part): bool {
       return strlen($part) > 0;
     });
 
@@ -629,6 +629,23 @@ class File {
   }
 
   /**
+   * Replace content in all files in a directory using a callback processor.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   * @param callable $processor
+   *   Callback function that receives file content and file path, returns
+   *   processed content.
+   *   Signature: function(string $content, string $file_path): string.
+   */
+  public static function replaceContentCallbackInDir(string $directory, callable $processor): void {
+    $files = static::scandirRecursive($directory, static::ignoredPaths());
+    foreach ($files as $filename) {
+      static::replaceContentCallbackInFile($filename, $processor);
+    }
+  }
+
+  /**
    * Replace content in a file.
    *
    * @param string $file
@@ -652,6 +669,46 @@ class File {
 
     if ($replaced !== $content) {
       static::dump($file, $replaced);
+    }
+  }
+
+  /**
+   * Replace content in a file using a callback processor.
+   *
+   * @param string $file
+   *   File path to process.
+   * @param callable $processor
+   *   Callback function that receives file content and file path, returns
+   *   processed content.
+   *   Signature: function(string $content, string $file_path): string.
+   *
+   * @throws \InvalidArgumentException
+   *   When processor returns non-string.
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When callback execution fails.
+   */
+  public static function replaceContentCallbackInFile(string $file, callable $processor): void {
+    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
+      return;
+    }
+
+    $content = static::read($file);
+    if ($content === '' || $content === '0') {
+      return;
+    }
+
+    try {
+      $processed = $processor($content, $file);
+      if (!is_string($processed)) {
+        throw new \InvalidArgumentException('Processor must return a string.');
+      }
+    }
+    catch (\Exception $exception) {
+      throw new FileException(sprintf('Error processing file %s: %s', $file, $exception->getMessage()), $exception->getCode(), $exception);
+    }
+
+    if ($processed !== $content) {
+      static::dump($file, $processed);
     }
   }
 
@@ -685,7 +742,7 @@ class File {
       // @codeCoverageIgnoreEnd
     }
 
-    $lines = array_filter($lines, fn($line): bool => !str_contains($line, $needle));
+    $lines = array_filter($lines, fn(string $line): bool => !str_contains($line, $needle));
 
     $content = implode($line_ending, $lines);
 
@@ -758,6 +815,35 @@ class File {
     else {
       return str_replace($needle, $replacement, $content);
     }
+  }
+
+  /**
+   * Replace content in a string using a callback processor.
+   *
+   * @param string $content
+   *   Content string to process.
+   * @param callable $processor
+   *   Callback function that receives content and returns processed content.
+   *   Signature: function(string $content): string.
+   *
+   * @return string
+   *   Processed content.
+   *
+   * @throws \InvalidArgumentException
+   *   When processor returns non-string.
+   */
+  public static function replaceContentCallback(string $content, callable $processor): string {
+    if ($content === '') {
+      return $content;
+    }
+
+    $result = $processor($content);
+
+    if (!is_string($result)) {
+      throw new \InvalidArgumentException('Processor must return a string.');
+    }
+
+    return $result;
   }
 
   /**
