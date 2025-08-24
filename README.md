@@ -109,8 +109,11 @@ try {
 | `removeTokenInDir()`    | Remove tokens and optionally content between tokens from all files in a directory.                             |
 | `renameInDir()`         | Rename files in directory by replacing part of the filename.                                                   |
 | `replaceContent()`      | Replace content in a string.                                                                                   |
+| `replaceContentCallback()` | Replace content in a string using a callback processor.                                                     |
 | `replaceContentInFile()` | Replace content in a file.                                                                                     |
+| `replaceContentCallbackInFile()` | Replace content in a file using a callback processor.                                                |
 | `replaceContentInDir()` | Replace content in all files in a directory.                                                                   |
+| `replaceContentCallbackInDir()` | Replace content in all files in a directory using a callback processor.                                |
 | `collapseRepeatedEmptyLines()` | Remove multiple consecutive empty lines, keeping at most one empty line between content blocks.         |
 | `rmdir()`               | Remove directory recursively.                                                                                  |
 | `rmdirEmpty()`          | Remove directory recursively if empty.                                                                         |
@@ -129,6 +132,7 @@ batch operations that minimize directory scans and optimize I/O operations:
 | `runTaskDirectory()`     | Execute all queued tasks on files in a directory with optimized I/O. |
 | `clearTaskDirectory()`   | Clear all queued batch tasks.                                        |
 | `replaceContent()`       | Replace content in a string (base method for batch processing).       |
+| `replaceContentCallback()` | Replace content in a string using a callback processor (base method for batch processing). |
 | `removeToken()`          | Remove tokens from a string (base method for batch processing).       |
 | `collapseRepeatedEmptyLines()` | Remove multiple consecutive empty lines from a string (base method for batch processing). |
 
@@ -153,12 +157,33 @@ File::replaceContentInDir('/path/to/dir', 'old1', 'new1');
 File::replaceContentInDir('/path/to/dir', 'old2', 'new2');
 File::removeTokenInDir('/path/to/dir', '# token');
 
+// Callback approach for custom processing
+File::replaceContentCallbackInDir('/path/to/dir', function(string $content, string $file_path): string {
+  // Custom processing logic with access to file path
+  $content = str_replace('old1', 'new1', $content);
+  $content = preg_replace('/pattern/', 'replacement', $content);
+  // Example: different processing based on file type
+  if (str_ends_with($file_path, '.md')) {
+    $content = '# ' . $content;
+  }
+  return strtoupper($content);
+});
+
 // Batch approach (significantly faster)
 File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
   $content = File::replaceContent($file_info->getContent(), 'old1', 'new1');
   $content = File::replaceContent($content, 'old2', 'new2');
   $content = File::removeToken($content, '# token');
   $content = File::collapseRepeatedEmptyLines($content);
+  $file_info->setContent($content);
+  return $file_info;
+});
+
+// Batch approach with callback processing
+File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+  $content = File::replaceContentCallback($file_info->getContent(), function(string $content): string {
+    return strtoupper(str_replace('old', 'new', $content));
+  });
   $file_info->setContent($content);
   return $file_info;
 });
