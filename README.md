@@ -321,7 +321,7 @@ class MyTest extends TestCase {
 
   public function testDirectories(): void {
     // Assert directory contains "example" string in at least one file
-    $this->assertDirectoryContainsString('example', '/path/to/directory');
+    $this->assertDirectoryContainsString('/path/to/directory', 'example');
 
     // Assert two directories are identical
     $this->assertDirectoryEqualsDirectory('/path/to/dir1', '/path/to/dir2');
@@ -355,13 +355,13 @@ class MyTest extends TestCase {
 
   public function testFiles(): void {
     // Assert file contains "example" string
-    $this->assertFileContainsString('example', '/path/to/file.txt');
+    $this->assertFileContainsString('/path/to/file.txt', 'example');
 
     // Assert file contains "test" as a complete word
-    $this->assertFileContainsWord('test', '/path/to/file.txt');
+    $this->assertFileContainsWord('/path/to/file.txt', 'test');
 
     // Assert file does not contain a partial word
-    $this->assertFileNotContainsWord('exampl', '/path/to/file.txt');
+    $this->assertFileNotContainsWord('/path/to/file.txt', 'exampl');
 
     // Assert two files have identical content
     $this->assertFileEqualsFile('/path/to/expected.txt', '/path/to/actual.txt');

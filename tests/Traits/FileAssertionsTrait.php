@@ -16,14 +16,14 @@ trait FileAssertionsTrait {
   /**
    * Assert that a file contains a specific string.
    *
-   * @param string $needle
-   *   The string to search for in the file.
    * @param string $file
    *   The file to search in.
+   * @param string $needle
+   *   The string to search for in the file.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertFileContainsString(string $needle, string $file, string $message = ''): void {
+  public function assertFileContainsString(string $file, string $needle, string $message = ''): void {
     if (!File::contains($file, $needle)) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s", but it does not.', $file, $needle));
     }
@@ -33,14 +33,14 @@ trait FileAssertionsTrait {
   /**
    * Assert that a file does not contain a specific string.
    *
-   * @param string $needle
-   *   The string to search for in the file.
    * @param string $file
    *   The file to search in.
+   * @param string $needle
+   *   The string to search for in the file.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertFileNotContainsString(string $needle, string $file, string $message = ''): void {
+  public function assertFileNotContainsString(string $file, string $needle, string $message = ''): void {
     if (File::contains($file, $needle)) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s", but it does.', $file, $needle));
     }
@@ -53,14 +53,14 @@ trait FileAssertionsTrait {
    * This method uses word boundaries to ensure the needle is found as a
    * complete word, not as part of another word.
    *
-   * @param string $needle
-   *   The word to search for in the file.
    * @param string $file
    *   The file to search in.
+   * @param string $needle
+   *   The word to search for in the file.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertFileContainsWord(string $needle, string $file, string $message = ''): void {
+  public function assertFileContainsWord(string $file, string $needle, string $message = ''): void {
     if (!File::contains($file, '/\b' . preg_quote($needle) . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s" word, but it does not.', $file, $needle));
     }
@@ -73,14 +73,14 @@ trait FileAssertionsTrait {
    * This method uses word boundaries to ensure the needle is found as a
    * complete word, not as part of another word.
    *
-   * @param string $needle
-   *   The word to search for in the file.
    * @param string $file
    *   The file to search in.
+   * @param string $needle
+   *   The word to search for in the file.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertFileNotContainsWord(string $needle, string $file, string $message = ''): void {
+  public function assertFileNotContainsWord(string $file, string $needle, string $message = ''): void {
     if (File::contains($file, '/\b' . preg_quote($needle) . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s" word, but it does.', $file, $needle));
     }

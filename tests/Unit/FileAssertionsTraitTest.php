@@ -33,14 +33,14 @@ class FileAssertionsTraitTest extends TestCase {
 
   public function testAssertFileContainsStringSuccess(): void {
     file_put_contents($this->testFile, 'This is a test content');
-    $this->assertFileContainsString('test', $this->testFile);
+    $this->assertFileContainsString($this->testFile, 'test');
   }
 
   public function testAssertFileContainsStringFailure(): void {
     file_put_contents($this->testFile, 'This is a test content');
 
     try {
-      $this->assertFileContainsString('nonexistent', $this->testFile);
+      $this->assertFileContainsString($this->testFile, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent string');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -52,7 +52,7 @@ class FileAssertionsTraitTest extends TestCase {
     file_put_contents($this->testFile, 'This is a test content');
 
     try {
-      $this->assertFileContainsString('nonexistent', $this->testFile, 'Custom message for nonexistent string');
+      $this->assertFileContainsString($this->testFile, 'nonexistent', 'Custom message for nonexistent string');
       $this->fail('Assertion should have failed for nonexistent string');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -62,14 +62,14 @@ class FileAssertionsTraitTest extends TestCase {
 
   public function testAssertFileNotContainsStringSuccess(): void {
     file_put_contents($this->testFile, 'This is a test content');
-    $this->assertFileNotContainsString('nonexistent', $this->testFile);
+    $this->assertFileNotContainsString($this->testFile, 'nonexistent');
   }
 
   public function testAssertFileNotContainsStringFailure(): void {
     file_put_contents($this->testFile, 'This is a test content');
 
     try {
-      $this->assertFileNotContainsString('test', $this->testFile);
+      $this->assertFileNotContainsString($this->testFile, 'test');
       $this->fail('Assertion should have failed for existing string');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -81,7 +81,7 @@ class FileAssertionsTraitTest extends TestCase {
     file_put_contents($this->testFile, 'This is a test content');
 
     try {
-      $this->assertFileNotContainsString('test', $this->testFile, 'Custom message for existing string');
+      $this->assertFileNotContainsString($this->testFile, 'test', 'Custom message for existing string');
       $this->fail('Assertion should have failed for existing string with custom message');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -91,14 +91,14 @@ class FileAssertionsTraitTest extends TestCase {
 
   public function testAssertFileContainsWordSuccess(): void {
     file_put_contents($this->testFile, 'This is a test content with testing');
-    $this->assertFileContainsWord('test', $this->testFile);
+    $this->assertFileContainsWord($this->testFile, 'test');
   }
 
   public function testAssertFileContainsWordFailure(): void {
     file_put_contents($this->testFile, 'This is a test content with testing');
 
     try {
-      $this->assertFileContainsWord('nonexistent', $this->testFile);
+      $this->assertFileContainsWord($this->testFile, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent word');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -111,12 +111,12 @@ class FileAssertionsTraitTest extends TestCase {
     file_put_contents($this->testFile, 'Testing test tests tester testing');
 
     // These should pass - these are complete words.
-    $this->assertFileContainsWord('test', $this->testFile);
-    $this->assertFileContainsWord('testing', $this->testFile);
+    $this->assertFileContainsWord($this->testFile, 'test');
+    $this->assertFileContainsWord($this->testFile, 'testing');
 
     // This should fail - only a part of a word.
     try {
-      $this->assertFileContainsWord('tes', $this->testFile);
+      $this->assertFileContainsWord($this->testFile, 'tes');
       $this->fail('Assertion should have failed for partial word');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -126,16 +126,16 @@ class FileAssertionsTraitTest extends TestCase {
 
   public function testAssertFileNotContainsWordSuccess(): void {
     file_put_contents($this->testFile, 'This is a test content');
-    $this->assertFileNotContainsWord('nonexistent', $this->testFile);
+    $this->assertFileNotContainsWord($this->testFile, 'nonexistent');
     // Part of a word, but not a complete word - should pass.
-    $this->assertFileNotContainsWord('tes', $this->testFile);
+    $this->assertFileNotContainsWord($this->testFile, 'tes');
   }
 
   public function testAssertFileNotContainsWordFailure(): void {
     file_put_contents($this->testFile, 'This is a test content');
 
     try {
-      $this->assertFileNotContainsWord('test', $this->testFile);
+      $this->assertFileNotContainsWord($this->testFile, 'test');
       $this->fail('Assertion should have failed for existing word');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -148,12 +148,12 @@ class FileAssertionsTraitTest extends TestCase {
     file_put_contents($this->testFile, 'Testing with numbers: 123 and words.');
 
     // These should pass - valid regex patterns.
-    $this->assertFileContainsString('/\d+/', $this->testFile);
-    $this->assertFileNotContainsString('/\d{4,}/', $this->testFile);
+    $this->assertFileContainsString($this->testFile, '/\d+/');
+    $this->assertFileNotContainsString($this->testFile, '/\d{4,}/');
 
     // Regular string content should also work.
-    $this->assertFileContainsString('123', $this->testFile);
-    $this->assertFileNotContainsString('456', $this->testFile);
+    $this->assertFileContainsString($this->testFile, '123');
+    $this->assertFileNotContainsString($this->testFile, '456');
   }
 
   public function testAssertFileEqualsFileSuccess(): void {
