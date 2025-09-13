@@ -61,7 +61,7 @@ trait FileAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertFileContainsWord(string $file, string $needle, string $message = ''): void {
-    if (!File::contains($file, '/\b' . preg_quote($needle) . '\b/i')) {
+    if (!File::contains($file, '/\b' . preg_quote($needle, '/') . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s" word, but it does not.', $file, $needle));
     }
     $this->addToAssertionCount(1);
@@ -81,7 +81,7 @@ trait FileAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertFileNotContainsWord(string $file, string $needle, string $message = ''): void {
-    if (File::contains($file, '/\b' . preg_quote($needle) . '\b/i')) {
+    if (File::contains($file, '/\b' . preg_quote($needle, '/') . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s" word, but it does.', $file, $needle));
     }
     $this->addToAssertionCount(1);

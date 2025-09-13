@@ -490,4 +490,14 @@ class FileAssertionsTraitTest extends TestCase {
     }
   }
 
+  public function testAssertFileContainsWordWithSlashes(): void {
+    file_put_contents($this->testFile, 'This contains path/to/file and other/different content');
+
+    // Test that needles containing forward slashes work correctly.
+    $this->assertFileContainsWord($this->testFile, 'path/to/file');
+
+    // Test that non-existent paths with slashes don't match.
+    $this->assertFileNotContainsWord($this->testFile, 'path/to/nonexistent');
+  }
+
 }

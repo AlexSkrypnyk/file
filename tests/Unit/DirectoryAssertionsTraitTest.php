@@ -632,4 +632,20 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
+  public function testAssertDirectoryContainsWordWithSlashes(): void {
+    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
+
+    file_put_contents($file1, 'This contains path/to/file and other content');
+    file_put_contents($file2, 'This contains other/different but not the full path');
+
+    // Test that needles containing forward slashes work correctly.
+    $this->assertDirectoryContainsWord($this->tmpDir, 'path/to/file');
+    $this->addToAssertionCount(1);
+
+    // Test that non-existent paths with slashes don't match.
+    $this->assertDirectoryNotContainsWord($this->tmpDir, 'path/to/nonexistent');
+    $this->addToAssertionCount(1);
+  }
+
 }
