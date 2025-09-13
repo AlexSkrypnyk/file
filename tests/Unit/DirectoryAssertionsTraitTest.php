@@ -49,11 +49,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This is a test content');
     file_put_contents($file2, 'This is another content');
 
-    $this->assertDirectoryContainsString('test', $this->tmpDir);
+    $this->assertDirectoryContainsString($this->tmpDir, 'test');
     $this->addToAssertionCount(1);
 
     $excluded = ['file1.txt'];
-    $this->assertDirectoryContainsString('another', $this->tmpDir, $excluded);
+    $this->assertDirectoryContainsString($this->tmpDir, 'another', $excluded);
     $this->addToAssertionCount(1);
   }
 
@@ -65,7 +65,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This is another content');
 
     try {
-      $this->assertDirectoryContainsString('nonexistent', $this->tmpDir);
+      $this->assertDirectoryContainsString($this->tmpDir, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent string');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -73,7 +73,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
 
     try {
-      $this->assertDirectoryContainsString('nonexistent', $this->tmpDir, [], 'Custom message for nonexistent string');
+      $this->assertDirectoryContainsString($this->tmpDir, 'nonexistent', [], 'Custom message for nonexistent string');
       $this->fail('Assertion should have failed for nonexistent string');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -88,10 +88,10 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This is a test content');
     file_put_contents($file2, 'This is another content');
 
-    $this->assertDirectoryNotContainsString('nonexistent', $this->tmpDir);
+    $this->assertDirectoryNotContainsString($this->tmpDir, 'nonexistent');
     $this->addToAssertionCount(1);
 
-    $this->assertDirectoryNotContainsString('test', $this->tmpDir, ['file1.txt']);
+    $this->assertDirectoryNotContainsString($this->tmpDir, 'test', ['file1.txt']);
     $this->addToAssertionCount(1);
   }
 
@@ -103,7 +103,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This is another content');
 
     try {
-      $this->assertDirectoryNotContainsString('test', $this->tmpDir);
+      $this->assertDirectoryNotContainsString($this->tmpDir, 'test');
       $this->fail('Assertion should have failed for existing string');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -112,7 +112,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
 
     try {
-      $this->assertDirectoryNotContainsString('test', $this->tmpDir, [], 'Custom message for existing string');
+      $this->assertDirectoryNotContainsString($this->tmpDir, 'test', [], 'Custom message for existing string');
       $this->fail('Assertion should have failed for existing string with custom message');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -127,11 +127,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This is a test content');
     file_put_contents($file2, 'This is another content with testing');
 
-    $this->assertDirectoryContainsWord('test', $this->tmpDir);
+    $this->assertDirectoryContainsWord($this->tmpDir, 'test');
     $this->addToAssertionCount(1);
 
     $excluded = ['file2.txt'];
-    $this->assertDirectoryContainsWord('test', $this->tmpDir, $excluded);
+    $this->assertDirectoryContainsWord($this->tmpDir, 'test', $excluded);
     $this->addToAssertionCount(1);
   }
 
@@ -143,7 +143,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This is another content with testing');
 
     try {
-      $this->assertDirectoryContainsWord('nonexistent', $this->tmpDir);
+      $this->assertDirectoryContainsWord($this->tmpDir, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent word');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -151,7 +151,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
 
     try {
-      $this->assertDirectoryContainsWord('nonexistent', $this->tmpDir, [], 'Custom message for nonexistent word');
+      $this->assertDirectoryContainsWord($this->tmpDir, 'nonexistent', [], 'Custom message for nonexistent word');
       $this->fail('Assertion should have failed for nonexistent word with custom message');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -159,7 +159,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
 
     try {
-      $this->assertDirectoryContainsWord('tes', $this->tmpDir);
+      $this->assertDirectoryContainsWord($this->tmpDir, 'tes');
       $this->fail('Assertion should have failed for partial word match');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -174,13 +174,13 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This is a test content');
     file_put_contents($file2, 'This is another content');
 
-    $this->assertDirectoryNotContainsWord('nonexistent', $this->tmpDir);
+    $this->assertDirectoryNotContainsWord($this->tmpDir, 'nonexistent');
     $this->addToAssertionCount(1);
 
-    $this->assertDirectoryNotContainsWord('tes', $this->tmpDir);
+    $this->assertDirectoryNotContainsWord($this->tmpDir, 'tes');
     $this->addToAssertionCount(1);
 
-    $this->assertDirectoryNotContainsWord('test', $this->tmpDir, ['file1.txt']);
+    $this->assertDirectoryNotContainsWord($this->tmpDir, 'test', ['file1.txt']);
     $this->addToAssertionCount(1);
   }
 
@@ -192,7 +192,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This is another content');
 
     try {
-      $this->assertDirectoryNotContainsWord('test', $this->tmpDir);
+      $this->assertDirectoryNotContainsWord($this->tmpDir, 'test');
       $this->fail('Assertion should have failed for existing word');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -201,7 +201,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
 
     try {
-      $this->assertDirectoryNotContainsWord('test', $this->tmpDir, [], 'Custom message for existing word');
+      $this->assertDirectoryNotContainsWord($this->tmpDir, 'test', [], 'Custom message for existing word');
       $this->fail('Assertion should have failed for existing word with custom message');
     }
     catch (AssertionFailedError $assertionFailedError) {
@@ -209,7 +209,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
 
     try {
-      $this->assertDirectoryNotContainsWord('another', $this->tmpDir, ['file1.txt']);
+      $this->assertDirectoryNotContainsWord($this->tmpDir, 'another', ['file1.txt']);
       $this->fail('Assertion should have failed for word in non-excluded file');
     }
     catch (AssertionFailedError $assertionFailedError) {

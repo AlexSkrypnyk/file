@@ -18,16 +18,16 @@ trait DirectoryAssertionsTrait {
   /**
    * Assert that a directory contains files with a specific string.
    *
-   * @param string $needle
-   *   The string to search for in files.
    * @param string $directory
    *   The directory to search in.
+   * @param string $needle
+   *   The string to search for in files.
    * @param array $excluded
    *   An array of paths to exclude from the search.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryContainsString(string $directory, string $needle, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, $needle, $excluded);
 
     if (empty($files)) {
@@ -38,16 +38,16 @@ trait DirectoryAssertionsTrait {
   /**
    * Assert that a directory does not contain files with a specific string.
    *
-   * @param string $needle
-   *   The string to search for in files.
    * @param string $directory
    *   The directory to search in.
+   * @param string $needle
+   *   The string to search for in files.
    * @param array $excluded
    *   An array of paths to exclude from the search.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryNotContainsString(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryNotContainsString(string $directory, string $needle, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, $needle, $excluded);
 
     if (!empty($files)) {
@@ -61,16 +61,16 @@ trait DirectoryAssertionsTrait {
    * This method uses word boundaries to ensure the needle is found as a
    * complete word, not as part of another word.
    *
-   * @param string $needle
-   *   The word to search for in files.
    * @param string $directory
    *   The directory to search in.
+   * @param string $needle
+   *   The word to search for in files.
    * @param array $excluded
    *   An array of paths to exclude from the search.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryContainsWord(string $directory, string $needle, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle) . '\b/i', $excluded);
 
     if (empty($files)) {
@@ -84,16 +84,16 @@ trait DirectoryAssertionsTrait {
    * This method uses word boundaries to ensure the needle is found as a
    * complete word, not as part of another word.
    *
-   * @param string $needle
-   *   The word to search for in files.
    * @param string $directory
    *   The directory to search in.
+   * @param string $needle
+   *   The word to search for in files.
    * @param array $excluded
    *   An array of paths to exclude from the search.
    * @param string $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryNotContainsWord(string $needle, string $directory, array $excluded = [], string $message = ''): void {
+  public function assertDirectoryNotContainsWord(string $directory, string $needle, array $excluded = [], string $message = ''): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle) . '\b/i', $excluded);
 
     if (!empty($files)) {
