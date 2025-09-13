@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\AssertionFailedError;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Tests\Traits\FileAssertionsTrait;
@@ -289,6 +290,203 @@ class FileAssertionsTraitTest extends TestCase {
     }
     catch (AssertionFailedError $assertionFailedError) {
       $this->assertStringContainsString('Custom message for identical files', $assertionFailedError->getMessage());
+    }
+  }
+
+  /**
+   * Data provider for assertFilesExist tests.
+   */
+  public static function assertFilesExistDataProvider(): array {
+    return [
+      'single file success' => [['test1.txt'], [], TRUE, ''],
+      'multiple files success' => [['test1.txt', 'test2.txt', 'test3.txt'], [], TRUE, ''],
+      'files with different extensions success' => [['test.txt', 'data.json', 'config.yml'], [], TRUE, ''],
+      'empty array success' => [[], [], TRUE, ''],
+      'nonexistent file failure' => [['existing.txt', 'nonexistent.txt'], ['existing.txt'], FALSE, 'nonexistent.txt'],
+    ];
+  }
+
+  /**
+   * Test assertFilesExist method with data provider.
+   */
+  #[DataProvider('assertFilesExistDataProvider')]
+  public function testAssertFilesExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
+    // Create specified files.
+    foreach ($create_files as $file) {
+      file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'content');
+    }
+
+    // If no specific files to create, create all files from the test case.
+    if (empty($create_files) && $should_pass) {
+      foreach ($files as $file) {
+        file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'test content');
+      }
+    }
+
+    if ($should_pass) {
+      $this->assertFilesExist($this->tmpDir, $files);
+      // Add assertion to avoid risky tests for empty arrays.
+      // @phpstan-ignore-next-line
+      $this->assertTrue(TRUE);
+    }
+    else {
+      try {
+        $this->assertFilesExist($this->tmpDir, $files);
+        $this->fail('Assertion should have failed');
+      }
+      catch (AssertionFailedError $assertionFailedError) {
+        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      }
+    }
+  }
+
+  /**
+   * Data provider for assertFilesDoNotExist tests.
+   */
+  public static function assertFilesDoNotExistDataProvider(): array {
+    return [
+      'single nonexistent file success' => [['nonexistent1.txt'], [], TRUE, ''],
+      'multiple nonexistent files success' => [['nonexistent1.txt', 'nonexistent2.txt', 'nonexistent3.txt'], [], TRUE, ''],
+      'files with different extensions success' => [['missing.txt', 'absent.json', 'gone.yml'], [], TRUE, ''],
+      'empty array success' => [[], [], TRUE, ''],
+      'existing file failure' => [['existing.txt'], ['existing.txt'], FALSE, 'existing.txt'],
+    ];
+  }
+
+  /**
+   * Test assertFilesDoNotExist method with data provider.
+   */
+  #[DataProvider('assertFilesDoNotExistDataProvider')]
+  public function testAssertFilesDoNotExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
+    // Create specified files.
+    foreach ($create_files as $file) {
+      file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'content');
+    }
+
+    if ($should_pass) {
+      $this->assertFilesDoNotExist($this->tmpDir, $files);
+      // Add assertion to avoid risky tests for empty arrays.
+      // @phpstan-ignore-next-line
+      $this->assertTrue(TRUE);
+    }
+    else {
+      try {
+        $this->assertFilesDoNotExist($this->tmpDir, $files);
+        $this->fail('Assertion should have failed');
+      }
+      catch (AssertionFailedError $assertionFailedError) {
+        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      }
+    }
+  }
+
+  /**
+   * Data provider for assertFilesWildcardExists tests.
+   */
+  public static function assertFilesWildcardExistsDataProvider(): array {
+    return [
+      'single pattern string success' => ['*.txt', ['test.txt'], TRUE, ''],
+      'single pattern array success' => [['*.txt'], ['test.txt'], TRUE, ''],
+      'multiple patterns success' => [['*.txt', '*.json'], ['test.txt', 'data.json'], TRUE, ''],
+      'directory pattern success' => ['subdir/*.txt', ['subdir/file.txt'], TRUE, ''],
+      'prefix pattern success' => ['test_*.txt', ['test_file.txt'], TRUE, ''],
+      'no matches failure' => ['*.nonexistent', [], FALSE, 'No files found matching wildcard pattern'],
+      'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
+    ];
+  }
+
+  /**
+   * Test assertFilesWildcardExists method with data provider.
+   */
+  #[DataProvider('assertFilesWildcardExistsDataProvider')]
+  public function testAssertFilesWildcardExists(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
+    // Create files.
+    foreach ($create_files as $file) {
+      $file_path = $this->tmpDir . DIRECTORY_SEPARATOR . $file;
+      $dir = dirname($file_path);
+      if (!is_dir($dir)) {
+        mkdir($dir, 0777, TRUE);
+      }
+      file_put_contents($file_path, 'content');
+    }
+
+    // Convert patterns to full paths.
+    $full_patterns = is_array($patterns) ?
+      array_map(fn($p): string => $this->tmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
+      $this->tmpDir . DIRECTORY_SEPARATOR . $patterns;
+
+    if ($should_pass === 'exception') {
+      try {
+        $this->assertFilesWildcardExists($patterns);
+        $this->fail('Should throw InvalidArgumentException');
+      }
+      catch (\InvalidArgumentException $invalidArgumentException) {
+        $this->assertStringContainsString($expected_error, $invalidArgumentException->getMessage());
+      }
+    }
+    elseif ($should_pass) {
+      $this->assertFilesWildcardExists($full_patterns);
+    }
+    else {
+      try {
+        $this->assertFilesWildcardExists($full_patterns);
+        $this->fail('Assertion should have failed');
+      }
+      catch (AssertionFailedError $assertionFailedError) {
+        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      }
+    }
+  }
+
+  /**
+   * Data provider for assertFilesWildcardDoNotExist tests.
+   */
+  public static function assertFilesWildcardDoNotExistDataProvider(): array {
+    return [
+      'single pattern string success' => ['*.nonexistent', [], TRUE, ''],
+      'single pattern array success' => [['*.nonexistent'], [], TRUE, ''],
+      'multiple patterns success' => [['*.nonexistent', '*.missing'], [], TRUE, ''],
+      'directory pattern success' => ['nonexistent_dir/*.txt', [], TRUE, ''],
+      'matching files failure' => ['*.txt', ['test.txt'], FALSE, 'Found 1 file(s) matching wildcard pattern that should not exist'],
+      'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
+    ];
+  }
+
+  /**
+   * Test assertFilesWildcardDoNotExist method with data provider.
+   */
+  #[DataProvider('assertFilesWildcardDoNotExistDataProvider')]
+  public function testAssertFilesWildcardDoNotExist(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
+    // Create files.
+    foreach ($create_files as $file) {
+      file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'content');
+    }
+
+    // Convert patterns to full paths.
+    $full_patterns = is_array($patterns) ?
+      array_map(fn($p): string => $this->tmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
+      $this->tmpDir . DIRECTORY_SEPARATOR . $patterns;
+
+    if ($should_pass === 'exception') {
+      try {
+        $this->assertFilesWildcardDoNotExist($patterns);
+        $this->fail('Should throw InvalidArgumentException');
+      }
+      catch (\InvalidArgumentException $invalidArgumentException) {
+        $this->assertStringContainsString($expected_error, $invalidArgumentException->getMessage());
+      }
+    }
+    elseif ($should_pass) {
+      $this->assertFilesWildcardDoNotExist($full_patterns);
+    }
+    else {
+      try {
+        $this->assertFilesWildcardDoNotExist($full_patterns);
+        $this->fail('Assertion should have failed');
+      }
+      catch (AssertionFailedError $assertionFailedError) {
+        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      }
     }
   }
 

@@ -142,4 +142,90 @@ trait FileAssertionsTrait {
     $this->addToAssertionCount(1);
   }
 
+  /**
+   * Assert that multiple files exist in a directory.
+   *
+   * @param string $directory
+   *   The directory to check files in.
+   * @param array $files
+   *   Array of file names to check for existence.
+   */
+  public function assertFilesExist(string $directory, array $files): void {
+    foreach ($files as $file) {
+      $this->assertFileExists($directory . DIRECTORY_SEPARATOR . $file);
+    }
+  }
+
+  /**
+   * Assert that multiple files do not exist in a directory.
+   *
+   * @param string $directory
+   *   The directory to check files in.
+   * @param array $files
+   *   Array of file names to check for non-existence.
+   */
+  public function assertFilesDoNotExist(string $directory, array $files): void {
+    foreach ($files as $file) {
+      $this->assertFileDoesNotExist($directory . DIRECTORY_SEPARATOR . $file);
+    }
+  }
+
+  /**
+   * Assert that files matching wildcard pattern(s) exist.
+   *
+   * @param string|array $patterns
+   *   Wildcard pattern(s) to match files against.
+   */
+  public function assertFilesWildcardExists(string|array $patterns): void {
+    $patterns = is_array($patterns) ? $patterns : [$patterns];
+
+    if (empty($patterns)) {
+      throw new \InvalidArgumentException('Empty patterns - no files to check');
+    }
+
+    foreach ($patterns as $pattern) {
+      $matches = glob($pattern);
+
+      if ($matches === FALSE) {
+        // @codeCoverageIgnoreStart
+        throw new \RuntimeException(sprintf('Failed to read files matching wildcard pattern: %s', $pattern));
+        // @codeCoverageIgnoreEnd
+      }
+
+      $this->assertNotEmpty(
+        $matches,
+        sprintf('No files found matching wildcard pattern: %s', $pattern)
+      );
+    }
+  }
+
+  /**
+   * Assert that files matching wildcard pattern(s) do not exist.
+   *
+   * @param string|array $patterns
+   *   Wildcard pattern(s) to match files against.
+   */
+  public function assertFilesWildcardDoNotExist(string|array $patterns): void {
+    $patterns = is_array($patterns) ? $patterns : [$patterns];
+
+    if (empty($patterns)) {
+      throw new \InvalidArgumentException('Empty patterns - no files to check');
+    }
+
+    foreach ($patterns as $pattern) {
+      $matches = glob($pattern);
+
+      if ($matches === FALSE) {
+        // @codeCoverageIgnoreStart
+        throw new \RuntimeException(sprintf('Failed to read files matching wildcard pattern: %s', $pattern));
+        // @codeCoverageIgnoreEnd
+      }
+
+      $this->assertEmpty(
+        $matches,
+        sprintf('Found %d file(s) matching wildcard pattern that should not exist: %s', count($matches), $pattern)
+      );
+    }
+  }
+
 }

@@ -331,14 +331,18 @@ class MyTest extends TestCase {
 
 #### File Assertions Trait
 
-| Assertion Method                | Description                                                               |
-|---------------------------------|---------------------------------------------------------------------------|
-| `assertFileContainsString()`    | Assert that a file contains a specific string.                            |
-| `assertFileNotContainsString()` | Assert that a file does not contain a specific string.                    |
-| `assertFileContainsWord()`      | Assert that a file contains a specific word (bounded by word boundaries). |
-| `assertFileNotContainsWord()`   | Assert that a file does not contain a specific word.                      |
-| `assertFileEqualsFile()`        | Assert that a file equals another file in contents.                       |
-| `assertFileNotEqualsFile()`     | Assert that a file does not equal another file in contents.               |
+| Assertion Method                   | Description                                                               |
+|------------------------------------|---------------------------------------------------------------------------|
+| `assertFileContainsString()`       | Assert that a file contains a specific string.                            |
+| `assertFileNotContainsString()`    | Assert that a file does not contain a specific string.                    |
+| `assertFileContainsWord()`         | Assert that a file contains a specific word (bounded by word boundaries). |
+| `assertFileNotContainsWord()`      | Assert that a file does not contain a specific word.                      |
+| `assertFileEqualsFile()`           | Assert that a file equals another file in contents.                       |
+| `assertFileNotEqualsFile()`        | Assert that a file does not equal another file in contents.               |
+| `assertFilesExist()`               | Assert that multiple files exist in a directory.                          |
+| `assertFilesDoNotExist()`          | Assert that multiple files do not exist in a directory.                   |
+| `assertFilesWildcardExists()`      | Assert that files matching wildcard pattern(s) exist.                     |
+| `assertFilesWildcardDoNotExist()`  | Assert that files matching wildcard pattern(s) do not exist.              |
 
 Usage example:
 
@@ -364,6 +368,20 @@ class MyTest extends TestCase {
 
     // Assert two files have different content
     $this->assertFileNotEqualsFile('/path/to/expected.txt', '/path/to/actual.txt');
+
+    // Assert that multiple files exist in a directory
+    $this->assertFilesExist('/path/to/directory', ['file1.txt', 'file2.txt']);
+
+    // Assert that multiple files do not exist in a directory
+    $this->assertFilesDoNotExist('/path/to/directory', ['file1.txt', 'file2.txt']);
+
+    // Assert that files matching wildcard pattern(s) exist
+    $this->assertFilesWildcardExists('*.txt');
+    $this->assertFilesWildcardExists(['*.txt', '*.json']);
+
+    // Assert that files matching wildcard pattern(s) do not exist
+    $this->assertFilesWildcardDoNotExist('*.log');
+    $this->assertFilesWildcardDoNotExist(['*.tmp', '*.cache']);
   }
 }
 ```
