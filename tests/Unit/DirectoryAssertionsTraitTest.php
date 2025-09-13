@@ -432,4 +432,204 @@ class DirectoryAssertionsTraitTest extends TestCase {
     $this->assertEquals("*.ignored\n*.log", $content);
   }
 
+  public function testIgnoredPathIntegrationWithContainsString(): void {
+    // Create test files including some that should be ignored.
+    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
+    $ignoreDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignore';
+    mkdir($ignoreDir);
+    $file3 = $ignoreDir . DIRECTORY_SEPARATOR . 'file3.txt';
+
+    file_put_contents($file1, 'This contains searchable content');
+    file_put_contents($file2, 'This contains searchable content');
+    file_put_contents($file3, 'This contains searchable content');
+
+    // Create a mock trait that overrides ignoredPath().
+    $testInstance = new class() {
+      use DirectoryAssertionsTrait;
+
+      public static function ignoredPath(): array {
+        return ['ignored.txt', 'ignore'];
+      }
+
+      public function fail(string $message = ''): never {
+        throw new AssertionFailedError($message);
+      }
+
+      public function addToAssertionCount(int $count): void {
+        // Mock implementation for testing.
+      }
+
+    };
+
+    // Test that ignored files are excluded from search.
+    $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable');
+    $this->addToAssertionCount(1);
+
+    // Remove the non-ignored file to test that assertion fails when only
+    // ignored files contain the string.
+    unlink($file1);
+    try {
+      $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable');
+      $this->fail('Assertion should have failed when only ignored files contain the string');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Directory should contain "searchable"', $assertionFailedError->getMessage());
+    }
+  }
+
+  public function testIgnoredPathIntegrationWithNotContainsString(): void {
+    // Create test files including some that should be ignored.
+    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
+
+    file_put_contents($file1, 'This does not contain the word');
+    file_put_contents($file2, 'This contains forbidden content');
+
+    // Create a mock trait that overrides ignoredPath().
+    $testInstance = new class() {
+      use DirectoryAssertionsTrait;
+
+      public static function ignoredPath(): array {
+        return ['ignored.txt'];
+      }
+
+      public function fail(string $message = ''): never {
+        throw new AssertionFailedError($message);
+      }
+
+      public function addToAssertionCount(int $count): void {
+        // Mock implementation for testing.
+      }
+
+    };
+
+    // Test that ignored files are excluded from search - should pass because
+    // ignored file is not checked.
+    $testInstance->assertDirectoryNotContainsString($this->tmpDir, 'forbidden');
+    $this->addToAssertionCount(1);
+
+    // Add forbidden content to non-ignored file to test failure.
+    file_put_contents($file1, 'This contains forbidden content');
+    try {
+      $testInstance->assertDirectoryNotContainsString($this->tmpDir, 'forbidden');
+      $this->fail('Assertion should have failed when non-ignored file contains forbidden string');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Directory should not contain "forbidden"', $assertionFailedError->getMessage());
+      $this->assertStringContainsString('file1.txt', $assertionFailedError->getMessage());
+    }
+  }
+
+  public function testIgnoredPathIntegrationWithContainsWord(): void {
+    // Create test files.
+    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
+
+    file_put_contents($file1, 'This has testing words');
+    file_put_contents($file2, 'This has test words');
+
+    // Create a mock trait that overrides ignoredPath().
+    $testInstance = new class() {
+      use DirectoryAssertionsTrait;
+
+      public static function ignoredPath(): array {
+        return ['ignored.txt'];
+      }
+
+      public function fail(string $message = ''): never {
+        throw new AssertionFailedError($message);
+      }
+
+      public function addToAssertionCount(int $count): void {
+        // Mock implementation for testing.
+      }
+
+    };
+
+    // Test finding complete word - should fail because ignored file is not
+    // checked.
+    try {
+      $testInstance->assertDirectoryContainsWord($this->tmpDir, 'test');
+      $this->fail('Assertion should have failed when only ignored file contains the word');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Directory should contain "test" word', $assertionFailedError->getMessage());
+    }
+  }
+
+  public function testIgnoredPathIntegrationWithNotContainsWord(): void {
+    // Create test files.
+    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
+
+    file_put_contents($file1, 'This has safe content');
+    file_put_contents($file2, 'This has forbidden word');
+
+    // Create a mock trait that overrides ignoredPath().
+    $testInstance = new class() {
+      use DirectoryAssertionsTrait;
+
+      public static function ignoredPath(): array {
+        return ['ignored.txt'];
+      }
+
+      public function fail(string $message = ''): never {
+        throw new AssertionFailedError($message);
+      }
+
+      public function addToAssertionCount(int $count): void {
+        // Mock implementation for testing.
+      }
+
+    };
+
+    // Test that ignored file is not checked - should pass.
+    $testInstance->assertDirectoryNotContainsWord($this->tmpDir, 'forbidden');
+    $this->addToAssertionCount(1);
+  }
+
+  public function testIgnoredPathMergesWithExplicitExcluded(): void {
+    // Create test files.
+    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored_by_method.txt';
+    $file3 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored_by_override.txt';
+
+    file_put_contents($file1, 'This contains searchable content');
+    file_put_contents($file2, 'This contains searchable content');
+    file_put_contents($file3, 'This contains searchable content');
+
+    // Create a mock trait that overrides ignoredPath().
+    $testInstance = new class() {
+      use DirectoryAssertionsTrait;
+
+      public static function ignoredPath(): array {
+        return ['ignored_by_override.txt'];
+      }
+
+      public function fail(string $message = ''): never {
+        throw new AssertionFailedError($message);
+      }
+
+      public function addToAssertionCount(int $count): void {
+        // Mock implementation for testing.
+      }
+
+    };
+
+    // Test that both ignoredPath() and explicit excluded are merged.
+    $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
+    $this->addToAssertionCount(1);
+
+    // Remove the non-ignored file and verify assertion fails.
+    unlink($file1);
+    try {
+      $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
+      $this->fail('Assertion should have failed when only ignored files contain the string');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Directory should contain "searchable"', $assertionFailedError->getMessage());
+    }
+  }
+
 }

@@ -323,11 +323,46 @@ class MyTest extends TestCase {
     // Assert directory contains "example" string in at least one file
     $this->assertDirectoryContainsString('/path/to/directory', 'example');
 
+    // Assert directory contains "example" string, ignoring specific files
+    $this->assertDirectoryContainsString('/path/to/directory', 'example', ['temp.log', 'cache']);
+
     // Assert two directories are identical
     $this->assertDirectoryEqualsDirectory('/path/to/dir1', '/path/to/dir2');
   }
 }
 ```
+
+##### Ignoring Paths in Directory Assertions
+
+The directory assertion methods support ignoring specific paths during searches. You can ignore paths in two ways:
+
+1. **Per-method ignoring**: Pass an `$ignored` array parameter to individual assertion methods
+2. **Global ignoring**: Override the `ignoredPath()` method in your test class
+
+```php
+class MyTest extends TestCase {
+  use DirectoryAssertionsTrait;
+
+  // Global ignored paths for all directory assertions in this test class
+  public static function ignoredPath(): array {
+    return ['.git', 'node_modules', 'vendor', 'temp/cache'];
+  }
+
+  public function testWithIgnoredPaths(): void {
+    // This will ignore both global ignored paths AND 'logs' directory
+    $this->assertDirectoryContainsString('/path/to/dir', 'search_term', ['logs']);
+    
+    // Global ignored paths are automatically applied to all directory assertions
+    $this->assertDirectoryNotContainsWord('/path/to/dir', 'forbidden');
+  }
+}
+```
+
+**Important Notes:**
+- Ignored paths are literal subpaths (not wildcard patterns)  
+- Global `ignoredPath()` and per-method `$ignored` parameters are merged together
+- Both file names and directory paths can be ignored
+- Ignored paths are relative to the directory being searched
 
 #### File Assertions Trait
 
