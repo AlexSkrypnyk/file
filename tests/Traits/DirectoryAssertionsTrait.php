@@ -32,7 +32,7 @@ trait DirectoryAssertionsTrait {
    * @return array
    *   An array of literal subpaths to ignore during directory assertions.
    */
-  public static function ignoredPath(): array {
+  public static function ignoredPaths(): array {
     return [];
   }
 
@@ -49,7 +49,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryContainsString(string $directory, string $needle, array $ignored = [], string $message = ''): void {
-    $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPath(), $ignored));
+    $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
 
     if (empty($files)) {
       $this->fail($message ?: sprintf('Directory should contain "%s", but it does not.', $needle));
@@ -69,7 +69,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryNotContainsString(string $directory, string $needle, array $ignored = [], string $message = ''): void {
-    $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPath(), $ignored));
+    $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
 
     if (!empty($files)) {
       $this->fail($message ?: sprintf('Directory should not contain "%s", but it does within files %s.', $needle, implode(', ', $files)));
@@ -92,7 +92,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryContainsWord(string $directory, string $needle, array $ignored = [], string $message = ''): void {
-    $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPath(), $ignored));
+    $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
 
     if (empty($files)) {
       $this->fail($message ?: sprintf('Directory should contain "%s" word, but it does not.', $needle));
@@ -115,7 +115,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryNotContainsWord(string $directory, string $needle, array $ignored = [], string $message = ''): void {
-    $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPath(), $ignored));
+    $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
 
     if (!empty($files)) {
       $this->fail($message ?: sprintf('Directory should not contain "%s" word, but it does within files %s.', $needle, implode(', ', $files)));

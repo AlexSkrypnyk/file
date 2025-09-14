@@ -337,21 +337,21 @@ class MyTest extends TestCase {
 The directory assertion methods support ignoring specific paths during searches. You can ignore paths in two ways:
 
 1. **Per-method ignoring**: Pass an `$ignored` array parameter to individual assertion methods
-2. **Global ignoring**: Override the `ignoredPath()` method in your test class
+2. **Global ignoring**: Override the `ignoredPaths()` method in your test class
 
 ```php
 class MyTest extends TestCase {
   use DirectoryAssertionsTrait;
 
   // Global ignored paths for all directory assertions in this test class
-  public static function ignoredPath(): array {
+  public static function ignoredPaths(): array {
     return ['.git', 'node_modules', 'vendor', 'temp/cache'];
   }
 
   public function testWithIgnoredPaths(): void {
     // This will ignore both global ignored paths AND 'logs' directory
     $this->assertDirectoryContainsString('/path/to/dir', 'search_term', ['logs']);
-    
+
     // Global ignored paths are automatically applied to all directory assertions
     $this->assertDirectoryNotContainsWord('/path/to/dir', 'forbidden');
   }
@@ -359,8 +359,8 @@ class MyTest extends TestCase {
 ```
 
 **Important Notes:**
-- Ignored paths are literal subpaths (not wildcard patterns)  
-- Global `ignoredPath()` and per-method `$ignored` parameters are merged together
+- Ignored paths are literal subpaths (not wildcard patterns)
+- Global `ignoredPaths()` and per-method `$ignored` parameters are merged together
 - Both file names and directory paths can be ignored
 - Ignored paths are relative to the directory being searched
 
