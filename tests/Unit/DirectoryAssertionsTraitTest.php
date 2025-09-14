@@ -432,7 +432,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     $this->assertEquals("*.ignored\n*.log", $content);
   }
 
-  public function testIgnoredPathIntegrationWithContainsString(): void {
+  public function testIgnoredPathsIntegrationWithContainsString(): void {
     // Create test files including some that should be ignored.
     $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
@@ -444,11 +444,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This contains searchable content');
     file_put_contents($file3, 'This contains searchable content');
 
-    // Create a mock trait that overrides ignoredPath().
+    // Create a mock trait that overrides ignoredPaths().
     $testInstance = new class() {
       use DirectoryAssertionsTrait;
 
-      public static function ignoredPath(): array {
+      public static function ignoredPaths(): array {
         return ['ignored.txt', 'ignore'];
       }
 
@@ -478,7 +478,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testIgnoredPathIntegrationWithNotContainsString(): void {
+  public function testIgnoredPathsIntegrationWithNotContainsString(): void {
     // Create test files including some that should be ignored.
     $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
@@ -486,11 +486,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This does not contain the word');
     file_put_contents($file2, 'This contains forbidden content');
 
-    // Create a mock trait that overrides ignoredPath().
+    // Create a mock trait that overrides ignoredPaths().
     $testInstance = new class() {
       use DirectoryAssertionsTrait;
 
-      public static function ignoredPath(): array {
+      public static function ignoredPaths(): array {
         return ['ignored.txt'];
       }
 
@@ -521,7 +521,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testIgnoredPathIntegrationWithContainsWord(): void {
+  public function testIgnoredPathsIntegrationWithContainsWord(): void {
     // Create test files.
     $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
@@ -529,11 +529,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This has testing words');
     file_put_contents($file2, 'This has test words');
 
-    // Create a mock trait that overrides ignoredPath().
+    // Create a mock trait that overrides ignoredPaths().
     $testInstance = new class() {
       use DirectoryAssertionsTrait;
 
-      public static function ignoredPath(): array {
+      public static function ignoredPaths(): array {
         return ['ignored.txt'];
       }
 
@@ -558,7 +558,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testIgnoredPathIntegrationWithNotContainsWord(): void {
+  public function testIgnoredPathsIntegrationWithNotContainsWord(): void {
     // Create test files.
     $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
@@ -566,11 +566,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'This has safe content');
     file_put_contents($file2, 'This has forbidden word');
 
-    // Create a mock trait that overrides ignoredPath().
+    // Create a mock trait that overrides ignoredPaths().
     $testInstance = new class() {
       use DirectoryAssertionsTrait;
 
-      public static function ignoredPath(): array {
+      public static function ignoredPaths(): array {
         return ['ignored.txt'];
       }
 
@@ -589,7 +589,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
   }
 
-  public function testIgnoredPathMergesWithExplicitExcluded(): void {
+  public function testIgnoredPathsMergesWithExplicitExcluded(): void {
     // Create test files.
     $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored_by_method.txt';
@@ -599,11 +599,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This contains searchable content');
     file_put_contents($file3, 'This contains searchable content');
 
-    // Create a mock trait that overrides ignoredPath().
+    // Create a mock trait that overrides ignoredPaths().
     $testInstance = new class() {
       use DirectoryAssertionsTrait;
 
-      public static function ignoredPath(): array {
+      public static function ignoredPaths(): array {
         return ['ignored_by_override.txt'];
       }
 
@@ -617,7 +617,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
 
     };
 
-    // Test that both ignoredPath() and explicit excluded are merged.
+    // Test that both ignoredPaths() and explicit excluded are merged.
     $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
     $this->addToAssertionCount(1);
 
