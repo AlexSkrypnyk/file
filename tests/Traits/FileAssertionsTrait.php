@@ -20,10 +20,10 @@ trait FileAssertionsTrait {
    *   The file to search in.
    * @param string $needle
    *   The string to search for in the file.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertFileContainsString(string $file, string $needle, string $message = ''): void {
+  public function assertFileContainsString(string $file, string $needle, ?string $message = NULL): void {
     if (!File::contains($file, $needle)) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s", but it does not.', $file, $needle));
     }
@@ -37,10 +37,10 @@ trait FileAssertionsTrait {
    *   The file to search in.
    * @param string $needle
    *   The string to search for in the file.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertFileNotContainsString(string $file, string $needle, string $message = ''): void {
+  public function assertFileNotContainsString(string $file, string $needle, ?string $message = NULL): void {
     if (File::contains($file, $needle)) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s", but it does.', $file, $needle));
     }
@@ -57,10 +57,10 @@ trait FileAssertionsTrait {
    *   The file to search in.
    * @param string $needle
    *   The word to search for in the file.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertFileContainsWord(string $file, string $needle, string $message = ''): void {
+  public function assertFileContainsWord(string $file, string $needle, ?string $message = NULL): void {
     if (!File::contains($file, '/\b' . preg_quote($needle, '/') . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should contain "%s" word, but it does not.', $file, $needle));
     }
@@ -77,10 +77,10 @@ trait FileAssertionsTrait {
    *   The file to search in.
    * @param string $needle
    *   The word to search for in the file.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertFileNotContainsWord(string $file, string $needle, string $message = ''): void {
+  public function assertFileNotContainsWord(string $file, string $needle, ?string $message = NULL): void {
     if (File::contains($file, '/\b' . preg_quote($needle, '/') . '\b/i')) {
       $this->fail($message ?: sprintf('File "%s" should not contain "%s" word, but it does.', $file, $needle));
     }
@@ -94,10 +94,10 @@ trait FileAssertionsTrait {
    *   Expected file path.
    * @param string $actual
    *   Actual file path.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertFileEqualsFile(string $expected, string $actual, string $message = ''): void {
+  public function assertFileEqualsFile(string $expected, string $actual, ?string $message = NULL): void {
     // Check that both files exist.
     if (!file_exists($expected)) {
       $this->fail($message ?: sprintf('Expected file "%s" does not exist.', $expected));
@@ -119,10 +119,10 @@ trait FileAssertionsTrait {
    *   Expected file path.
    * @param string $actual
    *   Actual file path.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertFileNotEqualsFile(string $expected, string $actual, string $message = ''): void {
+  public function assertFileNotEqualsFile(string $expected, string $actual, ?string $message = NULL): void {
     // Check that both files exist.
     if (!file_exists($expected)) {
       $this->fail($message ?: sprintf('Expected file "%s" does not exist.', $expected));
@@ -149,10 +149,12 @@ trait FileAssertionsTrait {
    *   The directory to check files in.
    * @param array $files
    *   Array of file names to check for existence.
+   * @param string|null $message
+   *   Optional custom failure message.
    */
-  public function assertFilesExist(string $directory, array $files): void {
+  public function assertFilesExist(string $directory, array $files, ?string $message = NULL): void {
     foreach ($files as $file) {
-      $this->assertFileExists($directory . DIRECTORY_SEPARATOR . $file);
+      $this->assertFileExists($directory . DIRECTORY_SEPARATOR . $file, $message ?: sprintf('File "%s" should exist in directory "%s".', $file, $directory));
     }
   }
 
@@ -163,10 +165,12 @@ trait FileAssertionsTrait {
    *   The directory to check files in.
    * @param array $files
    *   Array of file names to check for non-existence.
+   * @param string|null $message
+   *   Optional custom failure message.
    */
-  public function assertFilesDoNotExist(string $directory, array $files): void {
+  public function assertFilesDoNotExist(string $directory, array $files, ?string $message = NULL): void {
     foreach ($files as $file) {
-      $this->assertFileDoesNotExist($directory . DIRECTORY_SEPARATOR . $file);
+      $this->assertFileDoesNotExist($directory . DIRECTORY_SEPARATOR . $file, $message ?: sprintf('File "%s" should not exist in directory "%s".', $file, $directory));
     }
   }
 
@@ -175,8 +179,10 @@ trait FileAssertionsTrait {
    *
    * @param string|array $patterns
    *   Wildcard pattern(s) to match files against.
+   * @param string|null $message
+   *   Optional custom failure message.
    */
-  public function assertFilesWildcardExists(string|array $patterns): void {
+  public function assertFilesWildcardExists(string|array $patterns, ?string $message = NULL): void {
     $patterns = is_array($patterns) ? $patterns : [$patterns];
 
     if (empty($patterns)) {
@@ -194,7 +200,7 @@ trait FileAssertionsTrait {
 
       $this->assertNotEmpty(
         $matches,
-        sprintf('No files found matching wildcard pattern: %s', $pattern)
+        $message ?: sprintf('No files found matching wildcard pattern: %s', $pattern)
       );
     }
   }
@@ -204,8 +210,10 @@ trait FileAssertionsTrait {
    *
    * @param string|array $patterns
    *   Wildcard pattern(s) to match files against.
+   * @param string|null $message
+   *   Optional custom failure message.
    */
-  public function assertFilesWildcardDoNotExist(string|array $patterns): void {
+  public function assertFilesWildcardDoNotExist(string|array $patterns, ?string $message = NULL): void {
     $patterns = is_array($patterns) ? $patterns : [$patterns];
 
     if (empty($patterns)) {
@@ -223,7 +231,7 @@ trait FileAssertionsTrait {
 
       $this->assertEmpty(
         $matches,
-        sprintf('Found %d file(s) matching wildcard pattern that should not exist: %s', count($matches), $pattern)
+        $message ?: sprintf('Found %d file(s) matching wildcard pattern that should not exist: %s', count($matches), $pattern)
       );
     }
   }

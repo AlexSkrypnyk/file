@@ -45,10 +45,10 @@ trait DirectoryAssertionsTrait {
    *   The string to search for in files.
    * @param array $ignored
    *   An array of paths to exclude from the search.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryContainsString(string $directory, string $needle, array $ignored = [], string $message = ''): void {
+  public function assertDirectoryContainsString(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
     $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
 
     if (empty($files)) {
@@ -65,10 +65,10 @@ trait DirectoryAssertionsTrait {
    *   The string to search for in files.
    * @param array $ignored
    *   An array of paths to exclude from the search.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryNotContainsString(string $directory, string $needle, array $ignored = [], string $message = ''): void {
+  public function assertDirectoryNotContainsString(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
     $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
 
     if (!empty($files)) {
@@ -88,10 +88,10 @@ trait DirectoryAssertionsTrait {
    *   The word to search for in files.
    * @param array $ignored
    *   An array of paths to exclude from the search.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryContainsWord(string $directory, string $needle, array $ignored = [], string $message = ''): void {
+  public function assertDirectoryContainsWord(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
 
     if (empty($files)) {
@@ -111,10 +111,10 @@ trait DirectoryAssertionsTrait {
    *   The word to search for in files.
    * @param array $ignored
    *   An array of paths to exclude from the search.
-   * @param string $message
+   * @param string|null $message
    *   Optional custom failure message.
    */
-  public function assertDirectoryNotContainsWord(string $directory, string $needle, array $ignored = [], string $message = ''): void {
+  public function assertDirectoryNotContainsWord(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
     $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
 
     if (!empty($files)) {
@@ -159,10 +159,12 @@ trait DirectoryAssertionsTrait {
    * @param string|null $expected
    *   Optional path where to create the expected directory. If not provided,
    *   a '.expected' directory will be created next to the baseline.
+   * @param string|null $message
+   *   Optional custom failure message.
    */
-  public function assertDirectoryEqualsPatchedBaseline(string $actual, string $baseline, string $diffs, ?string $expected = NULL): void {
+  public function assertDirectoryEqualsPatchedBaseline(string $actual, string $baseline, string $diffs, ?string $expected = NULL, ?string $message = NULL): void {
     if (!is_dir($baseline)) {
-      $this->fail(sprintf('The baseline directory does not exist: %s', $baseline));
+      $this->fail($message ?: sprintf('The baseline directory does not exist: %s', $baseline));
     }
 
     // We use the .expected dir to easily assess the combined expected fixture.
@@ -173,7 +175,7 @@ trait DirectoryAssertionsTrait {
       File::patch($baseline, $diffs, $expected);
     }
     catch (PatchException $patchException) {
-      $this->fail(sprintf('Failed to apply patch: %s', $patchException->getMessage()));
+      $this->fail($message ?: sprintf('Failed to apply patch: %s', $patchException->getMessage()));
     }
 
     // Do not override .ignorecontent file from the baseline directory.
@@ -181,7 +183,7 @@ trait DirectoryAssertionsTrait {
       File::copy($baseline . DIRECTORY_SEPARATOR . Index::IGNORECONTENT, $expected . DIRECTORY_SEPARATOR . Index::IGNORECONTENT);
     }
 
-    $this->assertDirectoryEqualsDirectory($expected, $actual);
+    $this->assertDirectoryEqualsDirectory($expected, $actual, $message);
   }
 
 }

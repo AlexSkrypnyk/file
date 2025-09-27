@@ -648,4 +648,32 @@ class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
   }
 
+  public function testAssertDirectoryEqualsPatchedBaselineWithCustomMessage(): void {
+    // Set up baseline directory.
+    mkdir($this->baselineDir, 0777, TRUE);
+    file_put_contents($this->baselineDir . DIRECTORY_SEPARATOR . 'file1.txt', 'Original content');
+
+    // Set up diff directory.
+    mkdir($this->diffDir, 0777, TRUE);
+    file_put_contents($this->diffDir . DIRECTORY_SEPARATOR . 'file1.txt', 'Original content');
+
+    // Set up actual directory.
+    mkdir($this->actualDir, 0777, TRUE);
+    file_put_contents($this->actualDir . DIRECTORY_SEPARATOR . 'file1.txt', 'Original content');
+
+    // Test successful assertion with custom message.
+    $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir, NULL, 'Custom success message');
+    $this->addToAssertionCount(1);
+
+    // Test failed assertion with custom message (nonexistent baseline).
+    $nonexistentDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent';
+    try {
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistentDir, $this->diffDir, NULL, 'Custom failure message');
+      $this->fail('Assertion should have failed');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Custom failure message', $assertionFailedError->getMessage());
+    }
+  }
+
 }

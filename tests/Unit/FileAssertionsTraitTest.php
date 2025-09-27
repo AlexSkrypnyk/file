@@ -500,4 +500,40 @@ class FileAssertionsTraitTest extends TestCase {
     $this->assertFileNotContainsWord($this->testFile, 'path/to/nonexistent');
   }
 
+  public function testAssertFilesExistWithCustomMessage(): void {
+    // Create test files.
+    file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . 'test1.txt', 'content');
+
+    // Test successful assertion with custom message.
+    $this->assertFilesExist($this->tmpDir, ['test1.txt'], 'Custom success message');
+
+    // Test failed assertion with custom message.
+    try {
+      $this->assertFilesExist($this->tmpDir, ['nonexistent.txt'], 'Custom failure message');
+      $this->fail('Assertion should have failed');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Custom failure message', $assertionFailedError->getMessage());
+    }
+  }
+
+  public function testAssertFilesWildcardExistsWithCustomMessage(): void {
+    // Create test files.
+    file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . 'test.txt', 'content');
+
+    // Test successful assertion with custom message.
+    $pattern = $this->tmpDir . DIRECTORY_SEPARATOR . '*.txt';
+    $this->assertFilesWildcardExists($pattern, 'Custom success message');
+
+    // Test failed assertion with custom message.
+    $nonexistent_pattern = $this->tmpDir . DIRECTORY_SEPARATOR . '*.nonexistent';
+    try {
+      $this->assertFilesWildcardExists($nonexistent_pattern, 'Custom failure message');
+      $this->fail('Assertion should have failed');
+    }
+    catch (AssertionFailedError $assertionFailedError) {
+      $this->assertStringContainsString('Custom failure message', $assertionFailedError->getMessage());
+    }
+  }
+
 }
