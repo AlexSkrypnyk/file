@@ -526,6 +526,22 @@ class File {
   }
 
   /**
+   * Append content to a file.
+   *
+   * @param string $file
+   *   File path to append to.
+   * @param string $content
+   *   Content to append to the file.
+   */
+  public static function append(string $file, string $content = ''): void {
+    if (!static::exists($file) || !is_readable($file)) {
+      throw new FileException(sprintf('File "%s" does not exist.', $file));
+    }
+
+    static::dump($file, static::read($file) . $content);
+  }
+
+  /**
    * Check if file contains a specific string or matches a pattern.
    *
    * @param string $file
