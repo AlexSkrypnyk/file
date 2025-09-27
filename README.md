@@ -421,6 +421,11 @@ class MyTest extends TestCase {
     // Assert that files matching wildcard pattern(s) do not exist
     $this->assertFilesWildcardDoNotExist('*.log');
     $this->assertFilesWildcardDoNotExist(['*.tmp', '*.cache']);
+
+    // All assertion methods support optional custom failure messages
+    $this->assertFileContainsString('/path/to/file.txt', 'example', 'Custom failure message');
+    $this->assertFilesExist('/path/to/directory', ['file1.txt'], 'Files should exist');
+    $this->assertDirectoryContainsString('/path/to/dir', 'search_term', [], 'Custom message');
   }
 }
 ```
