@@ -26,6 +26,7 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'diff')]
 #[CoversMethod(File::class, 'tmpdir')]
 #[CoversMethod(File::class, 'copy')]
+#[CoversMethod(File::class, 'append')]
 class FileTest extends UnitTestCase {
 
   protected string $testTmpDir;
@@ -479,6 +480,43 @@ class FileTest extends UnitTestCase {
 
     // Clean up.
     rmdir($empty_dir);
+  }
+
+  #[DataProvider('dataProviderAppend')]
+  public function testAppend(string $initial_content, string $append_content, string $expected_content): void {
+    $test_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'append_test.txt';
+
+    // Create initial file.
+    file_put_contents($test_file, $initial_content);
+    $this->assertFileExists($test_file);
+
+    // Test append operation.
+    File::append($test_file, $append_content);
+
+    // Verify final content.
+    $actual_content = file_get_contents($test_file);
+    $this->assertIsString($actual_content, 'Failed to read file content');
+    $this->assertSame($expected_content, $actual_content);
+  }
+
+  public static function dataProviderAppend(): array {
+    return [
+      'append to empty file' => ['', 'Hello World', 'Hello World'],
+      'append to existing content' => ['Hello', ' World', 'Hello World'],
+      'append multiline content' => ["First line\n", "Second line\n", "First line\nSecond line\n"],
+      'append empty string' => ['Existing content', '', 'Existing content'],
+      'append special characters' => ['Base: ', '«Special»', 'Base: «Special»'],
+      'append with newlines' => ['Line 1', "\nLine 2\nLine 3", "Line 1\nLine 2\nLine 3"],
+    ];
+  }
+
+  public function testAppendThrowsExceptionForNonExistentFile(): void {
+    $non_existent_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'non_existent.txt';
+
+    $this->expectException(FileException::class);
+    $this->expectExceptionMessage(sprintf('File "%s" does not exist.', $non_existent_file));
+
+    File::append($non_existent_file, 'content');
   }
 
 }

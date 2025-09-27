@@ -67,6 +67,9 @@ try {
   $processed = File::removeToken($processed, '# BEGIN', '# END');
   File::dump('/path/to/file.txt', $processed);
 
+  // Append content to an existing file
+  File::append('/path/to/log.txt', "\nNew log entry: " . date('Y-m-d H:i:s'));
+
   // Or use batch operations for better performance
   File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
     $content = File::replaceContent($file_info->getContent(), 'old', 'new');
@@ -86,6 +89,7 @@ try {
 | Function                | Description                                                                                                    |
 |-------------------------|----------------------------------------------------------------------------------------------------------------|
 | `absolute()`            | Get absolute path for provided absolute or relative file.                                                      |
+| `append()`              | Append content to an existing file.                                                                            |
 | `compare()`             | Compare files between source and destination directories.                                                      |
 | `contains()`            | Check if file contains a specific string or matches a pattern.                                                 |
 | `containsInDir()`       | Find all files in directory containing a specific string.                                                      |
