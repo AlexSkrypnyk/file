@@ -24,12 +24,17 @@ class ExtendedSplFileInfo extends \SplFileInfo {
   /**
    * Content hash value.
    */
-  protected ?string $hash;
+  protected ?string $hash = NULL;
 
   /**
    * File content.
    */
-  protected string $content;
+  protected ?string $content = NULL;
+
+  /**
+   * Whether content has been loaded.
+   */
+  protected bool $contentLoaded = FALSE;
 
   /**
    * Constructs a new ExtendedSplFileInfo object.
@@ -75,6 +80,9 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    *   The content hash.
    */
   public function getHash(): ?string {
+    if (!$this->contentLoaded) {
+      $this->loadContent();
+    }
     return $this->hash;
   }
 
@@ -85,7 +93,10 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    *   The file content.
    */
   public function getContent(): string {
-    return $this->content;
+    if (!$this->contentLoaded) {
+      $this->loadContent();
+    }
+    return $this->content ?? '';
   }
 
   /**
@@ -115,7 +126,9 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    *   TRUE if content should be ignored, FALSE otherwise.
    */
   public function isIgnoreContent(): bool {
-    return $this->content === static::CONTENT_IGNORED_MARKER;
+    // If content is explicitly set, check it.
+    // If not loaded yet, it can't be the ignore marker.
+    return $this->contentLoaded && $this->content === static::CONTENT_IGNORED_MARKER;
   }
 
   /**
@@ -132,20 +145,46 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    * Sets the file content.
    *
    * @param string|null $content
-   *   The content to set, or NULL to read from file.
+   *   The content to set, or NULL to load lazily.
    */
   public function setContent(?string $content): void {
-    if ($this->isLink()) {
-      $this->content = static::stripBasepath($this->getBasepath(), $this->getRealPath());
-    }
-    elseif (!is_null($content)) {
+    if (!is_null($content)) {
       $this->content = $content;
+      $this->hash = $this->hash($this->content);
+      $this->contentLoaded = TRUE;
+    }
+    else {
+      // Defer content loading until needed.
+      $this->contentLoaded = FALSE;
+      $this->content = NULL;
+      $this->hash = NULL;
+    }
+  }
+
+  /**
+   * Loads the file content.
+   */
+  protected function loadContent(): void {
+    if ($this->contentLoaded) {
+      return;
+    }
+
+    if ($this->isLink()) {
+      $link_target = $this->getLinkTarget();
+      // If the link target is absolute and within basepath, make it relative.
+      if (str_starts_with($link_target, $this->basepath)) {
+        $this->content = static::stripBasepath($this->basepath, $link_target);
+      }
+      else {
+        $this->content = $link_target;
+      }
     }
     else {
       $this->content = (string) file_get_contents($this->getRealPath());
     }
 
     $this->hash = $this->hash($this->content);
+    $this->contentLoaded = TRUE;
   }
 
   /**

@@ -112,9 +112,29 @@ class Diff implements RenderInterface {
     }
 
     $is_ignore_content = $this->left->isIgnoreContent() || $this->right->isIgnoreContent();
+    if ($is_ignore_content) {
+      return TRUE;
+    }
+
+    // Quick check for regular files: different sizes mean different content.
+    // Skip for symlinks as getSize() may not work on symlink targets.
+    if (!$this->left->isLink() && !$this->right->isLink()) {
+      try {
+        if ($this->left->getSize() !== $this->right->getSize()) {
+          return FALSE;
+        }
+      }
+      // @codeCoverageIgnoreStart
+      catch (\RuntimeException $runtimeException) {
+        // If getSize() fails, fall through to hash comparison.
+      }
+      // @codeCoverageIgnoreEnd
+    }
+
+    // Check content hash.
     $is_same_hash = $this->left->getHash() === $this->right->getHash();
 
-    return $is_ignore_content || $is_same_hash;
+    return $is_same_hash;
   }
 
   /**
