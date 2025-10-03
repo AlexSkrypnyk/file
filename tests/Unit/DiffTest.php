@@ -216,4 +216,90 @@ class DiffTest extends UnitTestCase {
     $this->assertStringContainsString('+line2', $result);
   }
 
+  public function testIsSameContentWithDifferentSizes(): void {
+    $diff = new Diff();
+
+    $file_path1 = static::$sut . DIRECTORY_SEPARATOR . 'test1.txt';
+    $file_path2 = static::$sut . DIRECTORY_SEPARATOR . 'test2.txt';
+
+    // Create files with different sizes.
+    file_put_contents($file_path1, 'short');
+    file_put_contents($file_path2, 'much longer content');
+
+    $file_info1 = new ExtendedSplFileInfo($file_path1, static::$sut);
+    $file_info2 = new ExtendedSplFileInfo($file_path2, static::$sut);
+
+    $diff->setLeft($file_info1);
+    $diff->setRight($file_info2);
+
+    // Should return FALSE without reading content (optimization).
+    $this->assertFalse($diff->isSameContent(), 'Files with different sizes should not be same');
+  }
+
+  public function testIsSameContentWithSameSizeDifferentContent(): void {
+    $diff = new Diff();
+
+    $file_path1 = static::$sut . DIRECTORY_SEPARATOR . 'test1.txt';
+    $file_path2 = static::$sut . DIRECTORY_SEPARATOR . 'test2.txt';
+
+    // Create files with same size but different content.
+    file_put_contents($file_path1, 'abcde');
+    file_put_contents($file_path2, 'fghij');
+
+    $file_info1 = new ExtendedSplFileInfo($file_path1, static::$sut);
+    $file_info2 = new ExtendedSplFileInfo($file_path2, static::$sut);
+
+    $diff->setLeft($file_info1);
+    $diff->setRight($file_info2);
+
+    // Should return FALSE after checking hash.
+    $this->assertFalse($diff->isSameContent(), 'Files with same size but different content should not be same');
+  }
+
+  public function testIsSameContentWithSymlinks(): void {
+    $diff = new Diff();
+
+    $target_path = static::$sut . DIRECTORY_SEPARATOR . 'target.txt';
+    file_put_contents($target_path, 'target content');
+
+    // Create two symlinks pointing to the same target.
+    $link_path1 = static::$sut . DIRECTORY_SEPARATOR . 'link1.txt';
+    $link_path2 = static::$sut . DIRECTORY_SEPARATOR . 'link2.txt';
+    symlink($target_path, $link_path1);
+    symlink($target_path, $link_path2);
+
+    $file_info1 = new ExtendedSplFileInfo($link_path1, static::$sut);
+    $file_info2 = new ExtendedSplFileInfo($link_path2, static::$sut);
+
+    $diff->setLeft($file_info1);
+    $diff->setRight($file_info2);
+
+    // Should compare symlink targets correctly.
+    $this->assertTrue($diff->isSameContent(), 'Symlinks with same targets should be same');
+  }
+
+  public function testIsSameContentSkipsSizeCheckForSymlinks(): void {
+    $diff = new Diff();
+
+    // Create symlinks to directories (getSize() would fail).
+    $dir1 = static::$sut . DIRECTORY_SEPARATOR . 'dir1';
+    $dir2 = static::$sut . DIRECTORY_SEPARATOR . 'dir2';
+    mkdir($dir1);
+    mkdir($dir2);
+
+    $link_path1 = static::$sut . DIRECTORY_SEPARATOR . 'link1';
+    $link_path2 = static::$sut . DIRECTORY_SEPARATOR . 'link2';
+    symlink($dir1, $link_path1);
+    symlink($dir2, $link_path2);
+
+    $file_info1 = new ExtendedSplFileInfo($link_path1, static::$sut);
+    $file_info2 = new ExtendedSplFileInfo($link_path2, static::$sut);
+
+    $diff->setLeft($file_info1);
+    $diff->setRight($file_info2);
+
+    // Should not throw exception from getSize() and compare by hash.
+    $this->assertFalse($diff->isSameContent(), 'Symlinks to different directories should not be same');
+  }
+
 }

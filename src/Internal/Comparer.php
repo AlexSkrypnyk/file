@@ -42,18 +42,19 @@ class Comparer implements RenderInterface {
     $dir_left_files = $this->left->getFiles();
     $dir_right_files = $this->right->getFiles();
 
-    foreach ($dir_left_files as $left_file) {
+    // Process all left files and matching right files.
+    foreach ($dir_left_files as $path => $left_file) {
       $this->differ->addLeftFile($left_file);
-      if (isset($dir_right_files[$left_file->getPathnameFromBasepath()])) {
-        $this->differ->addRightFile($dir_right_files[$left_file->getPathnameFromBasepath()]);
+      if (isset($dir_right_files[$path])) {
+        $this->differ->addRightFile($dir_right_files[$path]);
+        // Mark as processed to avoid duplicate processing.
+        unset($dir_right_files[$path]);
       }
     }
 
+    // Process remaining right files that don't exist in left.
     foreach ($dir_right_files as $right_file) {
       $this->differ->addRightFile($right_file);
-      if (isset($dir_left_files[$right_file->getPathnameFromBasepath()])) {
-        $this->differ->addLeftFile($dir_left_files[$right_file->getPathnameFromBasepath()]);
-      }
     }
 
     return $this;
