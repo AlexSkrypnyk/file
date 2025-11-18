@@ -8,6 +8,7 @@ parameters:
 
   paths:
     - File.php
+    - benchmarks
     - src
     - tests/Unit
     - tests/Traits
@@ -23,4 +24,9 @@ parameters:
       # it is not possible to specify the type of the parameter, so we ignore
       # this error.
       message: '#.*no value type specified in iterable type array.#'
+      reportUnmatched: false
+
+    -
+      # Ignoring PHPBench attribute errors as PHPStan doesn't recognize them.
+      message: '#Attribute class PHPBench\\Attributes\\.*does not exist\.#'
       reportUnmatched: false

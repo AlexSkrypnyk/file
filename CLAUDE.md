@@ -20,6 +20,44 @@ composer test-coverage
 ./vendor/bin/phpunit tests/Unit/FileTaskPerformanceTest.php
 ```
 
+## Performance Testing Commands (PHPBench)
+```bash
+# Run benchmarks with baseline comparison (used by CI)
+composer benchmark
+
+# Create or update baseline for performance comparison
+composer benchmark-baseline
+
+# Run specific benchmark class
+./vendor/bin/phpbench run benchmarks/Compare01IdenticalDirectoriesBench.php --ref=baseline
+
+# Run with detailed output
+./vendor/bin/phpbench run --report=aggregate
+```
+
+### Baseline Management
+
+- Baseline benchmarks are stored in `.phpbench/storage/` directory
+- CI compares new benchmarks against baseline with ±5% threshold
+- To update baseline manually: `composer benchmark-baseline`
+- Baseline updates automatically commit on main branch pushes
+- Performance regressions exceeding ±5% will fail CI checks
+
+### Performance Testing
+
+- PHPBench for measuring File::compare() performance
+- Benchmarks in `benchmarks/` directory measure:
+  - Identical directory comparison (baseline)
+  - Content differences detection (20% modified files)
+  - Structural differences (missing/extra files)
+  - Large file handling (1KB-10MB)
+  - Deep nesting performance (10 levels)
+  - Rules filtering overhead
+  - Callback processing overhead
+- Reports generated as JSON, CSV, and HTML in `.logs/performance-report.*`
+- CI runs performance tests without xdebug/pcov for accurate measurements
+
+
 ## Code Standards
 - Use snake_case for variable names and function arguments
 - Use camelCase for class properties
