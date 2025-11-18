@@ -174,8 +174,8 @@ trait DirectoryAssertionsTrait {
     try {
       File::patch($baseline, $diffs, $expected);
     }
-    catch (PatchException $patchException) {
-      $this->fail($message ?: sprintf('Failed to apply patch: %s', $patchException->getMessage()));
+    catch (PatchException $patch_exception) {
+      $this->fail($message ?: sprintf('Failed to apply patch: %s', $patch_exception->getMessage()));
     }
 
     // Do not override .ignorecontent file from the baseline directory.

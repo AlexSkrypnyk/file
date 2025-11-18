@@ -43,8 +43,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileContainsString($this->testFile, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('should contain', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('should contain', $assertion_failed_error->getMessage());
     }
   }
 
@@ -55,8 +55,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileContainsString($this->testFile, 'nonexistent', 'Custom message for nonexistent string');
       $this->fail('Assertion should have failed for nonexistent string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for nonexistent string', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for nonexistent string', $assertion_failed_error->getMessage());
     }
   }
 
@@ -72,8 +72,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotContainsString($this->testFile, 'test');
       $this->fail('Assertion should have failed for existing string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('should not contain', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('should not contain', $assertion_failed_error->getMessage());
     }
   }
 
@@ -84,8 +84,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotContainsString($this->testFile, 'test', 'Custom message for existing string');
       $this->fail('Assertion should have failed for existing string with custom message');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for existing string', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for existing string', $assertion_failed_error->getMessage());
     }
   }
 
@@ -101,9 +101,9 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileContainsWord($this->testFile, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent word');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('should contain', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('should contain', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('word', $assertion_failed_error->getMessage());
     }
   }
 
@@ -119,8 +119,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileContainsWord($this->testFile, 'tes');
       $this->fail('Assertion should have failed for partial word');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('should contain "tes" word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('should contain "tes" word', $assertion_failed_error->getMessage());
     }
   }
 
@@ -138,9 +138,9 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotContainsWord($this->testFile, 'test');
       $this->fail('Assertion should have failed for existing word');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('should not contain', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('should not contain', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('word', $assertion_failed_error->getMessage());
     }
   }
 
@@ -182,8 +182,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileEqualsFile($file1, $file2);
       $this->fail('Assertion should have failed for different content');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('match', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('match', $assertion_failed_error->getMessage());
     }
   }
 
@@ -198,8 +198,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileEqualsFile($nonexistent, $file);
       $this->fail('Assertion should have failed for nonexistent expected file');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('does not exist', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('does not exist', $assertion_failed_error->getMessage());
     }
 
     // Test with nonexistent actual file.
@@ -207,8 +207,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileEqualsFile($file, $nonexistent);
       $this->fail('Assertion should have failed for nonexistent actual file');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('does not exist', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('does not exist', $assertion_failed_error->getMessage());
     }
   }
 
@@ -234,8 +234,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotEqualsFile($file1, $file2);
       $this->fail('Assertion should have failed for identical content');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('identical contents', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('identical contents', $assertion_failed_error->getMessage());
     }
   }
 
@@ -250,8 +250,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotEqualsFile($nonexistent, $file);
       $this->fail('Assertion should have failed for nonexistent expected file');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('does not exist', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('does not exist', $assertion_failed_error->getMessage());
     }
 
     // Test with nonexistent actual file.
@@ -259,8 +259,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotEqualsFile($file, $nonexistent);
       $this->fail('Assertion should have failed for nonexistent actual file');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('does not exist', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('does not exist', $assertion_failed_error->getMessage());
     }
   }
 
@@ -276,8 +276,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileEqualsFile($file1, $file2, 'Custom message for different files');
       $this->fail('Assertion should have failed with custom message');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for different files', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for different files', $assertion_failed_error->getMessage());
     }
 
     // Make files identical.
@@ -288,8 +288,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFileNotEqualsFile($file1, $file2, 'Custom message for identical files');
       $this->fail('Assertion should have failed with custom message');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for identical files', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for identical files', $assertion_failed_error->getMessage());
     }
   }
 
@@ -334,8 +334,8 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertFilesExist($this->tmpDir, $files);
         $this->fail('Assertion should have failed');
       }
-      catch (AssertionFailedError $assertionFailedError) {
-        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      catch (AssertionFailedError $assertion_failed_error) {
+        $this->assertStringContainsString($expected_error, $assertion_failed_error->getMessage());
       }
     }
   }
@@ -374,8 +374,8 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertFilesDoNotExist($this->tmpDir, $files);
         $this->fail('Assertion should have failed');
       }
-      catch (AssertionFailedError $assertionFailedError) {
-        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      catch (AssertionFailedError $assertion_failed_error) {
+        $this->assertStringContainsString($expected_error, $assertion_failed_error->getMessage());
       }
     }
   }
@@ -420,8 +420,8 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertFilesWildcardExists($patterns);
         $this->fail('Should throw InvalidArgumentException');
       }
-      catch (\InvalidArgumentException $invalidArgumentException) {
-        $this->assertStringContainsString($expected_error, $invalidArgumentException->getMessage());
+      catch (\InvalidArgumentException $invalid_argument_exception) {
+        $this->assertStringContainsString($expected_error, $invalid_argument_exception->getMessage());
       }
     }
     elseif ($should_pass) {
@@ -432,8 +432,8 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertFilesWildcardExists($full_patterns);
         $this->fail('Assertion should have failed');
       }
-      catch (AssertionFailedError $assertionFailedError) {
-        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      catch (AssertionFailedError $assertion_failed_error) {
+        $this->assertStringContainsString($expected_error, $assertion_failed_error->getMessage());
       }
     }
   }
@@ -472,8 +472,8 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertFilesWildcardDoNotExist($patterns);
         $this->fail('Should throw InvalidArgumentException');
       }
-      catch (\InvalidArgumentException $invalidArgumentException) {
-        $this->assertStringContainsString($expected_error, $invalidArgumentException->getMessage());
+      catch (\InvalidArgumentException $invalid_argument_exception) {
+        $this->assertStringContainsString($expected_error, $invalid_argument_exception->getMessage());
       }
     }
     elseif ($should_pass) {
@@ -484,8 +484,8 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertFilesWildcardDoNotExist($full_patterns);
         $this->fail('Assertion should have failed');
       }
-      catch (AssertionFailedError $assertionFailedError) {
-        $this->assertStringContainsString($expected_error, $assertionFailedError->getMessage());
+      catch (AssertionFailedError $assertion_failed_error) {
+        $this->assertStringContainsString($expected_error, $assertion_failed_error->getMessage());
       }
     }
   }
@@ -512,8 +512,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFilesExist($this->tmpDir, ['nonexistent.txt'], 'Custom failure message');
       $this->fail('Assertion should have failed');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom failure message', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom failure message', $assertion_failed_error->getMessage());
     }
   }
 
@@ -531,8 +531,8 @@ class FileAssertionsTraitTest extends TestCase {
       $this->assertFilesWildcardExists($nonexistent_pattern, 'Custom failure message');
       $this->fail('Assertion should have failed');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom failure message', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom failure message', $assertion_failed_error->getMessage());
     }
   }
 

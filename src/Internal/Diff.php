@@ -125,7 +125,7 @@ class Diff implements RenderInterface {
         }
       }
       // @codeCoverageIgnoreStart
-      catch (\RuntimeException $runtimeException) {
+      catch (\RuntimeException $runtime_exception) {
         // If getSize() fails, fall through to hash comparison.
       }
       // @codeCoverageIgnoreEnd

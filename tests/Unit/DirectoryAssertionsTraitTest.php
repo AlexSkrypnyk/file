@@ -68,16 +68,16 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryContainsString($this->tmpDir, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should contain "nonexistent"', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should contain "nonexistent"', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryContainsString($this->tmpDir, 'nonexistent', [], 'Custom message for nonexistent string');
       $this->fail('Assertion should have failed for nonexistent string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for nonexistent string', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for nonexistent string', $assertion_failed_error->getMessage());
     }
   }
 
@@ -106,17 +106,17 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryNotContainsString($this->tmpDir, 'test');
       $this->fail('Assertion should have failed for existing string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should not contain "test"', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file1.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should not contain "test"', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file1.txt', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryNotContainsString($this->tmpDir, 'test', [], 'Custom message for existing string');
       $this->fail('Assertion should have failed for existing string with custom message');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for existing string', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for existing string', $assertion_failed_error->getMessage());
     }
   }
 
@@ -146,24 +146,24 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryContainsWord($this->tmpDir, 'nonexistent');
       $this->fail('Assertion should have failed for nonexistent word');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should contain "nonexistent" word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should contain "nonexistent" word', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryContainsWord($this->tmpDir, 'nonexistent', [], 'Custom message for nonexistent word');
       $this->fail('Assertion should have failed for nonexistent word with custom message');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for nonexistent word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for nonexistent word', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryContainsWord($this->tmpDir, 'tes');
       $this->fail('Assertion should have failed for partial word match');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should contain "tes" word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should contain "tes" word', $assertion_failed_error->getMessage());
     }
   }
 
@@ -195,26 +195,26 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryNotContainsWord($this->tmpDir, 'test');
       $this->fail('Assertion should have failed for existing word');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should not contain "test" word', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file1.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should not contain "test" word', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file1.txt', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryNotContainsWord($this->tmpDir, 'test', [], 'Custom message for existing word');
       $this->fail('Assertion should have failed for existing word with custom message');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for existing word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for existing word', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryNotContainsWord($this->tmpDir, 'another', ['file1.txt']);
       $this->fail('Assertion should have failed for word in non-excluded file');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('file2.txt', $assertionFailedError->getMessage());
-      $this->assertStringNotContainsString('file1.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('file2.txt', $assertion_failed_error->getMessage());
+      $this->assertStringNotContainsString('file1.txt', $assertion_failed_error->getMessage());
     }
   }
 
@@ -261,20 +261,20 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryEqualsDirectory($dir1, $dir2);
       $this->fail('Assertion should have failed for different file content');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Files that differ in content', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file1.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Files that differ in content', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file1.txt', $assertion_failed_error->getMessage());
     }
 
     try {
       $this->assertDirectoryEqualsDirectory($dir1, $dir2, 'Custom message for missing files');
       $this->fail('Assertion should have failed for missing files');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom message for missing files', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('Files absent in', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file2.txt', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file3.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom message for missing files', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('Files absent in', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file2.txt', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file3.txt', $assertion_failed_error->getMessage());
     }
   }
 
@@ -323,22 +323,22 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir, $this->expectedDir);
       $this->fail('Assertion should have failed for different content');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Files that differ in content', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file1.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Files that differ in content', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file1.txt', $assertion_failed_error->getMessage());
     }
   }
 
   public function testAssertDirectoryEqualsPatchedBaselineWithNonexistentBaseline(): void {
-    $nonexistentDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent';
+    $nonexistent_dir = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent';
 
     try {
-      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistentDir, $this->diffDir);
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistent_dir, $this->diffDir);
       $this->fail('Assertion should have failed for nonexistent baseline directory');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('The baseline directory does not exist', $assertionFailedError->getMessage());
-      $this->assertStringContainsString($nonexistentDir, $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('The baseline directory does not exist', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString($nonexistent_dir, $assertion_failed_error->getMessage());
     }
   }
 
@@ -357,8 +357,8 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir);
       $this->fail('Assertion should have failed for invalid patch');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Failed to apply patch', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Failed to apply patch', $assertion_failed_error->getMessage());
     }
   }
 
@@ -378,9 +378,9 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir);
       $this->fail('Assertion should have failed for hunk mismatch');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Failed to apply patch', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('Hunk mismatch', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Failed to apply patch', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('Hunk mismatch', $assertion_failed_error->getMessage());
     }
   }
 
@@ -400,9 +400,9 @@ class DirectoryAssertionsTraitTest extends TestCase {
       $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir);
       $this->fail('Assertion should have failed for unexpected EOF');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Failed to apply patch', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('Unexpected EOF', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Failed to apply patch', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('Unexpected EOF', $assertion_failed_error->getMessage());
     }
   }
 
@@ -425,9 +425,9 @@ class DirectoryAssertionsTraitTest extends TestCase {
     $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $this->baselineDir, $this->diffDir, $this->expectedDir);
     $this->addToAssertionCount(1);
 
-    $expectedIgnoreContentPath = $this->expectedDir . DIRECTORY_SEPARATOR . Index::IGNORECONTENT;
-    $this->assertFileExists($expectedIgnoreContentPath);
-    $content = file_get_contents($expectedIgnoreContentPath);
+    $expected_ignore_content_path = $this->expectedDir . DIRECTORY_SEPARATOR . Index::IGNORECONTENT;
+    $this->assertFileExists($expected_ignore_content_path);
+    $content = file_get_contents($expected_ignore_content_path);
     $this->assertIsString($content);
     $this->assertEquals("*.ignored\n*.log", $content);
   }
@@ -436,16 +436,16 @@ class DirectoryAssertionsTraitTest extends TestCase {
     // Create test files including some that should be ignored.
     $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignored.txt';
-    $ignoreDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignore';
-    mkdir($ignoreDir);
-    $file3 = $ignoreDir . DIRECTORY_SEPARATOR . 'file3.txt';
+    $ignore_dir = $this->tmpDir . DIRECTORY_SEPARATOR . 'ignore';
+    mkdir($ignore_dir);
+    $file3 = $ignore_dir . DIRECTORY_SEPARATOR . 'file3.txt';
 
     file_put_contents($file1, 'This contains searchable content');
     file_put_contents($file2, 'This contains searchable content');
     file_put_contents($file3, 'This contains searchable content');
 
     // Create a mock trait that overrides ignoredPaths().
-    $testInstance = new class() {
+    $test_instance = new class() {
       use DirectoryAssertionsTrait;
 
       public static function ignoredPaths(): array {
@@ -463,18 +463,18 @@ class DirectoryAssertionsTraitTest extends TestCase {
     };
 
     // Test that ignored files are excluded from search.
-    $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable');
+    $test_instance->assertDirectoryContainsString($this->tmpDir, 'searchable');
     $this->addToAssertionCount(1);
 
     // Remove the non-ignored file to test that assertion fails when only
     // ignored files contain the string.
     unlink($file1);
     try {
-      $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable');
+      $test_instance->assertDirectoryContainsString($this->tmpDir, 'searchable');
       $this->fail('Assertion should have failed when only ignored files contain the string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should contain "searchable"', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should contain "searchable"', $assertion_failed_error->getMessage());
     }
   }
 
@@ -487,7 +487,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This contains forbidden content');
 
     // Create a mock trait that overrides ignoredPaths().
-    $testInstance = new class() {
+    $test_instance = new class() {
       use DirectoryAssertionsTrait;
 
       public static function ignoredPaths(): array {
@@ -506,18 +506,18 @@ class DirectoryAssertionsTraitTest extends TestCase {
 
     // Test that ignored files are excluded from search - should pass because
     // ignored file is not checked.
-    $testInstance->assertDirectoryNotContainsString($this->tmpDir, 'forbidden');
+    $test_instance->assertDirectoryNotContainsString($this->tmpDir, 'forbidden');
     $this->addToAssertionCount(1);
 
     // Add forbidden content to non-ignored file to test failure.
     file_put_contents($file1, 'This contains forbidden content');
     try {
-      $testInstance->assertDirectoryNotContainsString($this->tmpDir, 'forbidden');
+      $test_instance->assertDirectoryNotContainsString($this->tmpDir, 'forbidden');
       $this->fail('Assertion should have failed when non-ignored file contains forbidden string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should not contain "forbidden"', $assertionFailedError->getMessage());
-      $this->assertStringContainsString('file1.txt', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should not contain "forbidden"', $assertion_failed_error->getMessage());
+      $this->assertStringContainsString('file1.txt', $assertion_failed_error->getMessage());
     }
   }
 
@@ -530,7 +530,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This has test words');
 
     // Create a mock trait that overrides ignoredPaths().
-    $testInstance = new class() {
+    $test_instance = new class() {
       use DirectoryAssertionsTrait;
 
       public static function ignoredPaths(): array {
@@ -550,11 +550,11 @@ class DirectoryAssertionsTraitTest extends TestCase {
     // Test finding complete word - should fail because ignored file is not
     // checked.
     try {
-      $testInstance->assertDirectoryContainsWord($this->tmpDir, 'test');
+      $test_instance->assertDirectoryContainsWord($this->tmpDir, 'test');
       $this->fail('Assertion should have failed when only ignored file contains the word');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should contain "test" word', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should contain "test" word', $assertion_failed_error->getMessage());
     }
   }
 
@@ -567,7 +567,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file2, 'This has forbidden word');
 
     // Create a mock trait that overrides ignoredPaths().
-    $testInstance = new class() {
+    $test_instance = new class() {
       use DirectoryAssertionsTrait;
 
       public static function ignoredPaths(): array {
@@ -585,7 +585,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     };
 
     // Test that ignored file is not checked - should pass.
-    $testInstance->assertDirectoryNotContainsWord($this->tmpDir, 'forbidden');
+    $test_instance->assertDirectoryNotContainsWord($this->tmpDir, 'forbidden');
     $this->addToAssertionCount(1);
   }
 
@@ -600,7 +600,7 @@ class DirectoryAssertionsTraitTest extends TestCase {
     file_put_contents($file3, 'This contains searchable content');
 
     // Create a mock trait that overrides ignoredPaths().
-    $testInstance = new class() {
+    $test_instance = new class() {
       use DirectoryAssertionsTrait;
 
       public static function ignoredPaths(): array {
@@ -618,17 +618,17 @@ class DirectoryAssertionsTraitTest extends TestCase {
     };
 
     // Test that both ignoredPaths() and explicit excluded are merged.
-    $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
+    $test_instance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
     $this->addToAssertionCount(1);
 
     // Remove the non-ignored file and verify assertion fails.
     unlink($file1);
     try {
-      $testInstance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
+      $test_instance->assertDirectoryContainsString($this->tmpDir, 'searchable', ['ignored_by_method.txt']);
       $this->fail('Assertion should have failed when only ignored files contain the string');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Directory should contain "searchable"', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Directory should contain "searchable"', $assertion_failed_error->getMessage());
     }
   }
 
@@ -666,13 +666,13 @@ class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
 
     // Test failed assertion with custom message (nonexistent baseline).
-    $nonexistentDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent';
+    $nonexistent_dir = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent';
     try {
-      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistentDir, $this->diffDir, NULL, 'Custom failure message');
+      $this->assertDirectoryEqualsPatchedBaseline($this->actualDir, $nonexistent_dir, $this->diffDir, NULL, 'Custom failure message');
       $this->fail('Assertion should have failed');
     }
-    catch (AssertionFailedError $assertionFailedError) {
-      $this->assertStringContainsString('Custom failure message', $assertionFailedError->getMessage());
+    catch (AssertionFailedError $assertion_failed_error) {
+      $this->assertStringContainsString('Custom failure message', $assertion_failed_error->getMessage());
     }
   }
 

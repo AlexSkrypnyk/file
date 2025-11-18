@@ -402,11 +402,11 @@ class PatcherTest extends UnitTestCase {
       ]);
       $this->fail('Expected PatchException was not thrown');
     }
-    catch (PatchException $patchException) {
-      $this->assertStringContainsString('Unexpected removal line', $patchException->getMessage());
-      $this->assertEquals($source_file, $patchException->getFilePath());
-      $this->assertNotNull($patchException->getLineNumber());
-      $this->assertNotNull($patchException->getLineContent());
+    catch (PatchException $patch_exception) {
+      $this->assertStringContainsString('Unexpected removal line', $patch_exception->getMessage());
+      $this->assertEquals($source_file, $patch_exception->getFilePath());
+      $this->assertNotNull($patch_exception->getLineNumber());
+      $this->assertNotNull($patch_exception->getLineContent());
     }
   }
 
@@ -451,11 +451,11 @@ class PatcherTest extends UnitTestCase {
       ]);
       $this->fail('Expected PatchException was not thrown');
     }
-    catch (PatchException $patchException) {
-      $this->assertStringContainsString('Unexpected addition line', $patchException->getMessage());
-      $this->assertEquals($source_file, $patchException->getFilePath());
-      $this->assertNotNull($patchException->getLineNumber());
-      $this->assertNotNull($patchException->getLineContent());
+    catch (PatchException $patch_exception) {
+      $this->assertStringContainsString('Unexpected addition line', $patch_exception->getMessage());
+      $this->assertEquals($source_file, $patch_exception->getFilePath());
+      $this->assertNotNull($patch_exception->getLineNumber());
+      $this->assertNotNull($patch_exception->getLineContent());
     }
   }
 

@@ -146,7 +146,7 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     $base_path = static::$sut;
 
     // Create file info with NULL content (lazy loading).
-    $file_info = new ExtendedSplFileInfo($file_path, $base_path, NULL);
+    $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
     // Content should not be loaded yet - verify by using reflection.
     $reflection = new \ReflectionClass($file_info);
@@ -171,7 +171,7 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     $base_path = static::$sut;
 
     // Create file info with NULL content (lazy loading).
-    $file_info = new ExtendedSplFileInfo($file_path, $base_path, NULL);
+    $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
     // Hash should not be computed yet.
     $reflection = new \ReflectionClass($file_info);
@@ -232,7 +232,7 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     $base_path = static::$sut;
 
     // Create file info with NULL content (lazy loading).
-    $file_info = new ExtendedSplFileInfo($file_path, $base_path, NULL);
+    $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
     // isIgnoreContent should return FALSE when content not loaded.
     $this->assertFalse($file_info->isIgnoreContent());
@@ -295,7 +295,7 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
     file_put_contents($file_path, 'test content');
 
     $base_path = static::$sut;
-    $file_info = new ExtendedSplFileInfo($file_path, $base_path, NULL);
+    $file_info = new ExtendedSplFileInfo($file_path, $base_path);
 
     // Use reflection to call loadContent directly.
     $reflection = new \ReflectionClass($file_info);
