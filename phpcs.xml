@@ -18,6 +18,7 @@
     <arg name="colors"/>
 
     <file>File.php</file>
+    <file>benchmarks</file>
     <file>src</file>
     <file>tests</file>
 
