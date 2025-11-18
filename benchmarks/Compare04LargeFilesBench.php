@@ -17,15 +17,15 @@ class Compare04LargeFilesBench {
    * Setup method - runs before each benchmark iteration (NOT timed).
    */
   public function setUp(): void {
-    $this->initializeDirectories();
-    $this->createLargeFiles();
+    $this->directoryInitialize();
+    $this->directoryCreateIdentical(6, 1, [1024, 10240, 102400, 1048576, 5242880, 10485760]);
   }
 
   /**
    * Teardown method - runs after each benchmark iteration (NOT timed).
    */
   public function tearDown(): void {
-    $this->cleanupDirectories();
+    $this->directoryCleanup();
   }
 
   /**
