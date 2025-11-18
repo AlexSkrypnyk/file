@@ -17,16 +17,16 @@ class Compare02ContentDiffsBench {
    * Setup method - runs before each benchmark iteration (NOT timed).
    */
   public function setUp(): void {
-    $this->initializeDirectories();
-    $this->createIdenticalDirectories();
-    $this->createDirectoryWithContentDiffs(20);
+    $this->directoryInitialize();
+    $this->directoryCreateIdentical();
+    $this->directoryCreateWithContentDiffs(20);
   }
 
   /**
    * Teardown method - runs after each benchmark iteration (NOT timed).
    */
   public function tearDown(): void {
-    $this->cleanupDirectories();
+    $this->directoryCleanup();
   }
 
   /**

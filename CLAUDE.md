@@ -33,7 +33,30 @@ composer benchmark-baseline
 
 # Run with detailed output
 ./vendor/bin/phpbench run --report=aggregate
+
+# Quick testing: verify benchmark works without full suite (saves time)
+./vendor/bin/phpbench run benchmarks/Task01TraditionalApproachBench.php --iterations=1 --revs=1
 ```
+
+### Quick Testing Benchmarks
+
+When making changes to benchmark classes or the BenchmarkDirectoryTrait, use `--iterations=1 --revs=1` to quickly verify the benchmark runs without errors:
+
+```bash
+# Test a single benchmark quickly
+./vendor/bin/phpbench run benchmarks/Compare01IdenticalDirectoriesBench.php --iterations=1 --revs=1
+
+# Test multiple benchmarks in sequence
+./vendor/bin/phpbench run benchmarks/Task01TraditionalApproachBench.php --iterations=1 --revs=1
+./vendor/bin/phpbench run benchmarks/Compare02ContentDiffsBench.php --iterations=1 --revs=1
+```
+
+This approach:
+- Verifies benchmark setup/teardown methods work correctly
+- Confirms directory creation and file operations succeed
+- Catches PHP errors and method naming issues immediately
+- Runs in seconds instead of minutes
+- Should be used before running full benchmark suites
 
 ### Baseline Management
 

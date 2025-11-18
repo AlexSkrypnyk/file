@@ -15,9 +15,24 @@ use AlexSkrypnyk\File\File;
 trait BenchmarkDirectoryTrait {
 
   /**
+   * Number of OLD_* placeholders per file.
+   */
+  protected const OLD_COUNT = 10;
+
+  /**
+   * Number of TOKEN_* placeholders per file.
+   */
+  protected const TOKEN_COUNT = 5;
+
+  /**
    * Temporary directory for test data.
    */
   protected string $tmpDir = '';
+
+  /**
+   * Test directory path (for single-directory benchmarks).
+   */
+  protected string $testDir = '';
 
   /**
    * Baseline directory path.
@@ -30,31 +45,11 @@ trait BenchmarkDirectoryTrait {
   protected string $destinationDir = '';
 
   /**
-   * Number of files to create in test directories.
-   */
-  protected const FILE_COUNT = 100;
-
-  /**
-   * Number of subdirectories to create in test directories.
-   */
-  protected const DIR_COUNT = 10;
-
-  /**
-   * Maximum depth for deep nesting tests.
-   */
-  protected const MAX_DEPTH = 5;
-
-  /**
-   * Size of large files for testing (1 MB).
-   */
-  protected const LARGE_FILE_SIZE = 1048576;
-
-  /**
    * Initialize directory structure.
    *
    * Creates temporary baseline and destination directories.
    */
-  protected function initializeDirectories(): void {
+  protected function directoryInitialize(): void {
     $this->tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_bench_', TRUE);
     mkdir($this->tmpDir, 0777, TRUE);
 
@@ -66,38 +61,107 @@ trait BenchmarkDirectoryTrait {
   }
 
   /**
+   * Initialize single test directory structure.
+   *
+   * Creates temporary test directory for single-directory benchmarks.
+   */
+  protected function directoryInitializeTest(): void {
+    $this->tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_bench_', TRUE);
+    mkdir($this->tmpDir, 0777, TRUE);
+
+    $this->testDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'test';
+    mkdir($this->testDir, 0777, TRUE);
+  }
+
+  /**
    * Clean up test directories.
    */
-  protected function cleanupDirectories(): void {
+  protected function directoryCleanup(): void {
     if (is_dir($this->tmpDir)) {
       File::rmdir($this->tmpDir);
     }
   }
 
   /**
-   * Create identical directories for baseline comparison.
+   * Create directory structure with files containing string patterns.
+   *
+   * Helper method that creates files in a target directory with configurable
+   * nested directory depth and optional large file sizes.
+   *
+   * @param string $target_dir
+   *   Target directory to create files in.
+   * @param int $file_count
+   *   Number of files to create. Default: 100.
+   * @param int $dir_count
+   *   Number of subdirectories to create. Default: 10.
+   * @param array $file_sizes
+   *   Optional array of file sizes in bytes. When provided, files will be
+   *   padded to these sizes. Default: [].
+   * @param int $directory_depth
+   *   Depth of nested directory structure. Default: 3.
    */
-  protected function createIdenticalDirectories(): void {
-    $files_per_dir = (int) ceil(self::FILE_COUNT / self::DIR_COUNT);
+  protected function directoryCreateStructure(string $target_dir, int $file_count = 100, int $dir_count = 10, array $file_sizes = [], int $directory_depth = 3): void {
+    $files_per_level = (int) ceil($file_count / $directory_depth);
     $file_counter = 1;
 
-    for ($dir_num = 1; $dir_num <= self::DIR_COUNT; $dir_num++) {
-      $baseline_sub_dir = $this->baselineDir . DIRECTORY_SEPARATOR . ('subdir_' . $dir_num);
-      $dest_sub_dir = $this->destinationDir . DIRECTORY_SEPARATOR . ('subdir_' . $dir_num);
+    for ($level = 1; $level <= $directory_depth; $level++) {
+      // Build nested path: level_1/level_2/level_3/etc.
+      $nested_path = $target_dir;
+      for ($i = 1; $i <= $level; $i++) {
+        $nested_path .= DIRECTORY_SEPARATOR . ('level_' . $i);
+      }
+      mkdir($nested_path, 0777, TRUE);
 
-      mkdir($baseline_sub_dir, 0777, TRUE);
-      mkdir($dest_sub_dir, 0777, TRUE);
+      for ($file_in_level = 1; $file_in_level <= $files_per_level && $file_counter <= $file_count; $file_in_level++) {
+        // Build OLD_* placeholders.
+        $old_parts = [];
+        for ($i = 1; $i <= self::OLD_COUNT; $i++) {
+          $old_parts[] = 'OLD_' . $i;
+        }
 
-      for ($file_in_dir = 1; $file_in_dir <= $files_per_dir && $file_counter <= self::FILE_COUNT; $file_in_dir++) {
-        $content = "File {$file_counter} with OLD_1 OLD_2 OLD_3 content\nLine 2\nLine 3\n";
+        // Build TOKEN_* placeholders.
+        $token_parts = [];
+        for ($i = 1; $i <= self::TOKEN_COUNT; $i++) {
+          $token_parts[] = '#; TOKEN_' . $i;
+        }
+
+        // Create base content with OLD_* and TOKEN_* patterns.
+        $content = sprintf('File %d with ', $file_counter) . implode(' ', $old_parts) . "\n" . implode("\n", $token_parts) . "\n";
+
+        // If file sizes are provided, pad the content to reach target size.
+        if (!empty($file_sizes)) {
+          $size_index = ($file_counter - 1) % count($file_sizes);
+          $target_size = $file_sizes[$size_index];
+
+          if (strlen($content) < $target_size) {
+            $padding = str_repeat("Line of text to fill the file.\n", (int) ceil(($target_size - strlen($content)) / 30));
+            $content .= $padding;
+            $content = substr($content, 0, $target_size);
+          }
+        }
+
         $filename = sprintf('file_%d.txt', $file_counter);
-
-        file_put_contents($baseline_sub_dir . DIRECTORY_SEPARATOR . $filename, $content);
-        file_put_contents($dest_sub_dir . DIRECTORY_SEPARATOR . $filename, $content);
-
+        file_put_contents($nested_path . DIRECTORY_SEPARATOR . $filename, $content);
         $file_counter++;
       }
     }
+  }
+
+  /**
+   * Create identical directories for baseline comparison.
+   *
+   * @param int $file_count
+   *   Number of files to create. Default: 100.
+   * @param int $dir_count
+   *   Number of subdirectories to create. Default: 10.
+   * @param array $file_sizes
+   *   Optional array of file sizes in bytes. Default: [].
+   * @param int $directory_depth
+   *   Depth of nested directory structure. Default: 3.
+   */
+  protected function directoryCreateIdentical(int $file_count = 100, int $dir_count = 10, array $file_sizes = [], int $directory_depth = 3): void {
+    $this->directoryCreateStructure($this->baselineDir, $file_count, $dir_count, $file_sizes, $directory_depth);
+    $this->directoryCreateStructure($this->destinationDir, $file_count, $dir_count, $file_sizes, $directory_depth);
   }
 
   /**
@@ -106,7 +170,7 @@ trait BenchmarkDirectoryTrait {
    * @param int $percent_changed
    *   Percentage of files to modify (0-100).
    */
-  protected function createDirectoryWithContentDiffs(int $percent_changed): void {
+  protected function directoryCreateWithContentDiffs(int $percent_changed): void {
     $files = File::scandirRecursive($this->destinationDir);
     $files_to_change = (int) ceil(count($files) * ($percent_changed / 100));
 
@@ -125,7 +189,7 @@ trait BenchmarkDirectoryTrait {
   /**
    * Create directories with structural differences (missing/extra files).
    */
-  protected function createDirectoryWithStructuralDiffs(): void {
+  protected function directoryCreateWithStructuralDiffs(): void {
     $files = File::scandirRecursive($this->destinationDir);
     $files_count = count($files);
 
@@ -149,55 +213,6 @@ trait BenchmarkDirectoryTrait {
       $random_dir = $sub_dirs[array_rand($sub_dirs)];
       $extra_file = $random_dir . DIRECTORY_SEPARATOR . sprintf('extra_file_%d.txt', $i);
       file_put_contents($extra_file, "Extra file {$i} content\n");
-    }
-  }
-
-  /**
-   * Create large files for performance testing.
-   */
-  protected function createLargeFiles(): void {
-    $file_sizes = [1024, 10240, 102400, 1048576, 5242880, 10485760];
-
-    foreach ($file_sizes as $index => $size) {
-      $content = str_repeat("Line of text to fill the file.\n", (int) ceil($size / 30));
-      $content = substr($content, 0, $size);
-
-      $baseline_file = $this->baselineDir . DIRECTORY_SEPARATOR . sprintf('large_file_%d.txt', $index);
-      $dest_file = $this->destinationDir . DIRECTORY_SEPARATOR . sprintf('large_file_%d.txt', $index);
-
-      file_put_contents($baseline_file, $content);
-      file_put_contents($dest_file, $content);
-    }
-  }
-
-  /**
-   * Create deeply nested directory structure.
-   *
-   * @param int $depth
-   *   Maximum nesting depth.
-   */
-  protected function createDeepNestedStructure(int $depth): void {
-    $files_per_level = (int) ceil(500 / $depth);
-
-    for ($level = 1; $level <= $depth; $level++) {
-      $baseline_path = $this->baselineDir;
-      $dest_path = $this->destinationDir;
-
-      for ($i = 1; $i <= $level; $i++) {
-        $baseline_path .= DIRECTORY_SEPARATOR . ('level_' . $i);
-        $dest_path .= DIRECTORY_SEPARATOR . ('level_' . $i);
-      }
-
-      mkdir($baseline_path, 0777, TRUE);
-      mkdir($dest_path, 0777, TRUE);
-
-      for ($file_num = 1; $file_num <= $files_per_level; $file_num++) {
-        $content = sprintf('File at level %d, number %d%s', $level, $file_num, PHP_EOL);
-        $filename = sprintf('file_l%d_n%d.txt', $level, $file_num);
-
-        file_put_contents($baseline_path . DIRECTORY_SEPARATOR . $filename, $content);
-        file_put_contents($dest_path . DIRECTORY_SEPARATOR . $filename, $content);
-      }
     }
   }
 

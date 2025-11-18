@@ -17,15 +17,15 @@ class Compare05DeepNestingBench {
    * Setup method - runs before each benchmark iteration (NOT timed).
    */
   public function setUp(): void {
-    $this->initializeDirectories();
-    $this->createDeepNestedStructure(10);
+    $this->directoryInitialize();
+    $this->directoryCreateIdentical(500, 10, [], 10);
   }
 
   /**
    * Teardown method - runs after each benchmark iteration (NOT timed).
    */
   public function tearDown(): void {
-    $this->cleanupDirectories();
+    $this->directoryCleanup();
   }
 
   /**

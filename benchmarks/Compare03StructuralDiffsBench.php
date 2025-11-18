@@ -17,16 +17,16 @@ class Compare03StructuralDiffsBench {
    * Setup method - runs before each benchmark iteration (NOT timed).
    */
   public function setUp(): void {
-    $this->initializeDirectories();
-    $this->createIdenticalDirectories();
-    $this->createDirectoryWithStructuralDiffs();
+    $this->directoryInitialize();
+    $this->directoryCreateIdentical();
+    $this->directoryCreateWithStructuralDiffs();
   }
 
   /**
    * Teardown method - runs after each benchmark iteration (NOT timed).
    */
   public function tearDown(): void {
-    $this->cleanupDirectories();
+    $this->directoryCleanup();
   }
 
   /**
