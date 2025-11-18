@@ -191,7 +191,7 @@ class File {
     try {
       static::dir($directory);
     }
-    catch (FileException $fileException) {
+    catch (FileException $file_exception) {
       // If path exists and is a file, throw exception immediately.
       if (static::exists($directory) && is_file($directory)) {
         throw new FileException(sprintf('Cannot create directory "%s": path exists and is a file.', $directory));
@@ -272,11 +272,11 @@ class File {
       return static::dir($path);
     }
     // @codeCoverageIgnoreStart
-    catch (FileException $fileException) {
+    catch (FileException $file_exception) {
       throw new FileException(
         sprintf('Unable to create temporary directory "%s".', $path),
-        $fileException->getCode(),
-        $fileException
+        $file_exception->getCode(),
+        $file_exception
       );
     }
     // @codeCoverageIgnoreEnd
@@ -437,7 +437,7 @@ class File {
     try {
       $directory = static::dir($directory);
     }
-    catch (FileException $fileException) {
+    catch (FileException $file_exception) {
       return [];
     }
 
@@ -800,9 +800,9 @@ class File {
         static::dump($file, $processed);
       }
     }
-    catch (FileException $fileException) {
+    catch (FileException $file_exception) {
       // Re-throw with file context.
-      throw new FileException(sprintf('Error processing file %s: %s', $file, $fileException->getMessage()), $fileException->getCode(), $fileException);
+      throw new FileException(sprintf('Error processing file %s: %s', $file, $file_exception->getMessage()), $file_exception->getCode(), $file_exception);
     }
   }
 
