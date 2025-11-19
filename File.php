@@ -288,8 +288,10 @@ class File {
    * @param array|string $paths
    *   Path or array of paths to search in.
    * @param string|null $needle
-   *   Optional search needle. If provided, will look for files containing this
-   *   string.
+   *   Optional string or regex pattern to match in file paths.
+   *   Regex patterns must start with /, #, or ~ delimiter.
+   *   If NULL, returns the first path found.
+   *   Examples: 'text', '/\.php$/', '/pattern/i'.
    *
    * @return string|null
    *   First matching path or NULL if no matches found.
@@ -306,7 +308,12 @@ class File {
 
       if (!empty($needle)) {
         foreach ($files as $file) {
-          if (static::contains($file, $needle)) {
+          if (Strings::isRegex($needle)) {
+            if (preg_match($needle, $file)) {
+              return $file;
+            }
+          }
+          elseif (str_contains($file, $needle)) {
             return $file;
           }
         }
@@ -729,12 +736,14 @@ class File {
   }
 
   /**
-   * Remove lines containing a specific string from a file.
+   * Remove lines containing a specific string or regex pattern from a file.
    *
    * @param string $file
    *   File path to process.
    * @param string $needle
-   *   String to search for in lines.
+   *   String or regex pattern to search for in lines.
+   *   Regex patterns must start with /, #, or ~ delimiter.
+   *   Examples: 'text', '/^pattern/', '/regex/i'.
    */
   public static function removeLine(string $file, string $needle): void {
     if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
@@ -758,7 +767,12 @@ class File {
       // @codeCoverageIgnoreEnd
     }
 
-    $lines = array_filter($lines, fn(string $line): bool => !str_contains($line, $needle));
+    if (Strings::isRegex($needle)) {
+      $lines = array_filter($lines, fn(string $line): bool => !preg_match($needle, $line));
+    }
+    else {
+      $lines = array_filter($lines, fn(string $line): bool => !str_contains($line, $needle));
+    }
 
     $content = implode($line_ending, $lines);
 
