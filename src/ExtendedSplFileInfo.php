@@ -96,6 +96,12 @@ class ExtendedSplFileInfo extends \SplFileInfo {
     if (!$this->contentLoaded) {
       $this->loadContent();
     }
+
+    // Lazy load actual content for files if not already loaded.
+    if ($this->content === NULL && !$this->isLink()) {
+      $this->content = (string) file_get_contents($this->getRealPath());
+    }
+
     return $this->content ?? '';
   }
 
@@ -178,17 +184,21 @@ class ExtendedSplFileInfo extends \SplFileInfo {
       else {
         $this->content = $link_target;
       }
+      $this->hash = $this->hash($this->content);
     }
     else {
-      $this->content = (string) file_get_contents($this->getRealPath());
+      // For files, compute hash incrementally without loading entire content.
+      $this->hash = $this->hashFile($this->getRealPath());
+      // Content remains NULL until explicitly requested via getContent().
     }
 
-    $this->hash = $this->hash($this->content);
     $this->contentLoaded = TRUE;
   }
 
   /**
    * Creates a hash for the given content.
+   *
+   * Uses SHA-1 instead of MD5 for better performance.
    *
    * @param string $content
    *   The content to hash.
@@ -197,7 +207,41 @@ class ExtendedSplFileInfo extends \SplFileInfo {
    *   A hash of the content.
    */
   protected function hash(string $content): string {
-    return md5($content);
+    return sha1($content);
+  }
+
+  /**
+   * Computes a hash for a file using incremental processing.
+   *
+   * This method reads the file in chunks to avoid loading the entire
+   * content into memory, which is more efficient for large files.
+   *
+   * @param string $filepath
+   *   The path to the file.
+   *
+   * @return string
+   *   A hash of the file content.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   If the file cannot be opened.
+   */
+  protected function hashFile(string $filepath): string {
+    $context = hash_init('sha1');
+    $handle = fopen($filepath, 'rb');
+
+    if ($handle === FALSE) {
+      throw new FileException('Cannot open file: ' . $filepath);
+    }
+
+    while (!feof($handle)) {
+      $data = fread($handle, 8192);
+      if ($data !== FALSE) {
+        hash_update($context, $data);
+      }
+    }
+
+    fclose($handle);
+    return hash_final($context);
   }
 
   /**
