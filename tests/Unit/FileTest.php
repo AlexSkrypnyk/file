@@ -284,17 +284,29 @@ class FileTest extends UnitTestCase {
 
     $file1 = $test_dir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $test_dir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file3 = $test_dir . DIRECTORY_SEPARATOR . 'test_file.php';
+    $file4 = $test_dir . DIRECTORY_SEPARATOR . 'Controller.php';
 
-    file_put_contents($file1, "This is a test file containing needle.");
-    file_put_contents($file2, "This is another file without the word.");
+    file_put_contents($file1, "This is a test file.");
+    file_put_contents($file2, "This is another file.");
+    file_put_contents($file3, "<?php\necho 'test';");
+    file_put_contents($file4, "<?php\nclass Controller {}");
 
     return [
       'single path, no needle' => [$file1, NULL, $file1],
-      'single path, with needle' => [$file1, 'needle', $file1],
-      'single path, needle missing' => [$file2, 'needle', NULL],
+      'single path, with needle in path' => [$file1, 'file1', $file1],
+      'single path, needle missing in path' => [$file2, 'nonexistent', NULL],
       'glob pattern, first match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', NULL, $file1],
-      'glob pattern, matching content' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', 'needle', $file1],
+      'glob pattern, matching path' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', 'file1', $file1],
       'glob pattern, no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.md', NULL, NULL],
+      // Regex pattern tests.
+      'regex: match .txt extension' => [$test_dir . DIRECTORY_SEPARATOR . 'file*.txt', '/file1\.txt$/', $file1],
+      'regex: match .php extension' => [$test_dir . DIRECTORY_SEPARATOR . 'test*.php', '/test_file\.php$/', $file3],
+      'regex: match Controller in path' => [$test_dir . DIRECTORY_SEPARATOR . '*.php', '/Controller\.php$/', $file4],
+      'regex: match file starting with test' => [$test_dir . DIRECTORY_SEPARATOR . 'test*', '/test_file/', $file3],
+      'regex: case-insensitive match' => [$test_dir . DIRECTORY_SEPARATOR . 'C*.php', '/controller/i', $file4],
+      'regex: no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', '/\.php$/', NULL],
+      'regex: alternative delimiter' => [$test_dir . DIRECTORY_SEPARATOR . 'file1*', '#file1\.txt#', $file1],
     ];
   }
 

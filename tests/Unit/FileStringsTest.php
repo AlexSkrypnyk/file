@@ -309,6 +309,55 @@ class FileStringsTest extends UnitTestCase {
         '###',
         "line1\nline3\n",
       ],
+      // Regex pattern tests.
+      'remove lines starting with FOO (regex)' => [
+        'test.txt',
+        "FOO line1\nline2\nFOOBAR line3\nline4\n",
+        '/^FOO/',
+        "line2\nline4\n",
+      ],
+      'remove lines ending with BAR (regex)' => [
+        'test.txt',
+        "line1\nline2 BAR\nline3\nline4 BAR\n",
+        '/BAR$/',
+        "line1\nline3\n",
+      ],
+      'remove lines matching pattern (regex)' => [
+        'test.txt',
+        "FOO line1 BAR\nline2\nFOO line3 BAR\nline4\n",
+        '/FOO.*BAR/',
+        "line2\nline4\n",
+      ],
+      'remove lines case-insensitive (regex)' => [
+        'test.txt',
+        "FOO line1\nfoo line2\nFoO line3\nline4\n",
+        '/foo/i',
+        "line4\n",
+      ],
+      'remove lines with digits (regex)' => [
+        'test.txt',
+        "line one\nline without digits\nline with 123\nline456\n",
+        '/\d+/',
+        "line one\nline without digits\n",
+      ],
+      'remove lines with URL pattern (regex, # delimiter)' => [
+        'test.txt',
+        "line1\nhttp://example.com\nhttps://test.com\nline4\n",
+        '#https?://#',
+        "line1\nline4\n",
+      ],
+      'remove lines with trailing whitespace (regex, ~ delimiter)' => [
+        'test.txt',
+        "line1\nline2  \nline3\nline4 \n",
+        '~\s+$~',
+        "line1\nline3\n",
+      ],
+      'invalid regex treated as literal' => [
+        'test.txt',
+        "line1\ninvalid( line\nline3\n",
+        '/invalid(/',
+        "line1\ninvalid( line\nline3\n",
+      ],
     ];
   }
 

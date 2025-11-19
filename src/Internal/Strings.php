@@ -40,7 +40,8 @@ class Strings {
     }
 
     // Test the regex.
-    $result = preg_match($string, '');
+    // Suppress warnings for invalid regex patterns.
+    $result = @preg_match($string, '');
     return $result !== FALSE && preg_last_error() === PREG_NO_ERROR;
   }
 
