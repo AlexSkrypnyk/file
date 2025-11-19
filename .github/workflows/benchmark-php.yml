@@ -19,6 +19,7 @@ on:
 jobs:
   benchmark-php:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.refresh_baseline != 'true'
 
     steps:
       - name: Checkout code
