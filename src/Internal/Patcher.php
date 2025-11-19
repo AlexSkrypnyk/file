@@ -260,25 +260,19 @@ class Patcher {
   /**
    * Splits a string into lines.
    *
+   * Optimized to use string replacement + explode instead of preg_split
+   * for performance improvement.
+   *
    * @param string $content
    *   The content to split.
    *
    * @return array
    *   Array of lines.
-   *
-   * @throws \Exception
-   *   If the content cannot be split.
    */
   protected static function splitLines(string $content): array {
-    $lines = preg_split('/(\r\n)|(\r)|(\n)/', $content);
-
-    if ($lines === FALSE) {
-      // @codeCoverageIgnoreStart
-      throw new PatchException('Failed to split lines.');
-      // @codeCoverageIgnoreEnd
-    }
-
-    return $lines;
+    // Normalize line endings to \n, then use fast explode.
+    $normalized = str_replace(["\r\n", "\r"], "\n", $content);
+    return explode("\n", $normalized);
   }
 
 }

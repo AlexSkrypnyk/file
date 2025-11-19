@@ -116,22 +116,33 @@ class Diff implements RenderInterface {
       return TRUE;
     }
 
-    // Quick check for regular files: different sizes mean different content.
-    // Skip for symlinks as getSize() may not work on symlink targets.
+    // File fingerprinting for regular files.
+    // Skip for symlinks as metadata may not work reliably.
     if (!$this->left->isLink() && !$this->right->isLink()) {
       try {
-        if ($this->left->getSize() !== $this->right->getSize()) {
+        $left_size = $this->left->getSize();
+        $right_size = $this->right->getSize();
+
+        // Optimization 1: Different sizes = definitely different content.
+        if ($left_size !== $right_size) {
           return FALSE;
+        }
+
+        // Optimization 2: Same inode = same file (hard link).
+        $left_inode = $this->left->getInode();
+        $right_inode = $this->right->getInode();
+        if ($left_inode === $right_inode && $left_inode !== FALSE) {
+          return TRUE;
         }
       }
       // @codeCoverageIgnoreStart
       catch (\RuntimeException $runtime_exception) {
-        // If getSize() fails, fall through to hash comparison.
+        // If metadata access fails, fall through to hash comparison.
       }
       // @codeCoverageIgnoreEnd
     }
 
-    // Check content hash.
+    // Final check: Content hash comparison.
     $is_same_hash = $this->left->getHash() === $this->right->getHash();
 
     return $is_same_hash;

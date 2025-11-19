@@ -37,10 +37,10 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
 
   public static function dataProviderHash(): array {
     return [
-      'basic content' => ['test content', md5('test content')],
-      'empty content' => ['', md5('')],
-      'content with newlines' => ["line1\nline2", md5("line1\nline2")],
-      'content with spaces (preserved)' => ['  test  ', md5('  test  ')],
+      'basic content' => ['test content', sha1('test content')],
+      'empty content' => ['', sha1('')],
+      'content with newlines' => ["line1\nline2", sha1("line1\nline2")],
+      'content with spaces (preserved)' => ['  test  ', sha1('  test  ')],
     ];
   }
 
@@ -182,7 +182,7 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
 
     // Access hash triggers content loading and hash computation.
     $computed_hash = $file_info->getHash();
-    $this->assertEquals(md5('test content'), $computed_hash);
+    $this->assertEquals(sha1('test content'), $computed_hash);
 
     // Verify hash is now stored.
     $hash = $property->getValue($file_info);
@@ -279,14 +279,14 @@ class ExtendedSplFileInfoTest extends UnitTestCase {
 
   public static function dataProviderHashProtected(): array {
     return [
-      'basic content' => ['test content', md5('test content')],
-      'content with trailing spaces (preserved)' => [' test content ', md5(' test content ')],
-      'content with leading spaces (preserved)' => ['   test content', md5('   test content')],
-      'content with newlines (preserved)' => ["test\ncontent\r\nmore", md5("test\ncontent\r\nmore")],
-      'content with carriage returns (preserved)' => ["test\rcontent", md5("test\rcontent")],
-      'empty content' => ['', md5('')],
-      'only spaces (preserved)' => ['   ', md5('   ')],
-      'only newlines (preserved)' => ["\n\r\n\r", md5("\n\r\n\r")],
+      'basic content' => ['test content', sha1('test content')],
+      'content with trailing spaces (preserved)' => [' test content ', sha1(' test content ')],
+      'content with leading spaces (preserved)' => ['   test content', sha1('   test content')],
+      'content with newlines (preserved)' => ["test\ncontent\r\nmore", sha1("test\ncontent\r\nmore")],
+      'content with carriage returns (preserved)' => ["test\rcontent", sha1("test\rcontent")],
+      'empty content' => ['', sha1('')],
+      'only spaces (preserved)' => ['   ', sha1('   ')],
+      'only newlines (preserved)' => ["\n\r\n\r", sha1("\n\r\n\r")],
     ];
   }
 
