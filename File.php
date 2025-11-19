@@ -1101,8 +1101,18 @@ class File {
 
     $differ = self::compare($baseline, $destination, NULL, $before_match_content)->getDiffer();
 
-    if (!empty($differ->getAbsentLeftDiffs())) {
-      foreach (array_keys($differ->getAbsentLeftDiffs()) as $file) {
+    // Early exit: Check if there are any differences at all.
+    $absent_left = $differ->getAbsentLeftDiffs();
+    $absent_right = $differ->getAbsentRightDiffs();
+    $content_diffs = $differ->getContentDiffs();
+
+    if (empty($absent_left) && empty($absent_right) && empty($content_diffs)) {
+      return;
+    }
+
+    // Process absent left diffs (files in destination but not in baseline).
+    if (!empty($absent_left)) {
+      foreach (array_keys($absent_left) as $file) {
         $file_dst = $destination . DIRECTORY_SEPARATOR . $file;
         $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
         static::mkdir(dirname($file_diff));
@@ -1110,15 +1120,18 @@ class File {
       }
     }
 
-    if (!empty($differ->getAbsentRightDiffs())) {
-      foreach (array_keys($differ->getAbsentRightDiffs()) as $file) {
+    // Process absent right diffs (files in baseline but not in destination).
+    if (!empty($absent_right)) {
+      foreach (array_keys($absent_right) as $file) {
         $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-        static::mkdir(dirname($file_diff));
-        static::dump(dirname($file_diff) . DIRECTORY_SEPARATOR . '-' . basename($file_diff), '');
+        $parent_dir = dirname($file_diff);
+        static::mkdir($parent_dir);
+        static::dump($parent_dir . DIRECTORY_SEPARATOR . '-' . basename($file_diff), '');
       }
     }
 
-    foreach ($differ->getContentDiffs() as $file => $d) {
+    // Process content diffs (files that differ in content).
+    foreach ($content_diffs as $file => $d) {
       if (!$d instanceof Diff) {
         // @codeCoverageIgnoreStart
         continue;

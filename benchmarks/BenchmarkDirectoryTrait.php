@@ -45,9 +45,20 @@ trait BenchmarkDirectoryTrait {
   protected string $destinationDir = '';
 
   /**
+   * Diff directory path (for storing generated diff/patch files).
+   */
+  protected string $diffDir = '';
+
+  /**
+   * Patch destination directory path (for patch application target).
+   */
+  protected string $patchDestination = '';
+
+  /**
    * Initialize directory structure.
    *
-   * Creates temporary baseline and destination directories.
+   * Creates temporary baseline, destination, and diff directories.
+   * Sets patch destination path (created by File::patch()).
    */
   protected function directoryInitialize(): void {
     $this->tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_bench_', TRUE);
@@ -55,9 +66,13 @@ trait BenchmarkDirectoryTrait {
 
     $this->baselineDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'baseline';
     $this->destinationDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'destination';
+    $this->diffDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'diff';
+    $this->patchDestination = $this->tmpDir . DIRECTORY_SEPARATOR . 'patch_destination';
 
     mkdir($this->baselineDir, 0777, TRUE);
     mkdir($this->destinationDir, 0777, TRUE);
+    mkdir($this->diffDir, 0777, TRUE);
+    // Note: patchDestination is NOT created here - created by File::patch().
   }
 
   /**
@@ -75,8 +90,17 @@ trait BenchmarkDirectoryTrait {
 
   /**
    * Clean up test directories.
+   *
+   * Cleans up patch destination directory if it exists, then removes the
+   * entire temporary directory (including baseline, destination, diff).
    */
   protected function directoryCleanup(): void {
+    // Clean up patch destination if it exists.
+    if (!empty($this->patchDestination) && is_dir($this->patchDestination)) {
+      File::rmdir($this->patchDestination);
+    }
+
+    // Clean up main tmp directory (includes all subdirectories).
     if (is_dir($this->tmpDir)) {
       File::rmdir($this->tmpDir);
     }

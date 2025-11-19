@@ -95,6 +95,12 @@ class Index {
   protected function scan(): static {
     $this->files = [];
 
+    // Pre-cache pattern arrays for faster matching.
+    $global_patterns = $this->rules->getGlobal();
+    $include_patterns = $this->rules->getInclude();
+    $skip_patterns = $this->rules->getSkip();
+    $ignore_content_patterns = $this->rules->getIgnoreContent();
+
     foreach ($this->iterator($this->directory) as $resource) {
       if (!$resource instanceof \SplFileInfo) {
         // @codeCoverageIgnoreStart
@@ -114,36 +120,29 @@ class Index {
 
       $file = new ExtendedSplFileInfo($resource->getPathname(), $this->directory);
 
-      foreach ($this->rules->getGlobal() as $pattern) {
-        if (static::isPathMatchesPattern($file->getBasename(), $pattern)) {
-          continue 2;
-        }
+      // Fast path: check basename against global patterns first.
+      $basename = $file->getBasename();
+      if ($this->matchesAnyPattern($basename, $global_patterns)) {
+        continue;
       }
 
+      $relative_path = $file->getPathnameFromBasepath();
+
+      // Check include patterns (if any exist).
       $is_included = FALSE;
-      foreach ($this->rules->getInclude() as $pattern) {
-        if (static::isPathMatchesPattern($file->getPathnameFromBasepath(), $pattern)) {
-          $is_included = TRUE;
-          break;
-        }
+      if (!empty($include_patterns)) {
+        $is_included = $this->matchesAnyPattern($relative_path, $include_patterns);
       }
 
-      if (!$is_included) {
-        foreach ($this->rules->getSkip() as $pattern) {
-          if (static::isPathMatchesPattern($file->getPathnameFromBasepath(), $pattern)) {
-            continue 2;
-          }
-        }
+      // Only check skip if not explicitly included.
+      if (!$is_included && $this->matchesAnyPattern($relative_path, $skip_patterns)) {
+        continue;
       }
 
+      // Check ignore content patterns.
       $is_ignore_content = FALSE;
-      if (!$is_included) {
-        foreach ($this->rules->getIgnoreContent() as $pattern) {
-          if (static::isPathMatchesPattern($file->getPathnameFromBasepath(), $pattern)) {
-            $is_ignore_content = TRUE;
-            break;
-          }
-        }
+      if (!$is_included && $this->matchesAnyPattern($relative_path, $ignore_content_patterns)) {
+        $is_ignore_content = TRUE;
       }
 
       if ($is_ignore_content) {
@@ -163,12 +162,35 @@ class Index {
         }
       }
 
-      $this->files[$file->getPathnameFromBasepath()] = $file;
+      $this->files[$relative_path] = $file;
     }
 
     ksort($this->files);
 
     return $this;
+  }
+
+  /**
+   * Checks if a path matches any of the given patterns.
+   *
+   * This is a helper method to reduce code duplication and improve
+   * readability in the scan() method.
+   *
+   * @param string $path
+   *   The path to check.
+   * @param array<int, string> $patterns
+   *   The patterns to match against.
+   *
+   * @return bool
+   *   TRUE if the path matches any pattern, FALSE otherwise.
+   */
+  protected function matchesAnyPattern(string $path, array $patterns): bool {
+    foreach ($patterns as $pattern) {
+      if (static::isPathMatchesPattern($path, $pattern)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**
