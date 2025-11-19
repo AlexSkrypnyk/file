@@ -142,7 +142,7 @@ jobs:
         with:
           # Get branch for PR from 'head_ref' or for branch from 'ref_name'.
           ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
