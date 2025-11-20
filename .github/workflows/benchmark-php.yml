@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -138,7 +138,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           # Get branch for PR from 'head_ref' or for branch from 'ref_name'.
           ref: ${{ github.head_ref || github.ref_name }}
