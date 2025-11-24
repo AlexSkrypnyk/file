@@ -65,7 +65,7 @@ class TaskerTest extends UnitTestCase {
     }
   }
 
-  #[DataProvider('dataProviderMissingComponents')]
+  #[DataProvider('dataProviderProcessWithMissingComponents')]
   public function testProcessWithMissingComponents(bool $has_tasks, bool $has_iterator, bool $should_execute): void {
     $tasker = new Tasker();
     $executed = FALSE;
@@ -89,7 +89,7 @@ class TaskerTest extends UnitTestCase {
     $this->assertSame($should_execute, $executed, 'Execution should match expected behavior based on missing components');
   }
 
-  public static function dataProviderMissingComponents(): array {
+  public static function dataProviderProcessWithMissingComponents(): array {
     return [
       'has tasks and iterator' => [TRUE, TRUE, TRUE],
       'has tasks, no iterator' => [TRUE, FALSE, FALSE],

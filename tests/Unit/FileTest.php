@@ -126,12 +126,12 @@ class FileTest extends UnitTestCase {
     ];
   }
 
-  #[DataProvider('dataProviderAbsolutePath')]
+  #[DataProvider('dataProviderAbsolute')]
   public function testAbsolute(string $file, ?string $base, string $expected): void {
     $this->assertSame($expected, File::absolute($file, $base));
   }
 
-  public static function dataProviderAbsolutePath(): array {
+  public static function dataProviderAbsolute(): array {
     return [
       // Absolute path remains unchanged.
       ['/var/www/file.txt', NULL, '/var/www/file.txt'],

@@ -294,22 +294,9 @@ class FileAssertionsTraitTest extends TestCase {
   }
 
   /**
-   * Data provider for assertFilesExist tests.
-   */
-  public static function assertFilesExistDataProvider(): array {
-    return [
-      'single file success' => [['test1.txt'], [], TRUE, ''],
-      'multiple files success' => [['test1.txt', 'test2.txt', 'test3.txt'], [], TRUE, ''],
-      'files with different extensions success' => [['test.txt', 'data.json', 'config.yml'], [], TRUE, ''],
-      'empty array success' => [[], [], TRUE, ''],
-      'nonexistent file failure' => [['existing.txt', 'nonexistent.txt'], ['existing.txt'], FALSE, 'nonexistent.txt'],
-    ];
-  }
-
-  /**
    * Test assertFilesExist method with data provider.
    */
-  #[DataProvider('assertFilesExistDataProvider')]
+  #[DataProvider('dataProviderAssertFilesExist')]
   public function testAssertFilesExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
     // Create specified files.
     foreach ($create_files as $file) {
@@ -341,22 +328,22 @@ class FileAssertionsTraitTest extends TestCase {
   }
 
   /**
-   * Data provider for assertFilesDoNotExist tests.
+   * Data provider for assertFilesExist tests.
    */
-  public static function assertFilesDoNotExistDataProvider(): array {
+  public static function dataProviderAssertFilesExist(): array {
     return [
-      'single nonexistent file success' => [['nonexistent1.txt'], [], TRUE, ''],
-      'multiple nonexistent files success' => [['nonexistent1.txt', 'nonexistent2.txt', 'nonexistent3.txt'], [], TRUE, ''],
-      'files with different extensions success' => [['missing.txt', 'absent.json', 'gone.yml'], [], TRUE, ''],
+      'single file success' => [['test1.txt'], [], TRUE, ''],
+      'multiple files success' => [['test1.txt', 'test2.txt', 'test3.txt'], [], TRUE, ''],
+      'files with different extensions success' => [['test.txt', 'data.json', 'config.yml'], [], TRUE, ''],
       'empty array success' => [[], [], TRUE, ''],
-      'existing file failure' => [['existing.txt'], ['existing.txt'], FALSE, 'existing.txt'],
+      'nonexistent file failure' => [['existing.txt', 'nonexistent.txt'], ['existing.txt'], FALSE, 'nonexistent.txt'],
     ];
   }
 
   /**
    * Test assertFilesDoNotExist method with data provider.
    */
-  #[DataProvider('assertFilesDoNotExistDataProvider')]
+  #[DataProvider('dataProviderAssertFilesDoNotExist')]
   public function testAssertFilesDoNotExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
     // Create specified files.
     foreach ($create_files as $file) {
@@ -381,24 +368,22 @@ class FileAssertionsTraitTest extends TestCase {
   }
 
   /**
-   * Data provider for assertFilesWildcardExists tests.
+   * Data provider for assertFilesDoNotExist tests.
    */
-  public static function assertFilesWildcardExistsDataProvider(): array {
+  public static function dataProviderAssertFilesDoNotExist(): array {
     return [
-      'single pattern string success' => ['*.txt', ['test.txt'], TRUE, ''],
-      'single pattern array success' => [['*.txt'], ['test.txt'], TRUE, ''],
-      'multiple patterns success' => [['*.txt', '*.json'], ['test.txt', 'data.json'], TRUE, ''],
-      'directory pattern success' => ['subdir/*.txt', ['subdir/file.txt'], TRUE, ''],
-      'prefix pattern success' => ['test_*.txt', ['test_file.txt'], TRUE, ''],
-      'no matches failure' => ['*.nonexistent', [], FALSE, 'No files found matching wildcard pattern'],
-      'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
+      'single nonexistent file success' => [['nonexistent1.txt'], [], TRUE, ''],
+      'multiple nonexistent files success' => [['nonexistent1.txt', 'nonexistent2.txt', 'nonexistent3.txt'], [], TRUE, ''],
+      'files with different extensions success' => [['missing.txt', 'absent.json', 'gone.yml'], [], TRUE, ''],
+      'empty array success' => [[], [], TRUE, ''],
+      'existing file failure' => [['existing.txt'], ['existing.txt'], FALSE, 'existing.txt'],
     ];
   }
 
   /**
    * Test assertFilesWildcardExists method with data provider.
    */
-  #[DataProvider('assertFilesWildcardExistsDataProvider')]
+  #[DataProvider('dataProviderAssertFilesWildcardExists')]
   public function testAssertFilesWildcardExists(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
     // Create files.
     foreach ($create_files as $file) {
@@ -439,15 +424,16 @@ class FileAssertionsTraitTest extends TestCase {
   }
 
   /**
-   * Data provider for assertFilesWildcardDoNotExist tests.
+   * Data provider for assertFilesWildcardExists tests.
    */
-  public static function assertFilesWildcardDoNotExistDataProvider(): array {
+  public static function dataProviderAssertFilesWildcardExists(): array {
     return [
-      'single pattern string success' => ['*.nonexistent', [], TRUE, ''],
-      'single pattern array success' => [['*.nonexistent'], [], TRUE, ''],
-      'multiple patterns success' => [['*.nonexistent', '*.missing'], [], TRUE, ''],
-      'directory pattern success' => ['nonexistent_dir/*.txt', [], TRUE, ''],
-      'matching files failure' => ['*.txt', ['test.txt'], FALSE, 'Found 1 file(s) matching wildcard pattern that should not exist'],
+      'single pattern string success' => ['*.txt', ['test.txt'], TRUE, ''],
+      'single pattern array success' => [['*.txt'], ['test.txt'], TRUE, ''],
+      'multiple patterns success' => [['*.txt', '*.json'], ['test.txt', 'data.json'], TRUE, ''],
+      'directory pattern success' => ['subdir/*.txt', ['subdir/file.txt'], TRUE, ''],
+      'prefix pattern success' => ['test_*.txt', ['test_file.txt'], TRUE, ''],
+      'no matches failure' => ['*.nonexistent', [], FALSE, 'No files found matching wildcard pattern'],
       'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
     ];
   }
@@ -455,7 +441,7 @@ class FileAssertionsTraitTest extends TestCase {
   /**
    * Test assertFilesWildcardDoNotExist method with data provider.
    */
-  #[DataProvider('assertFilesWildcardDoNotExistDataProvider')]
+  #[DataProvider('dataProviderAssertFilesWildcardDoNotExist')]
   public function testAssertFilesWildcardDoNotExist(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
     // Create files.
     foreach ($create_files as $file) {
@@ -488,6 +474,20 @@ class FileAssertionsTraitTest extends TestCase {
         $this->assertStringContainsString($expected_error, $assertion_failed_error->getMessage());
       }
     }
+  }
+
+  /**
+   * Data provider for assertFilesWildcardDoNotExist tests.
+   */
+  public static function dataProviderAssertFilesWildcardDoNotExist(): array {
+    return [
+      'single pattern string success' => ['*.nonexistent', [], TRUE, ''],
+      'single pattern array success' => [['*.nonexistent'], [], TRUE, ''],
+      'multiple patterns success' => [['*.nonexistent', '*.missing'], [], TRUE, ''],
+      'directory pattern success' => ['nonexistent_dir/*.txt', [], TRUE, ''],
+      'matching files failure' => ['*.txt', ['test.txt'], FALSE, 'Found 1 file(s) matching wildcard pattern that should not exist'],
+      'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
+    ];
   }
 
   public function testAssertFileContainsWordWithSlashes(): void {

@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 #[CoversClass(PatchException::class)]
 class PatchExceptionTest extends UnitTestCase {
 
-  #[DataProvider('messageFormattingProvider')]
+  #[DataProvider('dataProviderMessageFormatting')]
   public function testMessageFormatting(
     string $message,
     ?string $file_path,
@@ -25,7 +25,7 @@ class PatchExceptionTest extends UnitTestCase {
     $this->assertEquals($expected_message, $exception->getMessage());
   }
 
-  public static function messageFormattingProvider(): array {
+  public static function dataProviderMessageFormatting(): array {
     return [
       'message only' => [
         'Test message',
