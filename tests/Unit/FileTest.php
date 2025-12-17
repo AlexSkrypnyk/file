@@ -23,7 +23,6 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'findMatchingPath')]
 #[CoversMethod(File::class, 'copyIfExists')]
 #[CoversMethod(File::class, 'scandirRecursive')]
-#[CoversMethod(File::class, 'diff')]
 #[CoversMethod(File::class, 'tmpdir')]
 #[CoversMethod(File::class, 'copy')]
 #[CoversMethod(File::class, 'append')]
@@ -395,37 +394,6 @@ class FileTest extends UnitTestCase {
     $file_path = $base_dir . DIRECTORY_SEPARATOR . 'file1.txt';
     $files = File::scandirRecursive($file_path);
     $this->assertEmpty($files);
-  }
-
-  public function testDiff(): void {
-    $baseline_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'baseline';
-    $destination_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
-    $diff_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'diff';
-
-    mkdir($baseline_dir, 0777, TRUE);
-    mkdir($destination_dir, 0777, TRUE);
-
-    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'common.txt', 'Common content');
-    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'common.txt', 'Common content');
-
-    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'modified.txt', 'Original content');
-    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'modified.txt', 'Modified content');
-
-    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'removed.txt', 'This file is removed');
-
-    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'added.txt', 'This file is added');
-
-    mkdir($baseline_dir . DIRECTORY_SEPARATOR . 'subdir', 0777);
-    mkdir($destination_dir . DIRECTORY_SEPARATOR . 'subdir', 0777);
-    file_put_contents($baseline_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt', 'Subfile content');
-    file_put_contents($destination_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt', 'Changed subfile content');
-
-    File::diff($baseline_dir, $destination_dir, $diff_dir);
-
-    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . 'added.txt');
-    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . '-removed.txt');
-    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . 'modified.txt');
-    $this->assertFileExists($diff_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt');
   }
 
   public function testCopy(): void {

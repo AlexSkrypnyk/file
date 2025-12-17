@@ -118,7 +118,17 @@ class FileStringsTest extends UnitTestCase {
 
     File::removeTokenInDir(static::$sut, $token);
 
-    $this->assertDirectoryEqualsDirectory(static::$fixtures, static::$sut);
+    // Compare directories by checking all files have identical content.
+    $expected_files = File::scandirRecursive(static::$fixtures);
+    $actual_files = File::scandirRecursive(static::$sut);
+    $this->assertCount(count($expected_files), $actual_files, 'Directory should have the same number of files.');
+
+    foreach ($expected_files as $expected_file) {
+      $relative_path = str_replace((string) static::$fixtures, '', $expected_file);
+      $actual_file = static::$sut . $relative_path;
+      $this->assertFileExists($actual_file, sprintf('File %s should exist.', $relative_path));
+      $this->assertFileEquals($expected_file, $actual_file, sprintf('File %s content should match.', $relative_path));
+    }
   }
 
   public static function dataProviderRemoveTokenInDir(): array {

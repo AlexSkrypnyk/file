@@ -17,10 +17,6 @@
     <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
-            <exclude>tests/Unit/FileTaskPerformanceTest.php</exclude>
-        </testsuite>
-        <testsuite name="performance">
-            <file>tests/Unit/FileTaskPerformanceTest.php</file>
         </testsuite>
     </testsuites>
     <source restrictNotices="true"

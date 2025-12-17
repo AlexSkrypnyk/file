@@ -5,13 +5,9 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File;
 
 use AlexSkrypnyk\File\Exception\FileException;
-use AlexSkrypnyk\File\Internal\Comparer;
-use AlexSkrypnyk\File\Internal\Diff;
-use AlexSkrypnyk\File\Internal\Index;
-use AlexSkrypnyk\File\Internal\Patcher;
-use AlexSkrypnyk\File\Internal\Rules;
+use AlexSkrypnyk\File\Internal\ContentFile;
+use AlexSkrypnyk\File\Internal\ContentFileInterface;
 use AlexSkrypnyk\File\Internal\Strings;
-use AlexSkrypnyk\File\Internal\Syncer;
 use AlexSkrypnyk\File\Internal\Tasker;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -1085,151 +1081,6 @@ class File {
   }
 
   /**
-   * Create diff files between baseline and destination directories.
-   *
-   * @param string $baseline
-   *   Baseline directory path.
-   * @param string $destination
-   *   Destination directory path.
-   * @param string $diff
-   *   Directory to write diff files to.
-   * @param callable|null $before_match_content
-   *   Optional callback to process file content before comparison.
-   */
-  public static function diff(string $baseline, string $destination, string $diff, ?callable $before_match_content = NULL): void {
-    static::mkdir($diff);
-
-    $differ = self::compare($baseline, $destination, NULL, $before_match_content)->getDiffer();
-
-    // Early exit: Check if there are any differences at all.
-    $absent_left = $differ->getAbsentLeftDiffs();
-    $absent_right = $differ->getAbsentRightDiffs();
-    $content_diffs = $differ->getContentDiffs();
-
-    if (empty($absent_left) && empty($absent_right) && empty($content_diffs)) {
-      return;
-    }
-
-    // Process absent left diffs (files in destination but not in baseline).
-    if (!empty($absent_left)) {
-      foreach (array_keys($absent_left) as $file) {
-        $file_dst = $destination . DIRECTORY_SEPARATOR . $file;
-        $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-        static::mkdir(dirname($file_diff));
-        static::copy($file_dst, $file_diff);
-      }
-    }
-
-    // Process absent right diffs (files in baseline but not in destination).
-    if (!empty($absent_right)) {
-      foreach (array_keys($absent_right) as $file) {
-        $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-        $parent_dir = dirname($file_diff);
-        static::mkdir($parent_dir);
-        static::dump($parent_dir . DIRECTORY_SEPARATOR . '-' . basename($file_diff), '');
-      }
-    }
-
-    // Process content diffs (files that differ in content).
-    foreach ($content_diffs as $file => $d) {
-      if (!$d instanceof Diff) {
-        // @codeCoverageIgnoreStart
-        continue;
-        // @codeCoverageIgnoreEnd
-      }
-
-      $file_diff = $diff . DIRECTORY_SEPARATOR . $file;
-      $rendered_content = $d->render();
-      if ($rendered_content !== NULL) {
-        static::dump($file_diff, $rendered_content);
-      }
-    }
-  }
-
-  /**
-   * Synchronize files from source to destination directory.
-   *
-   * @param string $src
-   *   Source directory path.
-   * @param string $dst
-   *   Destination directory path.
-   * @param int $permissions
-   *   Permissions to set on created directories.
-   * @param bool $copy_empty_dirs
-   *   Whether to copy empty directories.
-   */
-  public static function sync(string $src, string $dst, int $permissions = 0755, bool $copy_empty_dirs = FALSE): void {
-    $src_index = new Index($src);
-
-    $syncer = new Syncer($src_index);
-
-    $syncer->sync($dst, $permissions, $copy_empty_dirs);
-  }
-
-  /**
-   * Compare files between source and destination directories.
-   *
-   * @param string $src
-   *   Source directory path.
-   * @param string $dst
-   *   Destination directory path.
-   * @param \AlexSkrypnyk\File\Internal\Rules|null $rules
-   *   Optional rules for file comparison.
-   * @param callable|null $before_match_content
-   *   Optional callback to process file content before comparison.
-   *
-   * @return \AlexSkrypnyk\File\Internal\Comparer
-   *   Configured and executed comparer object.
-   */
-  public static function compare(string $src, string $dst, ?Rules $rules = NULL, ?callable $before_match_content = NULL): Comparer {
-    $src_index = new Index($src, $rules, $before_match_content);
-
-    static::mkdir($dst);
-    $dst_index = new Index($dst, $rules ?: $src_index->getRules(), $before_match_content);
-
-    $comparer = new Comparer($src_index, $dst_index);
-
-    return $comparer->compare();
-  }
-
-  /**
-   * Apply patch files to a baseline and produce a destination.
-   *
-   * @param string $baseline
-   *   Baseline directory path.
-   * @param string $diff
-   *   Directory containing diff/patch files.
-   * @param string $destination
-   *   Destination directory path where patched files will be written.
-   * @param callable|null $before_match_content
-   *   Optional callback to process file content before patching.
-   */
-  public static function patch(string $baseline, string $diff, string $destination, ?callable $before_match_content = NULL): void {
-    static::mkdir($destination);
-
-    static::sync($baseline, $destination);
-
-    $patcher = new Patcher($baseline, $destination);
-
-    $diff_files = (new Index($diff))->getFiles();
-    foreach ($diff_files as $file) {
-      if (str_starts_with($file->getBasename(), '-')) {
-        $dst_file = $destination . DIRECTORY_SEPARATOR . $file->getPathFromBasepath() . DIRECTORY_SEPARATOR . substr($file->getBasename(), 1);
-        static::remove($dst_file);
-      }
-      elseif (!Patcher::isPatchFile($file->getPathname())) {
-        $dst_file = $destination . DIRECTORY_SEPARATOR . $file->getPathnameFromBasepath();
-        static::copy($file->getPathname(), $dst_file);
-      }
-      else {
-        $patcher->addPatchFile($file);
-      }
-    }
-
-    $patcher->patch();
-  }
-
-  /**
    * Add a task to the directory task queue.
    *
    * @param callable $callback
@@ -1253,12 +1104,12 @@ class File {
           continue;
         }
 
-        $file = new ExtendedSplFileInfo($path, $directory);
+        $file = new ContentFile($path);
         $original_content = $file->getContent();
 
         $processed_file = yield $file;
 
-        if ($processed_file instanceof ExtendedSplFileInfo) {
+        if ($processed_file instanceof ContentFileInterface) {
           $new_content = $processed_file->getContent();
 
           if ($original_content !== $new_content) {

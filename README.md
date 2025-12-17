@@ -25,8 +25,6 @@
 - [Usage](#usage)
   - [Available Functions](#available-functions)
   - [Batch Operations](#batch-operations)
-  - [Diff Operations](#diff-operations)
-    - [Ignoring Files and Content Changes](#ignoring-files-and-content-changes)
   - [Assertion Traits](#assertion-traits)
     - [Directory Assertions Trait](#directory-assertions-trait)
     - [File Assertions Trait](#file-assertions-trait)
@@ -47,7 +45,9 @@ multiple files efficiently.
 All methods are available through the `AlexSkrypnyk\File\File` class.
 
 ```php
-use AlexSkrypnyk\File\Exception\FileException;use AlexSkrypnyk\File\ExtendedSplFileInfo;use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Exception\FileException;
+use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Internal\ContentFile;
 
 try {
   // Get current working directory
@@ -71,7 +71,7 @@ try {
   File::append('/path/to/log.txt', "\nNew log entry: " . date('Y-m-d H:i:s'));
 
   // Or use batch operations for better performance
-  File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+  File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
     $content = File::replaceContent($file_info->getContent(), 'old', 'new');
     $file_info->setContent($content);
     return $file_info;
@@ -86,44 +86,40 @@ try {
 
 ### Available Functions
 
-| Function                | Description                                                                                                    |
-|-------------------------|----------------------------------------------------------------------------------------------------------------|
-| `absolute()`            | Get absolute path for provided absolute or relative file.                                                      |
-| `append()`              | Append content to an existing file.                                                                            |
-| `compare()`             | Compare files between source and destination directories.                                                      |
-| `contains()`            | Check if file contains a specific string or matches a pattern.                                                 |
-| `containsInDir()`       | Find all files in directory containing a specific string.                                                      |
-| `copy()`                | Copy file or directory.                                                                                        |
-| `copyIfExists()`        | Copy file or directory if it exists.                                                                           |
-| `cwd()`                 | Get current working directory with absolute path.                                                              |
-| `diff()`                | Create diff files between baseline and destination directories. See [Diff Operations](#diff-operations) below. |
-| `dir()`                 | Get absolute path for existing directory.                                                                      |
-| `dirIsEmpty()`          | Check if directory is empty.                                                                                   |
-| `dump()`                | Write content to a file.                                                                                       |
-| `exists()`              | Check if file or directory exists.                                                                             |
-| `findMatchingPath()`    | Find first path that matches a needle among provided paths.                                                    |
-| `mkdir()`               | Creates a directory if it doesn't exist.                                                                       |
-| `patch()`               | Apply patch files to a baseline and produce a destination.                                                     |
-| `read()`                | Read file contents.                                                                                            |
-| `realpath()`            | Replacement for PHP's `realpath` resolves non-existing paths.                                                  |
-| `remove()`              | Remove file or directory.                                                                                      |
-| `removeLine()`          | Remove lines containing a specific string from a file.                                                         |
-| `removeToken()`         | Remove tokens and optionally content between tokens from a string.                                             |
-| `removeTokenInFile()`   | Remove tokens and optionally content between tokens from a file.                                               |
-| `removeTokenInDir()`    | Remove tokens and optionally content between tokens from all files in a directory.                             |
-| `renameInDir()`         | Rename files in directory by replacing part of the filename.                                                   |
-| `replaceContent()`      | Replace content in a string.                                                                                   |
-| `replaceContentCallback()` | Replace content in a string using a callback processor.                                                     |
-| `replaceContentInFile()` | Replace content in a file.                                                                                     |
-| `replaceContentCallbackInFile()` | Replace content in a file using a callback processor.                                                |
-| `replaceContentInDir()` | Replace content in all files in a directory.                                                                   |
-| `replaceContentCallbackInDir()` | Replace content in all files in a directory using a callback processor.                                |
-| `collapseRepeatedEmptyLines()` | Remove multiple consecutive empty lines, keeping at most one empty line between content blocks.         |
-| `rmdir()`               | Remove directory recursively.                                                                                  |
-| `rmdirEmpty()`          | Remove directory recursively if empty.                                                                         |
-| `scandirRecursive()`    | Recursively scan directory for files.                                                                          |
-| `sync()`                | Synchronize files from source to destination directory.                                                        |
-| `tmpdir()`              | Create temporary directory.                                                                                    |
+| Function                         | Description                                                                           |
+|----------------------------------|---------------------------------------------------------------------------------------|
+| `absolute()`                     | Get absolute path for provided absolute or relative file.                             |
+| `append()`                       | Append content to an existing file.                                                   |
+| `contains()`                     | Check if file contains a specific string or matches a pattern.                        |
+| `containsInDir()`                | Find all files in directory containing a specific string.                             |
+| `copy()`                         | Copy file or directory.                                                               |
+| `copyIfExists()`                 | Copy file or directory if it exists.                                                  |
+| `cwd()`                          | Get current working directory with absolute path.                                     |
+| `dir()`                          | Get absolute path for existing directory.                                             |
+| `dirIsEmpty()`                   | Check if directory is empty.                                                          |
+| `dump()`                         | Write content to a file.                                                              |
+| `exists()`                       | Check if file or directory exists.                                                    |
+| `findMatchingPath()`             | Find first path that matches a needle among provided paths.                           |
+| `mkdir()`                        | Creates a directory if it doesn't exist.                                              |
+| `read()`                         | Read file contents.                                                                   |
+| `realpath()`                     | Replacement for PHP's `realpath` resolves non-existing paths.                         |
+| `remove()`                       | Remove file or directory.                                                             |
+| `removeLine()`                   | Remove lines containing a specific string from a file.                                |
+| `removeToken()`                  | Remove tokens and optionally content between tokens from a string.                    |
+| `removeTokenInFile()`            | Remove tokens and optionally content between tokens from a file.                      |
+| `removeTokenInDir()`             | Remove tokens and optionally content between tokens from all files in a directory.    |
+| `renameInDir()`                  | Rename files in directory by replacing part of the filename.                          |
+| `replaceContent()`               | Replace content in a string.                                                          |
+| `replaceContentCallback()`       | Replace content in a string using a callback processor.                               |
+| `replaceContentInFile()`         | Replace content in a file.                                                            |
+| `replaceContentCallbackInFile()` | Replace content in a file using a callback processor.                                 |
+| `replaceContentInDir()`          | Replace content in all files in a directory.                                          |
+| `replaceContentCallbackInDir()`  | Replace content in all files in a directory using a callback processor.               |
+| `collapseRepeatedEmptyLines()`   | Remove multiple consecutive empty lines, keeping at most one empty line.              |
+| `rmdir()`                        | Remove directory recursively.                                                         |
+| `rmdirEmpty()`                   | Remove directory recursively if empty.                                                |
+| `scandirRecursive()`             | Recursively scan directory for files.                                                 |
+| `tmpdir()`                       | Create temporary directory.                                                           |
 
 ### Batch Operations
 
@@ -154,7 +150,8 @@ traditional file operations:
 #### Usage Example
 
 ```php
-use AlexSkrypnyk\File\ExtendedSplFileInfo;use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Internal\ContentFile;
 
 // Traditional approach (slow for multiple operations)
 File::replaceContentInDir('/path/to/dir', 'old1', 'new1');
@@ -174,7 +171,7 @@ File::replaceContentCallbackInDir('/path/to/dir', function(string $content, stri
 });
 
 // Batch approach (significantly faster)
-File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
   $content = File::replaceContent($file_info->getContent(), 'old1', 'new1');
   $content = File::replaceContent($content, 'old2', 'new2');
   $content = File::removeToken($content, '# token');
@@ -184,7 +181,7 @@ File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFile
 });
 
 // Batch approach with callback processing
-File::addTaskDirectory(function(ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
   $content = File::replaceContentCallback($file_info->getContent(), function(string $content): string {
     return strtoupper(str_replace('old', 'new', $content));
   });
@@ -210,7 +207,7 @@ that:
 - Uses PHP generators for memory-efficient processing of large file sets
 - Implements a two-way communication pattern between the queue and file
   processors
-- Leverages `ExtendedSplFileInfo` objects for rich file context and metadata
+- Leverages `ContentFile` objects for file content manipulation
 - Provides type-safe object validation to ensure data integrity
 - Maintains complete separation between the generic queue system and
   file-specific operations
@@ -218,101 +215,18 @@ that:
 This architecture allows the library to scale efficiently from small single-file
 operations to large-scale batch processing scenarios.
 
-### Diff Operations
-
-The `diff()`, `patch()`, and `compare()` functions provide powerful tools for
-working with file differences between directories:
-
-```php
-use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Exception\PatchException;
-
-// Generate diff files between baseline and destination directories
-File::diff('/path/to/baseline', '/path/to/destination', '/path/to/diff');
-
-// Compare directories to determine if they're equal
-$result = File::compare('/path/to/source', '/path/to/destination');
-
-// Apply patches to transform a baseline directory
-try {
-  File::patch('/path/to/baseline', '/path/to/diff', '/path/to/patched');
-} catch (PatchException $exception) {
-  echo $exception->getMessage(); // Returns a detailed error message.
-
-  // Additional contextual information
-  $path = $exception->getFilePath();    // Gets the affected file path.
-  $line_number = $exception->getLineNumber(); // Gets the line number where the error occurred.
-  $line_content = $exception->getLineContent(); // Gets the content of the problematic line.
-}
-```
-
-The diff functionality allows you to:
-
-1. Generate differences between two directory structures
-2. Store those differences as patch files
-3. Apply those patches to recreate directory structures elsewhere
-
-The `PatchException` provides detailed error messages with contextual
-information when patch operations fail, making debugging easier.
-
-#### Ignoring Files and Content Changes
-
-You can create a `.ignorecontent` file in your directories to specify patterns
-for files or content that should be ignored during comparison. This is useful
-for timestamps, randomly generated values, or files that shouldn't be compared.
-
-The syntax for `.ignorecontent` file is similar to `.gitignore` with additional
-content ignoring capabilities:
-
-```
-# Comments start with #
-file.txt        # Ignore this specific file
-logs/           # Ignore this directory and all subdirectories
-temp/*          # Ignore all files in directory, but not subdirectories
-^config.json    # Ignore content changes in this file, but check file exists
-^data/          # Ignore content changes in all files in dir and subdirs
-^cache/*        # Ignore content changes in all files in dir, but not subdirs
-!important.txt  # Do not ignore this file (exception)
-!^settings.php  # Do not ignore content changes in this file
-```
-
-Prefix meanings:
-
-- No prefix: Ignore file/directory completely
-- `^`: Ignore content changes but verify file/directory exists
-- `!`: Exception - do not ignore this file/directory
-- `!^`: Exception - do not ignore content changes in this file/directory
-
-When parsing these rules, the library may throw a `RulesException` if there are
-issues:
-
-```php
-use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Exception\RulesException;
-
-try {
-  // Operations using .ignorecontent rules
-  File::compare('/path/to/source', '/path/to/destination');
-} catch (RulesException $exception) {
-  // Handle rules parsing errors
-  echo $exception->getMessage();
-}
-```
-
 ### Assertion Traits
 
 The library includes PHPUnit traits for testing files and directories:
 
 #### Directory Assertions Trait
 
-| Assertion Method                         | Description                                                                               |
-|------------------------------------------|-------------------------------------------------------------------------------------------|
-| `assertDirectoryContainsString()`        | Assert that a directory contains files with a specific string.                            |
-| `assertDirectoryNotContainsString()`     | Assert that a directory does not contain files with a specific string.                    |
-| `assertDirectoryContainsWord()`          | Assert that a directory contains files with a specific word (bounded by word boundaries). |
-| `assertDirectoryNotContainsWord()`       | Assert that a directory does not contain files with a specific word.                      |
-| `assertDirectoryEqualsDirectory()`       | Assert that two directories have identical structure and content.                         |
-| `assertDirectoryEqualsPatchedBaseline()` | Assert that a directory is equal to the patched baseline (baseline + diff).               |
+| Assertion Method                     | Description                                                                               |
+|--------------------------------------|-------------------------------------------------------------------------------------------|
+| `assertDirectoryContainsString()`    | Assert that a directory contains files with a specific string.                            |
+| `assertDirectoryNotContainsString()` | Assert that a directory does not contain files with a specific string.                    |
+| `assertDirectoryContainsWord()`      | Assert that a directory contains files with a specific word (bounded by word boundaries). |
+| `assertDirectoryNotContainsWord()`   | Assert that a directory does not contain files with a specific word.                      |
 
 Usage example:
 
@@ -330,8 +244,8 @@ class MyTest extends TestCase {
     // Assert directory contains "example" string, ignoring specific files
     $this->assertDirectoryContainsString('/path/to/directory', 'example', ['temp.log', 'cache']);
 
-    // Assert two directories are identical
-    $this->assertDirectoryEqualsDirectory('/path/to/dir1', '/path/to/dir2');
+    // Assert directory does not contain specific word
+    $this->assertDirectoryNotContainsWord('/path/to/directory', 'forbidden');
   }
 }
 ```
@@ -437,8 +351,8 @@ composer install
 composer lint
 composer test
 
-# Run performance tests
-./vendor/bin/phpunit --testsuite=performance
+# Run performance benchmarks (PHPBench)
+composer benchmark
 ```
 
 ---

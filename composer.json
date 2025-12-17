@@ -36,10 +36,7 @@
     "autoload": {
         "psr-4": {
             "AlexSkrypnyk\\File\\": "src/"
-        },
-        "files": [
-            "File.php"
-        ]
+        }
     },
     "autoload-dev": {
         "psr-4": {
