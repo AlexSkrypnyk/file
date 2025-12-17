@@ -26,6 +26,7 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'tmpdir')]
 #[CoversMethod(File::class, 'copy')]
 #[CoversMethod(File::class, 'append')]
+#[CoversMethod(File::class, 'remove')]
 class FileTest extends UnitTestCase {
 
   protected string $testTmpDir;
@@ -497,6 +498,93 @@ class FileTest extends UnitTestCase {
     $this->expectExceptionMessage(sprintf('File "%s" does not exist.', $non_existent_file));
 
     File::append($non_existent_file, 'content');
+  }
+
+  public function testRemoveSingleFile(): void {
+    $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'remove_test.txt';
+    file_put_contents($file_path, 'content to remove');
+    $this->assertFileExists($file_path);
+
+    File::remove($file_path);
+
+    $this->assertFileDoesNotExist($file_path);
+  }
+
+  public function testRemoveDirectory(): void {
+    $dir_path = $this->testTmpDir . DIRECTORY_SEPARATOR . 'remove_dir';
+    mkdir($dir_path, 0777);
+    file_put_contents($dir_path . DIRECTORY_SEPARATOR . 'file.txt', 'content');
+    $this->assertDirectoryExists($dir_path);
+
+    File::remove($dir_path);
+
+    $this->assertDirectoryDoesNotExist($dir_path);
+  }
+
+  public function testRemoveIterable(): void {
+    $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'remove1.txt';
+    $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'remove2.txt';
+    $file3 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'remove3.txt';
+
+    file_put_contents($file1, 'content1');
+    file_put_contents($file2, 'content2');
+    file_put_contents($file3, 'content3');
+
+    $this->assertFileExists($file1);
+    $this->assertFileExists($file2);
+    $this->assertFileExists($file3);
+
+    File::remove([$file1, $file2, $file3]);
+
+    $this->assertFileDoesNotExist($file1);
+    $this->assertFileDoesNotExist($file2);
+    $this->assertFileDoesNotExist($file3);
+  }
+
+  public function testRemoveNonExistentFile(): void {
+    $non_existent = $this->testTmpDir . DIRECTORY_SEPARATOR . 'does_not_exist.txt';
+    $this->assertFileDoesNotExist($non_existent);
+
+    // Should not throw an exception.
+    File::remove($non_existent);
+
+    $this->assertFileDoesNotExist($non_existent);
+  }
+
+  #[DataProvider('dataProviderRemove')]
+  public function testRemove(string $type, string $name): void {
+    $path = $this->testTmpDir . DIRECTORY_SEPARATOR . $name;
+
+    if ($type === 'file') {
+      file_put_contents($path, 'test content');
+      $this->assertFileExists($path);
+    }
+    elseif ($type === 'directory') {
+      mkdir($path, 0777);
+      $this->assertDirectoryExists($path);
+    }
+    elseif ($type === 'nested_directory') {
+      mkdir($path, 0777);
+      mkdir($path . DIRECTORY_SEPARATOR . 'subdir', 0777);
+      file_put_contents($path . DIRECTORY_SEPARATOR . 'file.txt', 'content');
+      file_put_contents($path . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'nested.txt', 'nested');
+      $this->assertDirectoryExists($path);
+    }
+
+    File::remove($path);
+
+    $this->assertFileDoesNotExist($path);
+    $this->assertDirectoryDoesNotExist($path);
+  }
+
+  public static function dataProviderRemove(): array {
+    return [
+      'single file' => ['file', 'single.txt'],
+      'empty directory' => ['directory', 'empty_dir'],
+      'nested directory with files' => ['nested_directory', 'nested_dir'],
+      'file with special chars' => ['file', 'special-file_name.txt'],
+      'hidden file' => ['file', '.hidden_file'],
+    ];
   }
 
 }
