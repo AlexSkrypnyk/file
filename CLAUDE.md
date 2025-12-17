@@ -7,17 +7,19 @@
 - DirectoryAssertionsTrait provides assertions for directory operations
 - FileAssertionsTrait provides assertions for file operations
 
+## Key Classes
+- `File` - Main static class with file manipulation utilities
+- `ContentFile` - File object with mutable content for batch processing (extends SplFileInfo)
+- `ContentFileInterface` - Interface for file objects with mutable content
+- `Tasker` - Internal queue management system for batch operations
+
 ## Testing Commands
 ```bash
-# Run all tests (excludes performance tests)
+# Run all tests
 composer test
 
 # Run tests with coverage
 composer test-coverage
-
-# Run performance tests only
-./vendor/bin/phpunit --testsuite=performance
-./vendor/bin/phpunit tests/Unit/FileTaskPerformanceTest.php
 ```
 
 ## Performance Testing Commands (PHPBench)
@@ -29,34 +31,14 @@ composer benchmark
 composer benchmark-baseline
 
 # Run specific benchmark class
-./vendor/bin/phpbench run benchmarks/Compare01IdenticalDirectoriesBench.php --ref=baseline
+./vendor/bin/phpbench run benchmarks/TaskBench.php --ref=baseline
 
 # Run with detailed output
 ./vendor/bin/phpbench run --report=aggregate
 
 # Quick testing: verify benchmark works without full suite (saves time)
-./vendor/bin/phpbench run benchmarks/Task01TraditionalApproachBench.php --iterations=1 --revs=1
+./vendor/bin/phpbench run benchmarks/TaskBench.php --iterations=1 --revs=1
 ```
-
-### Quick Testing Benchmarks
-
-When making changes to benchmark classes or the BenchmarkDirectoryTrait, use `--iterations=1 --revs=1` to quickly verify the benchmark runs without errors:
-
-```bash
-# Test a single benchmark quickly
-./vendor/bin/phpbench run benchmarks/Compare01IdenticalDirectoriesBench.php --iterations=1 --revs=1
-
-# Test multiple benchmarks in sequence
-./vendor/bin/phpbench run benchmarks/Task01TraditionalApproachBench.php --iterations=1 --revs=1
-./vendor/bin/phpbench run benchmarks/Compare02ContentDiffsBench.php --iterations=1 --revs=1
-```
-
-This approach:
-- Verifies benchmark setup/teardown methods work correctly
-- Confirms directory creation and file operations succeed
-- Catches PHP errors and method naming issues immediately
-- Runs in seconds instead of minutes
-- Should be used before running full benchmark suites
 
 ### Baseline Management
 
@@ -68,18 +50,13 @@ This approach:
 
 ### Performance Testing
 
-- PHPBench for measuring File::compare() performance
+- PHPBench for measuring batch task processing performance
 - Benchmarks in `benchmarks/` directory measure:
-  - Identical directory comparison (baseline)
-  - Content differences detection (20% modified files)
-  - Structural differences (missing/extra files)
-  - Large file handling (1KB-10MB)
-  - Deep nesting performance (10 levels)
-  - Rules filtering overhead
-  - Callback processing overhead
+  - Traditional approach (multiple directory scans)
+  - Simple approach (single scan with multiple I/O)
+  - Batched approach (single scan with queue system)
 - Reports generated as JSON, CSV, and HTML in `.logs/performance-report.*`
 - CI runs performance tests without xdebug/pcov for accurate measurements
-
 
 ## Code Standards
 - Use snake_case for variable names and function arguments

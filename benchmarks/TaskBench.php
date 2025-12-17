@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Benchmarks;
 
-use AlexSkrypnyk\File\ExtendedSplFileInfo;
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Internal\ContentFile;
 
 /**
  * Benchmarks comparing different task processing approaches.
@@ -97,7 +97,7 @@ class TaskBench {
   /**
    * Benchmark batched approach with queue system.
    *
-   * Tests single directory scan with queue system using ExtendedSplFileInfo.
+   * Tests single directory scan with queue system using ContentFile.
    * This approach performs single directory scan and optimized I/O (single
    * read/write per file).
    *
@@ -108,15 +108,15 @@ class TaskBench {
    * @Iterations(20)
    */
   public function benchBatchedApproach(): void {
-    // Queue all operations using ExtendedSplFileInfo.
+    // Queue all operations using ContentFile.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
-      File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use ($task): ExtendedSplFileInfo {
+      File::addTaskDirectory(function (ContentFile $file_info) use ($task): ContentFile {
         $processed_content = File::replaceContent($file_info->getContent(), 'OLD_' . $task, 'NEW_' . $task);
         $file_info->setContent($processed_content);
         return $file_info;
       });
       if ($task <= 5) {
-        File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use ($task): ExtendedSplFileInfo {
+        File::addTaskDirectory(function (ContentFile $file_info) use ($task): ContentFile {
           $processed_content = File::removeToken($file_info->getContent(), '#; TOKEN_' . $task);
           $file_info->setContent($processed_content);
           return $file_info;

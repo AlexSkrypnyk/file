@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
-use AlexSkrypnyk\File\ExtendedSplFileInfo;
+use AlexSkrypnyk\File\Internal\ContentFile;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -36,7 +36,7 @@ class FileTaskTest extends UnitTestCase {
   public function testAddTaskDirectory(): void {
     $executed_files = [];
 
-    $callback = function (ExtendedSplFileInfo $file_info) use (&$executed_files): ExtendedSplFileInfo {
+    $callback = function (ContentFile $file_info) use (&$executed_files): ContentFile {
       $executed_files[] = $file_info->getBasename();
       return $file_info;
     };
@@ -55,12 +55,12 @@ class FileTaskTest extends UnitTestCase {
   public function testRunTaskDirectoryWithMultipleTasks(): void {
     $execution_log = [];
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$execution_log): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$execution_log): ContentFile {
       $execution_log[] = 'task1:' . $file_info->getBasename();
       return $file_info;
     });
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$execution_log): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$execution_log): ContentFile {
       $execution_log[] = 'task2:' . $file_info->getBasename();
       return $file_info;
     });
@@ -82,13 +82,13 @@ class FileTaskTest extends UnitTestCase {
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'replace_test.txt', 'old_text content');
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'token_test.txt', "line1\n#; remove\nline3");
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
       $processed_content = File::replaceContent($file_info->getContent(), 'old_text', 'new_text');
       $file_info->setContent($processed_content);
       return $file_info;
     });
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
       $processed_content = File::removeToken($file_info->getContent(), '#;');
       $file_info->setContent($processed_content);
       return $file_info;
@@ -111,7 +111,7 @@ class FileTaskTest extends UnitTestCase {
   public function testClearTaskDirectory(): void {
     $executed = FALSE;
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$executed): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$executed): ContentFile {
       $executed = TRUE;
       return $file_info;
     });
@@ -130,7 +130,7 @@ class FileTaskTest extends UnitTestCase {
   public function testRunTaskDirectoryWithEmptyDirectory(): void {
     $executed = FALSE;
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$executed): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$executed): ContentFile {
       $executed = TRUE;
       return $file_info;
     });
@@ -146,7 +146,7 @@ class FileTaskTest extends UnitTestCase {
   public function testTaskDirectoryIgnoresDefaultPaths(): void {
     $processed_files = [];
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$processed_files): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$processed_files): ContentFile {
       $processed_files[] = $file_info->getBasename();
       return $file_info;
     });
@@ -173,13 +173,13 @@ class FileTaskTest extends UnitTestCase {
       file_put_contents($test_dir . DIRECTORY_SEPARATOR . sprintf('file%d.txt', $i), sprintf('content %d with old_value', $i));
     }
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
       $processed_content = File::replaceContent($file_info->getContent(), 'old_value', 'new_value');
       $file_info->setContent($processed_content);
       return $file_info;
     });
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
       $processed_content = $file_info->getContent() . "\n-- processed --";
       $file_info->setContent($processed_content);
       return $file_info;
@@ -219,7 +219,7 @@ class FileTaskTest extends UnitTestCase {
     sleep(1);
 
     // Add tasks that modify some files but not others.
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
       $filename = $file_info->getBasename();
       $content = $file_info->getContent();
 
@@ -285,7 +285,7 @@ class FileTaskTest extends UnitTestCase {
     sleep(1);
 
     // Add a task that doesn't modify content at all.
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
       // No-op task - just return the file as-is.
       return $file_info;
     });
@@ -339,7 +339,7 @@ class FileTaskTest extends UnitTestCase {
     sleep(1);
 
     // Add task that sets specific content for each file.
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use ($test_cases): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use ($test_cases): ContentFile {
       $filename = $file_info->getBasename();
 
       if (isset($test_cases[$filename])) {
@@ -393,7 +393,7 @@ class FileTaskTest extends UnitTestCase {
     $processed_files = [];
 
     // Add task that tracks which files are processed.
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$processed_files): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$processed_files): ContentFile {
       $processed_files[] = $file_info->getBasename();
       $content = $file_info->getContent() . ' - processed';
       $file_info->setContent($content);
@@ -448,7 +448,7 @@ class FileTaskTest extends UnitTestCase {
     // Track processed files.
     $processed_files = [];
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$processed_files): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$processed_files): ContentFile {
       $processed_files[] = $file_info->getPathname();
       return $file_info;
     });
@@ -499,7 +499,7 @@ class FileTaskTest extends UnitTestCase {
     $task_call_count = 0;
     $processed_filenames = [];
 
-    File::addTaskDirectory(function (ExtendedSplFileInfo $file_info) use (&$task_call_count, &$processed_filenames): ExtendedSplFileInfo {
+    File::addTaskDirectory(function (ContentFile $file_info) use (&$task_call_count, &$processed_filenames): ContentFile {
       $task_call_count++;
       $processed_filenames[] = $file_info->getBasename();
 
