@@ -10,7 +10,6 @@ parameters:
     - benchmarks
     - src
     - tests/Unit
-    - tests/Traits
 
   excludePaths:
     - vendor/*

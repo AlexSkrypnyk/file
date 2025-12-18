@@ -4,8 +4,8 @@
 - PHP 8.2+ library for file operations
 - PHPUnit for testing
 - LocationsTrait provides directory management during tests
-- DirectoryAssertionsTrait provides assertions for directory operations
-- FileAssertionsTrait provides assertions for file operations
+- DirectoryAssertionsTrait (`src/Testing/`) provides assertions for directory operations
+- FileAssertionsTrait (`src/Testing/`) provides assertions for file operations
 
 ## Key Classes
 - `File` - Main static class with file manipulation utilities

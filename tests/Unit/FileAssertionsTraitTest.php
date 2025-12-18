@@ -7,7 +7,7 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\AssertionFailedError;
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Tests\Traits\FileAssertionsTrait;
+use AlexSkrypnyk\File\Testing\FileAssertionsTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

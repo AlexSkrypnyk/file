@@ -14,5 +14,4 @@
 /phpunit.xml     export-ignore
 /rector.php      export-ignore
 /renovate.json   export-ignore
-/tests/Fixtures  export-ignore
-/tests/Unit      export-ignore
+/tests           export-ignore

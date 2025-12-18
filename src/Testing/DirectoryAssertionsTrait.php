@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Tests\Traits;
+namespace AlexSkrypnyk\File\Testing;
 
 use AlexSkrypnyk\File\File;
 

@@ -233,7 +233,7 @@ Usage example:
 
 ```php
 use PHPUnit\Framework\TestCase;
-use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
+use AlexSkrypnyk\File\Testing\DirectoryAssertionsTrait;
 
 class MyTest extends TestCase {
   use DirectoryAssertionsTrait;
@@ -306,7 +306,7 @@ Usage example:
 
 ```php
 use PHPUnit\Framework\TestCase;
-use AlexSkrypnyk\File\Tests\Traits\FileAssertionsTrait;
+use AlexSkrypnyk\File\Testing\FileAssertionsTrait;
 
 class MyTest extends TestCase {
   use FileAssertionsTrait;
