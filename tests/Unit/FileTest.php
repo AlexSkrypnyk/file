@@ -19,10 +19,10 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'dir')]
 #[CoversMethod(File::class, 'exists')]
 #[CoversMethod(File::class, 'rmdir')]
-#[CoversMethod(File::class, 'rmdirEmpty')]
+#[CoversMethod(File::class, 'rmdirIfEmpty')]
 #[CoversMethod(File::class, 'findMatchingPath')]
 #[CoversMethod(File::class, 'copyIfExists')]
-#[CoversMethod(File::class, 'scandirRecursive')]
+#[CoversMethod(File::class, 'scandir')]
 #[CoversMethod(File::class, 'tmpdir')]
 #[CoversMethod(File::class, 'copy')]
 #[CoversMethod(File::class, 'append')]
@@ -329,11 +329,11 @@ class FileTest extends UnitTestCase {
     $this->assertDirectoryExists($subdir);
     $this->assertTrue(is_link($symlink_dir));
 
-    // Test that rmdirEmpty works on real directories but not on symlinks.
-    File::rmdirEmpty($subdir);
-    File::rmdirEmpty($subsubdir);
+    // Test that rmdirIfEmpty works on real directories but not on symlinks.
+    File::rmdirIfEmpty($subdir);
+    File::rmdirIfEmpty($subsubdir);
     // Symlink should be skipped.
-    File::rmdirEmpty($symlink_dir);
+    File::rmdirIfEmpty($symlink_dir);
 
     $this->assertDirectoryDoesNotExist($subdir);
     $this->assertDirectoryExists($dir);
@@ -380,20 +380,20 @@ class FileTest extends UnitTestCase {
     file_put_contents($subdir2 . DIRECTORY_SEPARATOR . 'file3.txt', 'test content');
     file_put_contents($ignored_dir . DIRECTORY_SEPARATOR . 'ignored_file.txt', 'test content');
 
-    $files = File::scandirRecursive($base_dir);
+    $files = File::scandir($base_dir);
     $this->assertCount(4, $files);
 
-    $files = File::scandirRecursive($base_dir, ['ignored_dir']);
+    $files = File::scandir($base_dir, ['ignored_dir']);
     $this->assertCount(3, $files);
 
-    $files = File::scandirRecursive($base_dir, [], TRUE);
+    $files = File::scandir($base_dir, [], TRUE);
     $this->assertCount(7, $files);
 
-    $files = File::scandirRecursive($base_dir . DIRECTORY_SEPARATOR . 'nonexistent');
+    $files = File::scandir($base_dir . DIRECTORY_SEPARATOR . 'nonexistent');
     $this->assertEmpty($files);
 
     $file_path = $base_dir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $files = File::scandirRecursive($file_path);
+    $files = File::scandir($file_path);
     $this->assertEmpty($files);
   }
 
@@ -441,7 +441,7 @@ class FileTest extends UnitTestCase {
     mkdir($removed_dir, 0777);
     rmdir($removed_dir);
 
-    $files = File::scandirRecursive($removed_dir);
+    $files = File::scandir($removed_dir);
     $this->assertEmpty($files);
   }
 
@@ -456,7 +456,7 @@ class FileTest extends UnitTestCase {
     $this->assertDirectoryExists($empty_dir);
 
     // This should hit the new condition: if (empty($paths)) { return []; }.
-    $files = File::scandirRecursive($empty_dir);
+    $files = File::scandir($empty_dir);
     $this->assertEmpty($files);
 
     // Clean up.

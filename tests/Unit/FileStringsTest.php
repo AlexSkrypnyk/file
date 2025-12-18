@@ -85,7 +85,7 @@ class FileStringsTest extends UnitTestCase {
     $files = $this->flattenFileTree($files, $dir);
     static::locationsCopyFilesToSut($files, $dir, FALSE);
 
-    $actual = File::containsInDir(static::$sut, $string, $excluded);
+    $actual = File::findContainingInDir(static::$sut, $string, $excluded);
 
     $this->assertEquals(count($expected), count($actual));
     foreach ($actual as $path) {
@@ -119,8 +119,8 @@ class FileStringsTest extends UnitTestCase {
     File::removeTokenInDir(static::$sut, $token);
 
     // Compare directories by checking all files have identical content.
-    $expected_files = File::scandirRecursive(static::$fixtures);
-    $actual_files = File::scandirRecursive(static::$sut);
+    $expected_files = File::scandir(static::$fixtures);
+    $actual_files = File::scandir(static::$sut);
     $this->assertCount(count($expected_files), $actual_files, 'Directory should have the same number of files.');
 
     foreach ($expected_files as $expected_file) {
@@ -250,12 +250,63 @@ class FileStringsTest extends UnitTestCase {
     ];
   }
 
+  #[DataProvider('dataProviderRemoveLine')]
+  public function testRemoveLine(string $content, string $needle, string $expected): void {
+    $result = File::removeLine($content, $needle);
+    $this->assertSame($expected, $result);
+  }
+
+  public static function dataProviderRemoveLine(): array {
+    return [
+      'remove single line' => [
+        "line1\nremove me\nline3\n",
+        'remove me',
+        "line1\nline3\n",
+      ],
+      'remove multiple occurrences' => [
+        "line1\nremove me\nline2\nremove me again\nline3\n",
+        'remove me',
+        "line1\nline2\nline3\n",
+      ],
+      'no match' => [
+        "line1\nline2\nline3\n",
+        'not found',
+        "line1\nline2\nline3\n",
+      ],
+      'empty content' => [
+        '',
+        'needle',
+        '',
+      ],
+      'regex pattern' => [
+        "FOO line1\nline2\nFOO line3\nline4\n",
+        '/^FOO/',
+        "line2\nline4\n",
+      ],
+      'regex case insensitive' => [
+        "FOO line1\nfoo line2\nline3\n",
+        '/^foo/i',
+        "line3\n",
+      ],
+      'crlf line endings' => [
+        "line1\r\nremove me\r\nline3\r\n",
+        'remove me',
+        "line1\r\nline3\r\n",
+      ],
+      'cr line endings' => [
+        "line1\rremove me\rline3\r",
+        'remove me',
+        "line1\rline3\r",
+      ],
+    ];
+  }
+
   #[DataProvider('dataProviderRemoveLineInFile')]
   public function testRemoveLineInFile(string $filename, string $content, string $needle, string $expected): void {
     $file = static::$workspace . DIRECTORY_SEPARATOR . $filename;
     file_put_contents($file, $content);
 
-    File::removeLine($file, $needle);
+    File::removeLineInFile($file, $needle);
     $result = file_get_contents($file);
 
     $this->assertSame($expected, $result);
@@ -369,6 +420,35 @@ class FileStringsTest extends UnitTestCase {
         "line1\ninvalid( line\nline3\n",
       ],
     ];
+  }
+
+  public function testRemoveLineInDir(): void {
+    $subdir = static::$sut . DIRECTORY_SEPARATOR . 'subdir';
+    mkdir($subdir);
+
+    $file1 = static::$sut . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $subdir . DIRECTORY_SEPARATOR . 'file2.txt';
+
+    file_put_contents($file1, "line1\nremove me\nline3\n");
+    file_put_contents($file2, "line1\nremove me\nline2\nremove me again\nline3\n");
+
+    File::removeLineInDir(static::$sut, 'remove me');
+
+    $this->assertSame("line1\nline3\n", file_get_contents($file1));
+    $this->assertSame("line1\nline2\nline3\n", file_get_contents($file2));
+  }
+
+  public function testRemoveLineInDirWithRegex(): void {
+    $file1 = static::$sut . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = static::$sut . DIRECTORY_SEPARATOR . 'file2.txt';
+
+    file_put_contents($file1, "FOO line1\nline2\nFOOBAR line3\nline4\n");
+    file_put_contents($file2, "line1\nFOO line2\nline3\n");
+
+    File::removeLineInDir(static::$sut, '/^FOO/');
+
+    $this->assertSame("line2\nline4\n", file_get_contents($file1));
+    $this->assertSame("line1\nline3\n", file_get_contents($file2));
   }
 
   #[DataProvider('dataProviderRenameInDir')]
@@ -486,7 +566,7 @@ class FileStringsTest extends UnitTestCase {
 
   #[DataProvider('dataProviderCollapseRepeatedEmptyLines')]
   public function testCollapseRepeatedEmptyLines(string $input, string $expected): void {
-    $actual = File::collapseRepeatedEmptyLines($input);
+    $actual = File::collapseEmptyLines($input);
     $this->assertSame($expected, $actual);
   }
 
@@ -687,6 +767,79 @@ class FileStringsTest extends UnitTestCase {
         "line1\r\nline2\r\n",
       ],
     ];
+  }
+
+  public function testCollapseEmptyLinesInFile(): void {
+    $file = static::$sut . DIRECTORY_SEPARATOR . 'collapse_test.txt';
+    file_put_contents($file, "line1\n\n\n\n\nline2\n\n\n");
+
+    File::collapseEmptyLinesInFile($file);
+
+    $this->assertSame("line1\n\nline2\n", file_get_contents($file));
+  }
+
+  public function testCollapseEmptyLinesInFileNoChange(): void {
+    $file = static::$sut . DIRECTORY_SEPARATOR . 'collapse_nochange.txt';
+    file_put_contents($file, "line1\nline2\n");
+
+    // Get original mtime.
+    clearstatcache();
+    $mtime_before = filemtime($file);
+
+    sleep(1);
+
+    File::collapseEmptyLinesInFile($file);
+
+    // File should not be modified since content didn't change.
+    clearstatcache();
+    $mtime_after = filemtime($file);
+
+    $this->assertSame("line1\nline2\n", file_get_contents($file));
+    $this->assertSame($mtime_before, $mtime_after, 'File should not be modified when content unchanged');
+  }
+
+  public function testCollapseEmptyLinesInFileExcluded(): void {
+    $file = static::$sut . DIRECTORY_SEPARATOR . 'image.png';
+    $content = "line1\n\n\n\n\nline2\n";
+    file_put_contents($file, $content);
+
+    File::collapseEmptyLinesInFile($file);
+
+    // Excluded file should not be modified.
+    $this->assertSame($content, file_get_contents($file));
+  }
+
+  public function testCollapseEmptyLinesInDir(): void {
+    $subdir = static::$sut . DIRECTORY_SEPARATOR . 'subdir';
+    mkdir($subdir);
+
+    $file1 = static::$sut . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $subdir . DIRECTORY_SEPARATOR . 'file2.txt';
+
+    file_put_contents($file1, "line1\n\n\n\n\nline2\n");
+    file_put_contents($file2, "line1\n\n\nline2\n\n\n\nline3\n");
+
+    File::collapseEmptyLinesInDir(static::$sut);
+
+    $this->assertSame("line1\n\nline2\n", file_get_contents($file1));
+    $this->assertSame("line1\n\nline2\n\nline3\n", file_get_contents($file2));
+  }
+
+  public function testCollapseEmptyLinesInDirWithExcludedFiles(): void {
+    $file1 = static::$sut . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = static::$sut . DIRECTORY_SEPARATOR . 'image.jpg';
+
+    $text_content = "line1\n\n\n\n\nline2\n";
+    $image_content = "fake\n\n\n\n\nimage\n";
+
+    file_put_contents($file1, $text_content);
+    file_put_contents($file2, $image_content);
+
+    File::collapseEmptyLinesInDir(static::$sut);
+
+    $this->assertSame("line1\n\nline2\n", file_get_contents($file1));
+    // Image file should not be modified.
+    $this->assertSame($image_content, file_get_contents($file2));
   }
 
   #[DataProvider('dataProviderRemoveToken')]

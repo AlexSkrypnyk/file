@@ -195,7 +195,7 @@ trait BenchmarkDirectoryTrait {
    *   Percentage of files to modify (0-100).
    */
   protected function directoryCreateWithContentDiffs(int $percent_changed): void {
-    $files = File::scandirRecursive($this->destinationDir);
+    $files = File::scandir($this->destinationDir);
     $files_to_change = (int) ceil(count($files) * ($percent_changed / 100));
 
     shuffle($files);
@@ -214,7 +214,7 @@ trait BenchmarkDirectoryTrait {
    * Create directories with structural differences (missing/extra files).
    */
   protected function directoryCreateWithStructuralDiffs(): void {
-    $files = File::scandirRecursive($this->destinationDir);
+    $files = File::scandir($this->destinationDir);
     $files_count = count($files);
 
     // Remove 10% of files.

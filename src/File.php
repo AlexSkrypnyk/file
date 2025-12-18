@@ -218,7 +218,7 @@ class File {
    */
   public static function dirIsEmpty(string $directory): bool {
     $directory = static::dir($directory);
-    return count(static::scandirRecursive($directory) ?: []) === 0;
+    return count(static::scandir($directory) ?: []) === 0;
   }
 
   /**
@@ -434,7 +434,7 @@ class File {
    * @return array<int, string>
    *   Array of discovered files.
    */
-  public static function scandirRecursive(string $directory, array $ignore_paths = [], bool $include_dirs = FALSE): array {
+  public static function scandir(string $directory, array $ignore_paths = [], bool $include_dirs = FALSE): array {
     $discovered = [];
 
     try {
@@ -473,7 +473,7 @@ class File {
         if ($include_dirs) {
           $discovered[] = $path;
         }
-        $discovered = array_merge($discovered, static::scandirRecursive($path, $ignore_paths, $include_dirs));
+        $discovered = array_merge($discovered, static::scandir($path, $ignore_paths, $include_dirs));
       }
       else {
         $discovered[] = $path;
@@ -499,10 +499,10 @@ class File {
    * @param string $directory
    *   Directory path to remove if empty.
    */
-  public static function rmdirEmpty(string $directory): void {
+  public static function rmdirIfEmpty(string $directory): void {
     if (is_dir($directory) && !is_link($directory) && static::dirIsEmpty($directory)) {
       static::rmdir($directory);
-      static::rmdirEmpty(dirname($directory));
+      static::rmdirIfEmpty(dirname($directory));
     }
   }
 
@@ -587,10 +587,10 @@ class File {
    * @return array
    *   Array of files containing the needle.
    */
-  public static function containsInDir(string $directory, string $needle, array $excluded = []): array {
+  public static function findContainingInDir(string $directory, string $needle, array $excluded = []): array {
     $contains = [];
 
-    $files = static::scandirRecursive($directory, array_merge(static::ignoredPaths(), $excluded));
+    $files = static::scandir($directory, array_merge(static::ignoredPaths(), $excluded));
     foreach ($files as $filename) {
       if (static::contains($filename, $needle)) {
         $contains[] = $filename;
@@ -611,7 +611,7 @@ class File {
    *   String to replace with.
    */
   public static function renameInDir(string $directory, string $search, string $replace): void {
-    $files = static::scandirRecursive($directory, static::ignoredPaths());
+    $files = static::scandir($directory, static::ignoredPaths());
 
     foreach ($files as $filename) {
       $new_filename = str_replace($search, $replace, (string) $filename);
@@ -625,7 +625,7 @@ class File {
 
         (new Filesystem())->rename($filename, $new_filename, TRUE);
 
-        static::rmdirEmpty(dirname($filename));
+        static::rmdirIfEmpty(dirname($filename));
       }
     }
   }
@@ -641,7 +641,7 @@ class File {
    *   String to replace with.
    */
   public static function replaceContentInDir(string $directory, string $needle, string $replacement): void {
-    $files = static::scandirRecursive($directory, static::ignoredPaths());
+    $files = static::scandir($directory, static::ignoredPaths());
     foreach ($files as $filename) {
       static::replaceContentInFile($filename, $needle, $replacement);
     }
@@ -658,7 +658,7 @@ class File {
    *   Signature: function(string $content, string $file_path): string.
    */
   public static function replaceContentCallbackInDir(string $directory, callable $processor): void {
-    $files = static::scandirRecursive($directory, static::ignoredPaths());
+    $files = static::scandir($directory, static::ignoredPaths());
     foreach ($files as $filename) {
       static::replaceContentCallbackInFile($filename, $processor);
     }
@@ -732,21 +732,22 @@ class File {
   }
 
   /**
-   * Remove lines containing a specific string or regex pattern from a file.
+   * Remove lines containing a specific string or regex pattern from a string.
    *
-   * @param string $file
-   *   File path to process.
+   * @param string $content
+   *   Content string to process.
    * @param string $needle
    *   String or regex pattern to search for in lines.
    *   Regex patterns must start with /, #, or ~ delimiter.
    *   Examples: 'text', '/^pattern/', '/regex/i'.
+   *
+   * @return string
+   *   Processed content.
    */
-  public static function removeLine(string $file, string $needle): void {
-    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
-      return;
+  public static function removeLine(string $content, string $needle): string {
+    if ($content === '') {
+      return $content;
     }
-
-    $content = static::read($file);
 
     $line_ending = "\n";
     if (str_contains($content, "\r\n")) {
@@ -759,7 +760,7 @@ class File {
     $lines = preg_split("/\r\n|\r|\n/", $content);
     if ($lines === FALSE) {
       // @codeCoverageIgnoreStart
-      return;
+      return $content;
       // @codeCoverageIgnoreEnd
     }
 
@@ -770,9 +771,47 @@ class File {
       $lines = array_filter($lines, fn(string $line): bool => !str_contains($line, $needle));
     }
 
-    $content = implode($line_ending, $lines);
+    return implode($line_ending, $lines);
+  }
 
-    static::dump($file, $content);
+  /**
+   * Remove lines containing a specific string or regex pattern from a file.
+   *
+   * @param string $file
+   *   File path to process.
+   * @param string $needle
+   *   String or regex pattern to search for in lines.
+   *   Regex patterns must start with /, #, or ~ delimiter.
+   *   Examples: 'text', '/^pattern/', '/regex/i'.
+   */
+  public static function removeLineInFile(string $file, string $needle): void {
+    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
+      return;
+    }
+
+    $content = static::read($file);
+    $processed = static::removeLine($content, $needle);
+
+    if ($processed !== $content) {
+      static::dump($file, $processed);
+    }
+  }
+
+  /**
+   * Remove lines containing a specific string or regex pattern from all files.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   * @param string $needle
+   *   String or regex pattern to search for in lines.
+   *   Regex patterns must start with /, #, or ~ delimiter.
+   *   Examples: 'text', '/^pattern/', '/regex/i'.
+   */
+  public static function removeLineInDir(string $directory, string $needle): void {
+    $files = static::scandir($directory, static::ignoredPaths());
+    foreach ($files as $filename) {
+      static::removeLineInFile($filename, $needle);
+    }
   }
 
   /**
@@ -881,7 +920,7 @@ class File {
    * @return string
    *   The content with duplicated empty lines removed.
    */
-  public static function collapseRepeatedEmptyLines(string $content): string {
+  public static function collapseEmptyLines(string $content): string {
     if ($content === '') {
       return $content;
     }
@@ -925,6 +964,38 @@ class File {
 
     // Convert back to original line ending.
     return $line_ending !== "\n" ? str_replace("\n", $line_ending, $normalized) : $normalized;
+  }
+
+  /**
+   * Replace multiple consecutive empty lines with a single empty line in file.
+   *
+   * @param string $file
+   *   File path to process.
+   */
+  public static function collapseEmptyLinesInFile(string $file): void {
+    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
+      return;
+    }
+
+    $content = static::read($file);
+    $processed = static::collapseEmptyLines($content);
+
+    if ($processed !== $content) {
+      static::dump($file, $processed);
+    }
+  }
+
+  /**
+   * Replace multiple consecutive empty lines with a single empty line in dir.
+   *
+   * @param string $directory
+   *   Directory to search in.
+   */
+  public static function collapseEmptyLinesInDir(string $directory): void {
+    $files = static::scandir($directory, static::ignoredPaths());
+    foreach ($files as $filename) {
+      static::collapseEmptyLinesInFile($filename);
+    }
   }
 
   /**
@@ -1025,7 +1096,7 @@ class File {
       $with_content = TRUE;
     }
 
-    $files = static::scandirRecursive($directory, static::ignoredPaths());
+    $files = static::scandir($directory, static::ignoredPaths());
     foreach ($files as $filename) {
       static::removeTokenInFile($filename, $token_start, $token_end, $with_content);
     }
@@ -1086,7 +1157,7 @@ class File {
    * @param callable $callback
    *   Callback function to execute.
    */
-  public static function addTaskDirectory(callable $callback): void {
+  public static function addDirectoryTask(callable $callback): void {
     static::getTasker()->addTask($callback, 'directory');
   }
 
@@ -1096,9 +1167,9 @@ class File {
    * @param string $directory
    *   Directory to scan and process.
    */
-  public static function runTaskDirectory(string $directory): void {
+  public static function runDirectoryTasks(string $directory): void {
     $iterator = function () use ($directory) {
-      $files = static::scandirRecursive($directory, static::ignoredPaths());
+      $files = static::scandir($directory, static::ignoredPaths());
       foreach ($files as $path) {
         if (File::isExcluded($path)) {
           continue;
@@ -1127,7 +1198,7 @@ class File {
   /**
    * Clear tasks from the directory batch.
    */
-  public static function clearTaskDirectory(): void {
+  public static function clearDirectoryTasks(): void {
     static::getTasker()->clear('directory');
   }
 

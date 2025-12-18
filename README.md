@@ -23,7 +23,7 @@
 
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Available Functions](#available-functions)
+  - [Available Methods](#available-methods)
   - [Batch Operations](#batch-operations)
   - [Assertion Traits](#assertion-traits)
     - [Directory Assertions Trait](#directory-assertions-trait)
@@ -71,12 +71,12 @@ try {
   File::append('/path/to/log.txt', "\nNew log entry: " . date('Y-m-d H:i:s'));
 
   // Or use batch operations for better performance
-  File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
+  File::addDirectoryTask(function(ContentFile $file_info): ContentFile {
     $content = File::replaceContent($file_info->getContent(), 'old', 'new');
     $file_info->setContent($content);
     return $file_info;
   });
-  File::runTaskDirectory('/path/to/directory');
+  File::runDirectoryTasks('/path/to/directory');
 
 } catch (FileException $exception) {
   // Handle any file operation errors
@@ -84,57 +84,57 @@ try {
 }
 ```
 
-### Available Functions
+### Available Methods
 
-| Function                         | Description                                                                           |
-|----------------------------------|---------------------------------------------------------------------------------------|
-| `absolute()`                     | Get absolute path for provided absolute or relative file.                             |
-| `append()`                       | Append content to an existing file.                                                   |
-| `contains()`                     | Check if file contains a specific string or matches a pattern.                        |
-| `containsInDir()`                | Find all files in directory containing a specific string.                             |
-| `copy()`                         | Copy file or directory.                                                               |
-| `copyIfExists()`                 | Copy file or directory if it exists.                                                  |
-| `cwd()`                          | Get current working directory with absolute path.                                     |
-| `dir()`                          | Get absolute path for existing directory.                                             |
-| `dirIsEmpty()`                   | Check if directory is empty.                                                          |
-| `dump()`                         | Write content to a file.                                                              |
-| `exists()`                       | Check if file or directory exists.                                                    |
-| `findMatchingPath()`             | Find first path that matches a needle among provided paths.                           |
-| `mkdir()`                        | Creates a directory if it doesn't exist.                                              |
-| `read()`                         | Read file contents.                                                                   |
-| `realpath()`                     | Replacement for PHP's `realpath` resolves non-existing paths.                         |
-| `remove()`                       | Remove file or directory.                                                             |
-| `removeLine()`                   | Remove lines containing a specific string from a file.                                |
-| `removeToken()`                  | Remove tokens and optionally content between tokens from a string.                    |
-| `removeTokenInFile()`            | Remove tokens and optionally content between tokens from a file.                      |
-| `removeTokenInDir()`             | Remove tokens and optionally content between tokens from all files in a directory.    |
-| `renameInDir()`                  | Rename files in directory by replacing part of the filename.                          |
-| `replaceContent()`               | Replace content in a string.                                                          |
-| `replaceContentCallback()`       | Replace content in a string using a callback processor.                               |
-| `replaceContentInFile()`         | Replace content in a file.                                                            |
-| `replaceContentCallbackInFile()` | Replace content in a file using a callback processor.                                 |
-| `replaceContentInDir()`          | Replace content in all files in a directory.                                          |
-| `replaceContentCallbackInDir()`  | Replace content in all files in a directory using a callback processor.               |
-| `collapseRepeatedEmptyLines()`   | Remove multiple consecutive empty lines, keeping at most one empty line.              |
-| `rmdir()`                        | Remove directory recursively.                                                         |
-| `rmdirEmpty()`                   | Remove directory recursively if empty.                                                |
-| `scandirRecursive()`             | Recursively scan directory for files.                                                 |
-| `tmpdir()`                       | Create temporary directory.                                                           |
+| Method                           | Description                                                                        |
+|----------------------------------|------------------------------------------------------------------------------------|
+| `absolute()`                     | Get absolute path for provided absolute or relative file.                          |
+| `append()`                       | Append content to an existing file.                                                |
+| `collapseEmptyLines()`           | Remove multiple consecutive empty lines from a string.                             |
+| `collapseEmptyLinesInFile()`     | Remove multiple consecutive empty lines from a file.                               |
+| `collapseEmptyLinesInDir()`      | Remove multiple consecutive empty lines from all files in a directory.             |
+| `contains()`                     | Check if file contains a specific string or matches a pattern.                     |
+| `copy()`                         | Copy file or directory.                                                            |
+| `copyIfExists()`                 | Copy file or directory if it exists.                                               |
+| `cwd()`                          | Get current working directory with absolute path.                                  |
+| `dir()`                          | Get absolute path for existing directory.                                          |
+| `dirIsEmpty()`                   | Check if directory is empty.                                                       |
+| `dump()`                         | Write content to a file.                                                           |
+| `exists()`                       | Check if file or directory exists.                                                 |
+| `findContainingInDir()`          | Find all files in directory containing a specific string.                          |
+| `findMatchingPath()`             | Find first path that matches a needle among provided paths.                        |
+| `mkdir()`                        | Creates a directory if it doesn't exist.                                           |
+| `read()`                         | Read file contents.                                                                |
+| `realpath()`                     | Replacement for PHP's `realpath` resolves non-existing paths.                      |
+| `remove()`                       | Remove file or directory.                                                          |
+| `removeLine()`                   | Remove lines containing a specific string from a string.                           |
+| `removeLineInFile()`             | Remove lines containing a specific string from a file.                             |
+| `removeLineInDir()`              | Remove lines containing a specific string from all files in a directory.           |
+| `removeToken()`                  | Remove tokens and optionally content between tokens from a string.                 |
+| `removeTokenInFile()`            | Remove tokens and optionally content between tokens from a file.                   |
+| `removeTokenInDir()`             | Remove tokens and optionally content between tokens from all files in a directory. |
+| `renameInDir()`                  | Rename files in directory by replacing part of the filename.                       |
+| `replaceContent()`               | Replace content in a string.                                                       |
+| `replaceContentCallback()`       | Replace content in a string using a callback processor.                            |
+| `replaceContentInFile()`         | Replace content in a file.                                                         |
+| `replaceContentCallbackInFile()` | Replace content in a file using a callback processor.                              |
+| `replaceContentInDir()`          | Replace content in all files in a directory.                                       |
+| `replaceContentCallbackInDir()`  | Replace content in all files in a directory using a callback processor.            |
+| `rmdir()`                        | Remove directory recursively.                                                      |
+| `rmdirIfEmpty()`                 | Remove directory recursively if empty.                                             |
+| `scandir()`                      | Recursively scan directory for files.                                              |
+| `tmpdir()`                       | Create temporary directory.                                                        |
 
 ### Batch Operations
 
 For improved performance when processing multiple files, the library provides
 batch operations that minimize directory scans and optimize I/O operations:
 
-| Function                 | Description                                                          |
-|--------------------------|----------------------------------------------------------------------|
-| `addTaskDirectory()`     | Add a batch task to be executed on all files in a directory.         |
-| `runTaskDirectory()`     | Execute all queued tasks on files in a directory with optimized I/O. |
-| `clearTaskDirectory()`   | Clear all queued batch tasks.                                        |
-| `replaceContent()`       | Replace content in a string (base method for batch processing).       |
-| `replaceContentCallback()` | Replace content in a string using a callback processor (base method for batch processing). |
-| `removeToken()`          | Remove tokens from a string (base method for batch processing).       |
-| `collapseRepeatedEmptyLines()` | Remove multiple consecutive empty lines from a string (base method for batch processing). |
+| Method                  | Description                                                          |
+|-------------------------|----------------------------------------------------------------------|
+| `addDirectoryTask()`    | Add a batch task to be executed on all files in a directory.         |
+| `runDirectoryTasks()`   | Execute all queued tasks on files in a directory with optimized I/O. |
+| `clearDirectoryTasks()` | Clear all queued batch tasks.                                        |
 
 #### Performance Benefits
 
@@ -170,18 +170,19 @@ File::replaceContentCallbackInDir('/path/to/dir', function(string $content, stri
   return strtoupper($content);
 });
 
-// Batch approach (significantly faster)
-File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
+// Batch approach: significantly faster because while tasks are added first,
+// the directory is scanned only once and each file is read/written only once.
+File::addDirectoryTask(function(ContentFile $file_info): ContentFile {
   $content = File::replaceContent($file_info->getContent(), 'old1', 'new1');
   $content = File::replaceContent($content, 'old2', 'new2');
   $content = File::removeToken($content, '# token');
-  $content = File::collapseRepeatedEmptyLines($content);
+  $content = File::collapseEmptyLines($content);
   $file_info->setContent($content);
   return $file_info;
 });
 
 // Batch approach with callback processing
-File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
+File::addDirectoryTask(function(ContentFile $file_info): ContentFile {
   $content = File::replaceContentCallback($file_info->getContent(), function(string $content): string {
     return strtoupper(str_replace('old', 'new', $content));
   });
@@ -189,7 +190,7 @@ File::addTaskDirectory(function(ContentFile $file_info): ContentFile {
   return $file_info;
 });
 
-File::runTaskDirectory('/path/to/dir');
+File::runDirectoryTasks('/path/to/dir');
 ```
 
 **Performance Results**: In tests with 5,000 files across 100 directories
@@ -252,9 +253,11 @@ class MyTest extends TestCase {
 
 ##### Ignoring Paths in Directory Assertions
 
-The directory assertion methods support ignoring specific paths during searches. You can ignore paths in two ways:
+The directory assertion methods support ignoring specific paths during searches.
+You can ignore paths in two ways:
 
-1. **Per-method ignoring**: Pass an `$ignored` array parameter to individual assertion methods
+1. **Per-method ignoring**: Pass an `$ignored` array parameter to individual
+   assertion methods
 2. **Global ignoring**: Override the `ignoredPaths()` method in your test class
 
 ```php
@@ -277,25 +280,27 @@ class MyTest extends TestCase {
 ```
 
 **Important Notes:**
+
 - Ignored paths are literal subpaths (not wildcard patterns)
-- Global `ignoredPaths()` and per-method `$ignored` parameters are merged together
+- Global `ignoredPaths()` and per-method `$ignored` parameters are merged
+  together
 - Both file names and directory paths can be ignored
 - Ignored paths are relative to the directory being searched
 
 #### File Assertions Trait
 
-| Assertion Method                   | Description                                                               |
-|------------------------------------|---------------------------------------------------------------------------|
-| `assertFileContainsString()`       | Assert that a file contains a specific string.                            |
-| `assertFileNotContainsString()`    | Assert that a file does not contain a specific string.                    |
-| `assertFileContainsWord()`         | Assert that a file contains a specific word (bounded by word boundaries). |
-| `assertFileNotContainsWord()`      | Assert that a file does not contain a specific word.                      |
-| `assertFileEqualsFile()`           | Assert that a file equals another file in contents.                       |
-| `assertFileNotEqualsFile()`        | Assert that a file does not equal another file in contents.               |
-| `assertFilesExist()`               | Assert that multiple files exist in a directory.                          |
-| `assertFilesDoNotExist()`          | Assert that multiple files do not exist in a directory.                   |
-| `assertFilesWildcardExists()`      | Assert that files matching wildcard pattern(s) exist.                     |
-| `assertFilesWildcardDoNotExist()`  | Assert that files matching wildcard pattern(s) do not exist.              |
+| Assertion Method                  | Description                                                               |
+|-----------------------------------|---------------------------------------------------------------------------|
+| `assertFileContainsString()`      | Assert that a file contains a specific string.                            |
+| `assertFileNotContainsString()`   | Assert that a file does not contain a specific string.                    |
+| `assertFileContainsWord()`        | Assert that a file contains a specific word (bounded by word boundaries). |
+| `assertFileNotContainsWord()`     | Assert that a file does not contain a specific word.                      |
+| `assertFileEqualsFile()`          | Assert that a file equals another file in contents.                       |
+| `assertFileNotEqualsFile()`       | Assert that a file does not equal another file in contents.               |
+| `assertFilesExist()`              | Assert that multiple files exist in a directory.                          |
+| `assertFilesDoNotExist()`         | Assert that multiple files do not exist in a directory.                   |
+| `assertFilesWildcardExists()`     | Assert that files matching wildcard pattern(s) exist.                     |
+| `assertFilesWildcardDoNotExist()` | Assert that files matching wildcard pattern(s) do not exist.              |
 
 Usage example:
 
