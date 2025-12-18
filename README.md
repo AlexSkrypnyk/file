@@ -1,9 +1,9 @@
 <p align="center">
   <a href="" rel="noopener">
-  <img width=200px height=200px src="https://placehold.jp/000000/ffffff/200x200.png?text=File&css=%7B%22border-radius%22%3A%22%20100px%22%7D" alt="Logo logo"></a>
+  <img width=200px height=200px src="logo.png" alt="File logo"/></a>
 </p>
 
-<h1 align="center">File manipulations</h1>
+<h1 align="center">Utilities to work with files and directories</h1>
 
 <div align="center">
 
@@ -38,7 +38,7 @@ composer require alexskrypnyk/file
 
 ## Usage
 
-This library provides a comprehensive set of static methods for file and
+This library provides a comprehensive set of utility methods for file and
 directory operations, including high-performance batch operations for processing
 multiple files efficiently.
 
