@@ -6,7 +6,7 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Tests\Traits\DirectoryAssertionsTrait;
+use AlexSkrypnyk\File\Testing\DirectoryAssertionsTrait;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
