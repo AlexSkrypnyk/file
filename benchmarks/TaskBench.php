@@ -37,7 +37,7 @@ class TaskBench {
    */
   public function tearDown(): void {
     $this->directoryCleanup();
-    File::clearTaskDirectory();
+    File::clearDirectoryTasks();
   }
 
   /**
@@ -78,7 +78,7 @@ class TaskBench {
    */
   public function benchSimpleApproach(): void {
     // Single directory scan to get all files.
-    $files = File::scandirRecursive($this->testDir, File::ignoredPaths());
+    $files = File::scandir($this->testDir, File::ignoredPaths());
 
     // Loop through files and perform all operations.
     foreach ($files as $file) {
@@ -110,13 +110,13 @@ class TaskBench {
   public function benchBatchedApproach(): void {
     // Queue all operations using ContentFile.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
-      File::addTaskDirectory(function (ContentFile $file_info) use ($task): ContentFile {
+      File::addDirectoryTask(function (ContentFile $file_info) use ($task): ContentFile {
         $processed_content = File::replaceContent($file_info->getContent(), 'OLD_' . $task, 'NEW_' . $task);
         $file_info->setContent($processed_content);
         return $file_info;
       });
       if ($task <= 5) {
-        File::addTaskDirectory(function (ContentFile $file_info) use ($task): ContentFile {
+        File::addDirectoryTask(function (ContentFile $file_info) use ($task): ContentFile {
           $processed_content = File::removeToken($file_info->getContent(), '#; TOKEN_' . $task);
           $file_info->setContent($processed_content);
           return $file_info;
@@ -125,7 +125,7 @@ class TaskBench {
     }
 
     // Execute all tasks with single directory scan and optimized I/O.
-    File::runTaskDirectory($this->testDir);
+    File::runDirectoryTasks($this->testDir);
   }
 
 }

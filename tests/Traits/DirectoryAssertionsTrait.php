@@ -47,7 +47,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryContainsString(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
-    $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
+    $files = File::findContainingInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
 
     if (empty($files)) {
       $this->fail($message ?: sprintf('Directory should contain "%s", but it does not.', $needle));
@@ -67,7 +67,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryNotContainsString(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
-    $files = File::containsInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
+    $files = File::findContainingInDir($directory, $needle, array_merge(static::ignoredPaths(), $ignored));
 
     if (!empty($files)) {
       $this->fail($message ?: sprintf('Directory should not contain "%s", but it does within files %s.', $needle, implode(', ', $files)));
@@ -90,7 +90,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryContainsWord(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
-    $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
+    $files = File::findContainingInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
 
     if (empty($files)) {
       $this->fail($message ?: sprintf('Directory should contain "%s" word, but it does not.', $needle));
@@ -113,7 +113,7 @@ trait DirectoryAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertDirectoryNotContainsWord(string $directory, string $needle, array $ignored = [], ?string $message = NULL): void {
-    $files = File::containsInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
+    $files = File::findContainingInDir($directory, '/\b' . preg_quote($needle, '/') . '\b/i', array_merge(static::ignoredPaths(), $ignored));
 
     if (!empty($files)) {
       $this->fail($message ?: sprintf('Directory should not contain "%s" word, but it does within files %s.', $needle, implode(', ', $files)));

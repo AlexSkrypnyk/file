@@ -11,9 +11,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
 
 #[CoversClass(File::class)]
-#[CoversMethod(File::class, 'addTaskDirectory')]
-#[CoversMethod(File::class, 'runTaskDirectory')]
-#[CoversMethod(File::class, 'clearTaskDirectory')]
+#[CoversMethod(File::class, 'addDirectoryTask')]
+#[CoversMethod(File::class, 'runDirectoryTasks')]
+#[CoversMethod(File::class, 'clearDirectoryTasks')]
 #[CoversMethod(File::class, 'getTasker')]
 class FileTaskTest extends UnitTestCase {
 
@@ -30,7 +30,7 @@ class FileTaskTest extends UnitTestCase {
     if (is_dir($this->testTmpDir)) {
       File::rmdir($this->testTmpDir);
     }
-    File::clearTaskDirectory();
+    File::clearDirectoryTasks();
   }
 
   public function testAddTaskDirectory(): void {
@@ -41,13 +41,13 @@ class FileTaskTest extends UnitTestCase {
       return $file_info;
     };
 
-    File::addTaskDirectory($callback);
+    File::addDirectoryTask($callback);
 
     $test_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'task_test';
     mkdir($test_dir, 0777);
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'test.txt', 'content');
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     $this->assertContains('test.txt', $executed_files, 'Task should be executed for the file');
   }
@@ -55,12 +55,12 @@ class FileTaskTest extends UnitTestCase {
   public function testRunTaskDirectoryWithMultipleTasks(): void {
     $execution_log = [];
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$execution_log): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$execution_log): ContentFile {
       $execution_log[] = 'task1:' . $file_info->getBasename();
       return $file_info;
     });
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$execution_log): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$execution_log): ContentFile {
       $execution_log[] = 'task2:' . $file_info->getBasename();
       return $file_info;
     });
@@ -70,7 +70,7 @@ class FileTaskTest extends UnitTestCase {
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'file1.txt', 'content1');
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'file2.txt', 'content2');
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     $expected = ['task1:file1.txt', 'task2:file1.txt', 'task1:file2.txt', 'task2:file2.txt'];
     $this->assertSame($expected, $execution_log, 'All tasks should execute in order for each file');
@@ -82,19 +82,19 @@ class FileTaskTest extends UnitTestCase {
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'replace_test.txt', 'old_text content');
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'token_test.txt', "line1\n#; remove\nline3");
 
-    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info): ContentFile {
       $processed_content = File::replaceContent($file_info->getContent(), 'old_text', 'new_text');
       $file_info->setContent($processed_content);
       return $file_info;
     });
 
-    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info): ContentFile {
       $processed_content = File::removeToken($file_info->getContent(), '#;');
       $file_info->setContent($processed_content);
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     $replace_content = file_get_contents($test_dir . DIRECTORY_SEPARATOR . 'replace_test.txt');
     $this->assertIsString($replace_content, 'File content should be readable');
@@ -111,18 +111,18 @@ class FileTaskTest extends UnitTestCase {
   public function testClearTaskDirectory(): void {
     $executed = FALSE;
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$executed): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$executed): ContentFile {
       $executed = TRUE;
       return $file_info;
     });
 
-    File::clearTaskDirectory();
+    File::clearDirectoryTasks();
 
     $test_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'clear_test';
     mkdir($test_dir, 0777);
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . 'test.txt', 'content');
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     $this->assertFalse($executed, 'Cleared tasks should not execute');
   }
@@ -130,7 +130,7 @@ class FileTaskTest extends UnitTestCase {
   public function testRunTaskDirectoryWithEmptyDirectory(): void {
     $executed = FALSE;
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$executed): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$executed): ContentFile {
       $executed = TRUE;
       return $file_info;
     });
@@ -138,7 +138,7 @@ class FileTaskTest extends UnitTestCase {
     $empty_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'empty_test';
     mkdir($empty_dir, 0777);
 
-    File::runTaskDirectory($empty_dir);
+    File::runDirectoryTasks($empty_dir);
 
     $this->assertFalse($executed, 'Tasks should not execute when directory is empty');
   }
@@ -146,7 +146,7 @@ class FileTaskTest extends UnitTestCase {
   public function testTaskDirectoryIgnoresDefaultPaths(): void {
     $processed_files = [];
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$processed_files): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$processed_files): ContentFile {
       $processed_files[] = $file_info->getBasename();
       return $file_info;
     });
@@ -159,7 +159,7 @@ class FileTaskTest extends UnitTestCase {
     mkdir($test_dir . DIRECTORY_SEPARATOR . '.git', 0777);
     file_put_contents($test_dir . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR . 'config', 'git config');
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     $this->assertContains('normal.txt', $processed_files, 'Normal files should be processed');
     $this->assertNotContains('config', $processed_files, 'Files in ignored directories should not be processed');
@@ -173,19 +173,19 @@ class FileTaskTest extends UnitTestCase {
       file_put_contents($test_dir . DIRECTORY_SEPARATOR . sprintf('file%d.txt', $i), sprintf('content %d with old_value', $i));
     }
 
-    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info): ContentFile {
       $processed_content = File::replaceContent($file_info->getContent(), 'old_value', 'new_value');
       $file_info->setContent($processed_content);
       return $file_info;
     });
 
-    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info): ContentFile {
       $processed_content = $file_info->getContent() . "\n-- processed --";
       $file_info->setContent($processed_content);
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     for ($i = 1; $i <= 5; $i++) {
       $content = file_get_contents($test_dir . DIRECTORY_SEPARATOR . sprintf('file%d.txt', $i));
@@ -219,7 +219,7 @@ class FileTaskTest extends UnitTestCase {
     sleep(1);
 
     // Add tasks that modify some files but not others.
-    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info): ContentFile {
       $filename = $file_info->getBasename();
       $content = $file_info->getContent();
 
@@ -244,7 +244,7 @@ class FileTaskTest extends UnitTestCase {
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     // Clear file stat cache and check modification times.
     clearstatcache();
@@ -285,12 +285,12 @@ class FileTaskTest extends UnitTestCase {
     sleep(1);
 
     // Add a task that doesn't modify content at all.
-    File::addTaskDirectory(function (ContentFile $file_info): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info): ContentFile {
       // No-op task - just return the file as-is.
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     // Clear file stat cache and check modification times.
     clearstatcache();
@@ -339,7 +339,7 @@ class FileTaskTest extends UnitTestCase {
     sleep(1);
 
     // Add task that sets specific content for each file.
-    File::addTaskDirectory(function (ContentFile $file_info) use ($test_cases): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use ($test_cases): ContentFile {
       $filename = $file_info->getBasename();
 
       if (isset($test_cases[$filename])) {
@@ -350,7 +350,7 @@ class FileTaskTest extends UnitTestCase {
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     // Verify results.
     clearstatcache();
@@ -393,14 +393,14 @@ class FileTaskTest extends UnitTestCase {
     $processed_files = [];
 
     // Add task that tracks which files are processed.
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$processed_files): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$processed_files): ContentFile {
       $processed_files[] = $file_info->getBasename();
       $content = $file_info->getContent() . ' - processed';
       $file_info->setContent($content);
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     // Verify only non-excluded files were processed
     // Text files should be processed.
@@ -448,12 +448,12 @@ class FileTaskTest extends UnitTestCase {
     // Track processed files.
     $processed_files = [];
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$processed_files): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$processed_files): ContentFile {
       $processed_files[] = $file_info->getPathname();
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     // Only the regular file should be processed
     // Files in ignored directories (.git, vendor, node_modules)
@@ -499,7 +499,7 @@ class FileTaskTest extends UnitTestCase {
     $task_call_count = 0;
     $processed_filenames = [];
 
-    File::addTaskDirectory(function (ContentFile $file_info) use (&$task_call_count, &$processed_filenames): ContentFile {
+    File::addDirectoryTask(function (ContentFile $file_info) use (&$task_call_count, &$processed_filenames): ContentFile {
       $task_call_count++;
       $processed_filenames[] = $file_info->getBasename();
 
@@ -509,7 +509,7 @@ class FileTaskTest extends UnitTestCase {
       return $file_info;
     });
 
-    File::runTaskDirectory($test_dir);
+    File::runDirectoryTasks($test_dir);
 
     // Verify image files are excluded but text files are processed.
     $this->assertContains('document.txt', $processed_filenames, 'Text file should be processed');
