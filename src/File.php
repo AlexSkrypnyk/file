@@ -7,6 +7,9 @@ namespace AlexSkrypnyk\File;
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\Internal\ContentFile;
 use AlexSkrypnyk\File\Internal\ContentFileInterface;
+use AlexSkrypnyk\File\Internal\Replacer\Replacement;
+use AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface;
+use AlexSkrypnyk\File\Internal\Replacer\Replacer;
 use AlexSkrypnyk\File\Internal\Strings;
 use AlexSkrypnyk\File\Internal\Tasker;
 use Symfony\Component\Filesystem\Filesystem;
@@ -635,33 +638,20 @@ class File {
    *
    * @param string $directory
    *   Directory to search in.
-   * @param string $needle
-   *   String to search for in file content.
+   * @param string|\AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $needle
+   *   String, regex pattern, or ReplacementInterface instance.
    * @param string $replacement
-   *   String to replace with.
+   *   String to replace with (ignored when $needle is ReplacementInterface).
    */
-  public static function replaceContentInDir(string $directory, string $needle, string $replacement): void {
-    $files = static::scandir($directory, static::ignoredPaths());
-    foreach ($files as $filename) {
-      static::replaceContentInFile($filename, $needle, $replacement);
+  public static function replaceContentInDir(string $directory, string|ReplacementInterface $needle, string $replacement = ''): void {
+    // Create Replacement from string needle if needed.
+    if (is_string($needle)) {
+      $needle = Replacement::create('inline', $needle, $replacement);
     }
-  }
 
-  /**
-   * Replace content in all files in a directory using a callback processor.
-   *
-   * @param string $directory
-   *   Directory to search in.
-   * @param callable $processor
-   *   Callback function that receives file content and file path, returns
-   *   processed content.
-   *   Signature: function(string $content, string $file_path): string.
-   */
-  public static function replaceContentCallbackInDir(string $directory, callable $processor): void {
-    $files = static::scandir($directory, static::ignoredPaths());
-    foreach ($files as $filename) {
-      static::replaceContentCallbackInFile($filename, $processor);
-    }
+    static::getReplacer()
+      ->addReplacement($needle)
+      ->replaceInDir($directory, static::ignoredPaths());
   }
 
   /**
@@ -669,12 +659,12 @@ class File {
    *
    * @param string $file
    *   File path to process.
-   * @param string $needle
-   *   String or regex pattern to search for.
+   * @param string|\AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $needle
+   *   String, regex pattern, or ReplacementInterface instance.
    * @param string $replacement
-   *   String to replace with.
+   *   String to replace with (ignored when $needle is ReplacementInterface).
    */
-  public static function replaceContentInFile(string $file, string $needle, string $replacement): void {
+  public static function replaceContentInFile(string $file, string|ReplacementInterface $needle, string $replacement = ''): void {
     if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
       return;
     }
@@ -684,50 +674,19 @@ class File {
       return;
     }
 
-    $replaced = static::replaceContent($content, $needle, $replacement);
-
-    if ($replaced !== $content) {
-      static::dump($file, $replaced);
-    }
-  }
-
-  /**
-   * Replace content in a file using a callback processor.
-   *
-   * @param string $file
-   *   File path to process.
-   * @param callable $processor
-   *   Callback function that receives file content and file path, returns
-   *   processed content.
-   *   Signature: function(string $content, string $file_path): string.
-   *
-   * @throws \InvalidArgumentException
-   *   When processor returns non-string.
-   * @throws \AlexSkrypnyk\File\Exception\FileException
-   *   When callback execution fails.
-   */
-  public static function replaceContentCallbackInFile(string $file, callable $processor): void {
-    if (!static::exists($file) || !is_readable($file) || static::isExcluded($file)) {
-      return;
+    // Create Replacement from string needle if needed.
+    if (is_string($needle)) {
+      $needle = Replacement::create('inline', $needle, $replacement);
     }
 
-    $content = static::read($file);
-    if ($content === '' || $content === '0') {
-      return;
-    }
+    $original = $content;
 
-    try {
-      $processed = $processor($content, $file);
-      if (!is_string($processed)) {
-        throw new \InvalidArgumentException('Processor must return a string.');
-      }
-    }
-    catch (\Exception $exception) {
-      throw new FileException(sprintf('Error processing file %s: %s', $file, $exception->getMessage()), $exception->getCode(), $exception);
-    }
+    static::getReplacer()
+      ->addReplacement($needle)
+      ->replace($content);
 
-    if ($processed !== $content) {
-      static::dump($file, $processed);
+    if ($content !== $original) {
+      static::dump($file, $content);
     }
   }
 
@@ -856,59 +815,33 @@ class File {
   }
 
   /**
-   * Replace content in a string (string version).
+   * Replace content in a string.
    *
    * @param string $content
    *   Content string to process.
-   * @param string $needle
-   *   String or regex pattern to search for.
+   * @param string|\AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $needle
+   *   String, regex pattern, or ReplacementInterface instance.
    * @param string $replacement
-   *   String to replace with.
+   *   String to replace with (ignored when $needle is ReplacementInterface).
    *
    * @return string
    *   Processed content.
    */
-  public static function replaceContent(string $content, string $needle, string $replacement): string {
+  public static function replaceContent(string $content, string|ReplacementInterface $needle, string $replacement = ''): string {
     if ($content === '') {
       return $content;
     }
 
-    if (Strings::isRegex($needle)) {
-      $replaced = preg_replace($needle, $replacement, $content);
-      return $replaced ?? $content;
-    }
-    else {
-      return str_replace($needle, $replacement, $content);
-    }
-  }
-
-  /**
-   * Replace content in a string using a callback processor.
-   *
-   * @param string $content
-   *   Content string to process.
-   * @param callable $processor
-   *   Callback function that receives content and returns processed content.
-   *   Signature: function(string $content): string.
-   *
-   * @return string
-   *   Processed content.
-   *
-   * @throws \InvalidArgumentException
-   *   When processor returns non-string.
-   */
-  public static function replaceContentCallback(string $content, callable $processor): string {
-    if ($content === '') {
-      return $content;
+    // Create Replacement from string needle if needed.
+    if (is_string($needle)) {
+      $needle = Replacement::create('inline', $needle, $replacement);
     }
 
-    $result = $processor($content);
+    static::getReplacer()
+      ->addReplacement($needle)
+      ->replace($content);
 
-    if (!is_string($result)) {
-      throw new \InvalidArgumentException('Processor must return a string.');
-    }
-
-    return $result;
+    return $content;
   }
 
   /**
@@ -1216,6 +1149,46 @@ class File {
     }
 
     return $tasker;
+  }
+
+  /**
+   * The shared Replacer instance.
+   */
+  protected static ?Replacer $replacer = NULL;
+
+  /**
+   * Set the Replacer instance.
+   *
+   * @param \AlexSkrypnyk\File\Internal\Replacer\Replacer|null $replacer
+   *   The Replacer instance, or NULL to reset to default.
+   */
+  public static function setReplacer(?Replacer $replacer): void {
+    static::$replacer = $replacer;
+  }
+
+  /**
+   * Get the Replacer instance.
+   *
+   * If a Replacer has been explicitly set via setReplacer(), returns that
+   * instance. Otherwise, returns a fresh Replacer instance for each call
+   * to avoid accumulating replacements across operations.
+   *
+   * @return \AlexSkrypnyk\File\Internal\Replacer\Replacer
+   *   The Replacer instance.
+   */
+  public static function getReplacer(): Replacer {
+    // If user has set a Replacer, use it. Otherwise, create a fresh one.
+    return static::$replacer ?? Replacer::create();
+  }
+
+  /**
+   * Reset the Replacer instance to default behavior.
+   *
+   * After calling this method, getReplacer() will return fresh instances
+   * instead of the previously set Replacer.
+   */
+  public static function resetReplacer(): void {
+    static::$replacer = NULL;
   }
 
 }

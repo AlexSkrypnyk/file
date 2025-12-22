@@ -25,6 +25,7 @@
 - [Usage](#usage)
   - [Available Methods](#available-methods)
   - [Batch Operations](#batch-operations)
+  - [Content Replacement](#content-replacement)
   - [Assertion Traits](#assertion-traits)
     - [Directory Assertions Trait](#directory-assertions-trait)
     - [File Assertions Trait](#file-assertions-trait)
@@ -115,11 +116,8 @@ try {
 | `removeTokenInDir()`             | Remove tokens and optionally content between tokens from all files in a directory. |
 | `renameInDir()`                  | Rename files in directory by replacing part of the filename.                       |
 | `replaceContent()`               | Replace content in a string.                                                       |
-| `replaceContentCallback()`       | Replace content in a string using a callback processor.                            |
 | `replaceContentInFile()`         | Replace content in a file.                                                         |
-| `replaceContentCallbackInFile()` | Replace content in a file using a callback processor.                              |
 | `replaceContentInDir()`          | Replace content in all files in a directory.                                       |
-| `replaceContentCallbackInDir()`  | Replace content in all files in a directory using a callback processor.            |
 | `rmdir()`                        | Remove directory recursively.                                                      |
 | `rmdirIfEmpty()`                 | Remove directory recursively if empty.                                             |
 | `scandir()`                      | Recursively scan directory for files.                                              |
@@ -158,18 +156,6 @@ File::replaceContentInDir('/path/to/dir', 'old1', 'new1');
 File::replaceContentInDir('/path/to/dir', 'old2', 'new2');
 File::removeTokenInDir('/path/to/dir', '# token');
 
-// Callback approach for custom processing
-File::replaceContentCallbackInDir('/path/to/dir', function(string $content, string $file_path): string {
-  // Custom processing logic with access to file path
-  $content = str_replace('old1', 'new1', $content);
-  $content = preg_replace('/pattern/', 'replacement', $content);
-  // Example: different processing based on file type
-  if (str_ends_with($file_path, '.md')) {
-    $content = '# ' . $content;
-  }
-  return strtoupper($content);
-});
-
 // Batch approach: significantly faster because while tasks are added first,
 // the directory is scanned only once and each file is read/written only once.
 File::addDirectoryTask(function(ContentFile $file_info): ContentFile {
@@ -181,11 +167,24 @@ File::addDirectoryTask(function(ContentFile $file_info): ContentFile {
   return $file_info;
 });
 
-// Batch approach with callback processing
+File::runDirectoryTasks('/path/to/dir');
+```
+
+```php
+use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Internal\ContentFile;
+use AlexSkrypnyk\File\Internal\Replacer\Replacement;
+use AlexSkrypnyk\File\Internal\Replacer\Replacer;
+
+// Batch approach with a custom Replacer for complex replacements.
 File::addDirectoryTask(function(ContentFile $file_info): ContentFile {
-  $content = File::replaceContentCallback($file_info->getContent(), function(string $content): string {
-    return strtoupper(str_replace('old', 'new', $content));
-  });
+  $content = $file_info->getContent();
+
+  Replacer::create()
+    ->addReplacement(Replacement::create('version', '/v\d+\.\d+\.\d+/', '__VERSION__'))
+    ->addReplacement(Replacement::create('year', '/20\d{2}/', '__YEAR__'))
+    ->replace($content);
+
   $file_info->setContent($content);
   return $file_info;
 });
@@ -215,6 +214,80 @@ that:
 
 This architecture allows the library to scale efficiently from small single-file
 operations to large-scale batch processing scenarios.
+
+### Content Replacement
+
+The `Replacer` class provides pattern-based content replacement in files and
+directories. It's particularly useful for normalizing volatile content like
+version numbers, hashes, and timestamps.
+
+#### Basic Usage
+
+```php
+use AlexSkrypnyk\File\Internal\Replacer\Replacer;
+use AlexSkrypnyk\File\Internal\Replacer\Replacement;
+
+// Use preset version patterns
+$replacer = Replacer::versions();
+$replacer->replaceInDir($directory);
+
+// Or create custom replacer
+$replacer = Replacer::create()
+    ->addReplacement(Replacement::create('version', '/v\d+\.\d+\.\d+/', '__VERSION__'))
+    ->addReplacement(Replacement::create('date', '/\d{4}-\d{2}-\d{2}/', '__DATE__'));
+
+// Apply to string content
+$content = 'Version: v1.2.3';
+$replacer->replace($content);  // $content is now 'Version: __VERSION__'
+
+// Apply to directory
+$replacer->replaceInDir($directory);
+```
+
+#### Version Patterns Preset
+
+The `Replacer::versions()` factory method creates a replacer with common patterns
+for normalizing volatile content:
+
+| Pattern | Example Input | Output |
+|---------|---------------|--------|
+| Semver versions | `1.2.3`, `v1.2.3-beta.1` | `__VERSION__` |
+| Git hashes | `@abc123...` (40 chars) | `@__HASH__` |
+| SRI integrity hashes | `sha512-...` | `__INTEGRITY__` |
+| Docker image tags | `nginx:1.21.0` | `nginx:__VERSION__` |
+| GitHub Actions versions | `actions/checkout@v4` | `actions/checkout@__VERSION__` |
+| Package versions in JSON | `"^1.2.3"` | `"__VERSION__"` |
+
+#### Exclusions
+
+Add exclusions to prevent specific matches from being replaced:
+
+```php
+$replacer = Replacer::versions()
+    ->setMaxReplacements(0)
+    ->addExclusions(['/^0\.0\./'], 'semver');  // Don't replace 0.0.x versions
+
+// Or add exclusions to all rules
+$replacer->addExclusions(['127.0.0.1']);  // Don't replace IP addresses
+
+// Exclusions can be:
+// - Regex patterns: '/^0\./'
+// - Exact strings: '127.0.0.1'
+// - Callbacks: fn(string $match): bool => $match === '9.9.9'
+```
+
+#### Custom Replacements
+
+Create custom replacement patterns:
+
+```php
+$replacer = Replacer::create()
+    ->addReplacement(Replacement::create('build', '/BUILD-\d+/', '__BUILD__'))
+    ->addReplacement(Replacement::create('timestamp', '/\d{10}/', '__TIMESTAMP__'))
+    ->setMaxReplacements(0);  // 0 = unlimited replacements
+
+$replacer->replaceInDir($directory, ['/path/to/ignore']);
+```
 
 ### Assertion Traits
 
