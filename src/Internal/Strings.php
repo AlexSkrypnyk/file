@@ -19,30 +19,24 @@ class Strings {
    *   TRUE if the string is a valid regex, FALSE otherwise.
    */
   public static function isRegex(string $string): bool {
-    if ($string === '' || strlen($string) < 3) {
+    if (strlen($string) < 2) {
       return FALSE;
     }
 
-    // Extract the first character as the delimiter.
     $delimiter = $string[0];
 
-    if (!in_array($delimiter, ['/', '#', '~'])) {
+    // Common regex delimiters.
+    if (!in_array($delimiter, ['/', '#', '~', '@', '%'], TRUE)) {
       return FALSE;
     }
 
-    $last_char = substr($string, -1);
-    $before_last_char = substr($string, -2, 1);
-    if (
-      ($last_char !== $delimiter && !in_array($last_char, ['i', 'm', 's']))
-      || ($before_last_char !== $delimiter && in_array($before_last_char, ['i', 'm', 's']))
-    ) {
+    // Must end with the delimiter (optionally followed by modifiers).
+    if (!preg_match('/^' . preg_quote($delimiter, '/') . '.+' . preg_quote($delimiter, '/') . '[imsxADSUXJu]*$/', $string)) {
       return FALSE;
     }
 
-    // Test the regex.
-    // Suppress warnings for invalid regex patterns.
-    $result = @preg_match($string, '');
-    return $result !== FALSE && preg_last_error() === PREG_NO_ERROR;
+    // Validate it's actually a working regex.
+    return @preg_match($string, '') !== FALSE;
   }
 
 }

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
+use AlexSkrypnyk\File\Internal\Replacer\Replacer;
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\Internal\Replacer\Replacement;
 use AlexSkrypnyk\File\Testing\DirectoryAssertionsTrait;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -200,7 +202,7 @@ class FileStringsTest extends UnitTestCase {
   }
 
   #[DataProvider('dataProviderReplaceContentInDir')]
-  public function testReplaceContentInDir(string $from, string $to, array $fixture_files, array $expected_files): void {
+  public function testReplaceContentInDir(string|Replacement $from, string $to, array $fixture_files, array $expected_files): void {
     $dir = $this->locationsFixtureDir('tokens');
 
     $expected_files = $this->flattenFileTree($expected_files, $dir);
@@ -244,6 +246,20 @@ class FileStringsTest extends UnitTestCase {
       [
         '/BAR/',
         'FOO',
+        ['dir1/foobar_b.txt'],
+        ['dir1/foofoo_b.txt'],
+      ],
+
+      // ReplacementInterface tests.
+      [
+        Replacement::create('test', 'BAR', 'FOO'),
+        '',
+        ['foobar_b.txt'],
+        ['foofoo_b.txt'],
+      ],
+      [
+        Replacement::create('test', '/BAR/', 'FOO'),
+        '',
         ['dir1/foobar_b.txt'],
         ['dir1/foofoo_b.txt'],
       ],
@@ -531,7 +547,7 @@ class FileStringsTest extends UnitTestCase {
   }
 
   #[DataProvider('dataProviderReplaceContent')]
-  public function testReplaceContent(string $content, string $needle, string $replacement, string $expected): void {
+  public function testReplaceContent(string $content, string|Replacement $needle, string $replacement, string $expected): void {
     $result = File::replaceContent($content, $needle, $replacement);
     $this->assertSame($expected, $result);
   }
@@ -561,6 +577,13 @@ class FileStringsTest extends UnitTestCase {
       'regex empty replacement' => ['Hello, world!', '/world/', '', 'Hello, !'],
       'regex with no matches' => ['Hello, world!', '/xyz/', 'replacement', 'Hello, world!'],
       'regex error handling' => ['test string', '/test/', 'new', 'new string'],
+
+      // ReplacementInterface tests.
+      'replacement with string pattern' => ['Hello, world!', Replacement::create('test', 'world', 'everyone'), '', 'Hello, everyone!'],
+      'replacement with regex pattern' => ['Hello, world!', Replacement::create('test', '/world/', 'universe'), '', 'Hello, universe!'],
+      'replacement with capture groups' => ['Hello, world!', Replacement::create('test', '/Hello, (\w+)!/', 'Greetings, $1!'), '', 'Greetings, world!'],
+      'replacement with closure' => ['hello world', Replacement::create('test', strtoupper(...)), '', 'HELLO WORLD'],
+      'replacement with exclusion' => ['1.0.0 2.0.0 0.0.1', Replacement::create('version', '/\d+\.\d+\.\d+/', '__VERSION__')->addExclusion('/^0\./'), '', '__VERSION__ __VERSION__ 0.0.1'],
     ];
   }
 
@@ -1047,7 +1070,7 @@ EOT;
   }
 
   #[DataProvider('dataProviderReplaceContentInFile')]
-  public function testReplaceContentInFile(string $filename, string $content, string $needle, string $replacement, string $expected, bool $should_exist_before, bool $should_exist_after): void {
+  public function testReplaceContentInFile(string $filename, string $content, string|Replacement $needle, string $replacement, string $expected, bool $should_exist_before, bool $should_exist_after): void {
     $file_path = static::$workspace . DIRECTORY_SEPARATOR . $filename;
 
     if ($should_exist_before) {
@@ -1085,286 +1108,69 @@ EOT;
       'unicode content in file' => ['unicode.txt', 'Hello, 世界!', '世界', 'world', 'Hello, world!', TRUE, TRUE],
       'special characters' => ['special.txt', 'Price: $10.00 (tax: $1.50)', '$', '€', 'Price: €10.00 (tax: €1.50)', TRUE, TRUE],
       'no content change' => ['nochange.txt', 'Hello, world!', 'xyz', 'replacement', 'Hello, world!', TRUE, TRUE],
+
+      // ReplacementInterface tests.
+      'replacement with string pattern' => ['test.txt', 'Hello, world!', Replacement::create('test', 'world', 'everyone'), '', 'Hello, everyone!', TRUE, TRUE],
+      'replacement with regex pattern' => ['test.txt', 'Version: v1.2.3', Replacement::create('version', '/v\d+\.\d+\.\d+/', '__VERSION__'), '', 'Version: __VERSION__', TRUE, TRUE],
+      'replacement with closure' => ['test.txt', 'hello world', Replacement::create('test', strtoupper(...)), '', 'HELLO WORLD', TRUE, TRUE],
     ];
   }
 
-  #[DataProvider('dataProviderReplaceContentCallback')]
-  public function testReplaceContentCallback(string $content, callable $processor, string $expected): void {
-    $result = File::replaceContentCallback($content, $processor);
-    $this->assertSame($expected, $result);
+  public function testReplacerInstanceFreshWithoutSetting(): void {
+    // Ensure no Replacer is set.
+    File::resetReplacer();
+
+    // First replacement should not affect subsequent calls.
+    $content1 = File::replaceContent('Hello, world!', 'world', 'universe');
+    $this->assertSame('Hello, universe!', $content1);
+
+    // Second replacement with different needle should work independently.
+    // If Replacer was reused, the previous replacement would still be active.
+    $content2 = File::replaceContent('Hello, world!', 'Hello', 'Greetings');
+    $this->assertSame('Greetings, world!', $content2);
+
+    // Verify 'world' was NOT replaced (proving fresh Replacer was used).
+    $this->assertStringContainsString('world', $content2);
   }
 
-  public static function dataProviderReplaceContentCallback(): array {
-    return [
-      'basic transformation' => [
-        'Hello, world!',
-        fn(string $content): string => str_replace('world', 'universe', $content),
-        'Hello, universe!',
-      ],
-      'uppercase transformation' => [
-        'hello world',
-        fn(string $content): string => strtoupper($content),
-        'HELLO WORLD',
-      ],
-      'complex transformation' => [
-        "line1\nline2\nline3",
-        fn(string $content): string => implode("\n", array_map(fn(string $line): string => '- ' . $line, explode("\n", $content))),
-        "- line1\n- line2\n- line3",
-      ],
-      'no change' => [
-        'unchanged content',
-        fn(string $content): string => $content,
-        'unchanged content',
-      ],
-      'empty content' => [
-        '',
-        fn(string $content): string => $content . 'added',
-        '',
-      ],
-      'trim whitespace' => [
-        '  content with spaces  ',
-        fn(string $content): string => trim($content),
-        'content with spaces',
-      ],
-      'regex replacement' => [
-        'Hello, world!',
-        fn(string $content): string => preg_replace('/world/', 'universe', $content) ?: $content,
-        'Hello, universe!',
-      ],
-      'json processing' => [
-        '{"name":"value"}',
-        fn(string $content): string => json_encode(['name' => 'value', 'added' => TRUE]) ?: $content,
-        '{"name":"value","added":true}',
-      ],
-      'multiline processing' => [
-        "line1\r\nline2\r\nline3",
-        fn(string $content): string => str_replace("\r\n", "\n", $content),
-        "line1\nline2\nline3",
-      ],
-    ];
+  public function testReplacerInstanceSharedWhenSet(): void {
+    // Ensure clean state.
+    File::resetReplacer();
+
+    // Create and set a custom Replacer with a replacement.
+    $replacer = Replacer::create()
+      ->addReplacement(Replacement::create('custom', 'foo', 'bar'));
+    File::setReplacer($replacer);
+
+    // The set Replacer should be used.
+    $content1 = File::replaceContent('foo baz', 'baz', 'qux');
+    // Both 'foo' (from set Replacer) and 'baz' (from call) should be replaced.
+    $this->assertSame('bar qux', $content1);
+
+    // Subsequent call should still have 'foo' replacement from set Replacer.
+    $content2 = File::replaceContent('foo test', 'test', 'example');
+    $this->assertSame('bar example', $content2);
+
+    // Clean up.
+    File::resetReplacer();
   }
 
-  public function testReplaceContentCallbackInvalidCallable(): void {
-    $this->expectException(\TypeError::class);
-    // @phpstan-ignore-next-line
-    File::replaceContentCallback('content', 'not_callable');
-  }
+  public function testReplacerReset(): void {
+    // Set a custom Replacer.
+    $replacer = Replacer::create()
+      ->addReplacement(Replacement::create('custom', 'foo', 'bar'));
+    File::setReplacer($replacer);
 
-  public function testReplaceContentCallbackInvalidReturnType(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Processor must return a string.');
-    File::replaceContentCallback('content', fn($content): int => 123);
-  }
+    // Verify the Replacer is active.
+    $content1 = File::replaceContent('foo test', 'test', 'example');
+    $this->assertSame('bar example', $content1);
 
-  #[DataProvider('dataProviderReplaceContentCallbackInFile')]
-  public function testReplaceContentCallbackInFile(string $filename, string $content, callable $processor, string $expected, bool $should_exist_before, bool $should_exist_after): void {
-    $file_path = static::$sut . DIRECTORY_SEPARATOR . $filename;
+    // Reset the Replacer.
+    File::resetReplacer();
 
-    if ($should_exist_before) {
-      file_put_contents($file_path, $content);
-    }
-
-    File::replaceContentCallbackInFile($file_path, $processor);
-
-    if ($should_exist_after) {
-      $this->assertFileExists($file_path);
-      $actual_content = file_get_contents($file_path);
-      $this->assertSame($expected, $actual_content);
-      unlink($file_path);
-    }
-    else {
-      $this->assertFileDoesNotExist($file_path);
-    }
-  }
-
-  public static function dataProviderReplaceContentCallbackInFile(): array {
-    return [
-      'basic transformation' => [
-        'test.txt',
-        'Hello, world!',
-        fn(string $content, string $file_path): string => str_replace('world', 'universe', $content),
-        'Hello, universe!',
-        TRUE,
-        TRUE,
-      ],
-      'path-based processing' => [
-        'config.json',
-        '{"name":"test"}',
-        fn(string $content, string $file_path): string => str_ends_with($file_path, '.json') ? str_replace('test', 'production', $content) : $content,
-        '{"name":"production"}',
-        TRUE,
-        TRUE,
-      ],
-      'extension-based processing' => [
-        'readme.md',
-        'Content here',
-        fn(string $content, string $file_path): string => str_ends_with($file_path, '.md') ? '# ' . $content : $content,
-        '# Content here',
-        TRUE,
-        TRUE,
-      ],
-      'no change' => [
-        'nochange.txt',
-        'Hello, world!',
-        fn(string $content, string $file_path): string => $content,
-        'Hello, world!',
-        TRUE,
-        TRUE,
-      ],
-      'empty file' => [
-        'empty.txt',
-        '',
-        fn(string $content, string $file_path): string => $content . 'added',
-        '',
-        TRUE,
-        TRUE,
-      ],
-      'zero content file' => [
-        'zero.txt',
-        '0',
-        fn(string $content, string $file_path): string => $content . '_processed',
-        '0',
-        TRUE,
-        TRUE,
-      ],
-      'nonexistent file' => [
-        'nonexistent.txt',
-        '',
-        fn(string $content, string $file_path): string => $content,
-        '',
-        FALSE,
-        FALSE,
-      ],
-      'excluded image file' => [
-        'image.jpg',
-        'fake image content',
-        fn(string $content, string $file_path): string => str_replace('fake', 'real', $content),
-        'fake image content',
-        TRUE,
-        TRUE,
-      ],
-      'excluded png file' => [
-        'photo.png',
-        'png content here',
-        fn(string $content, string $file_path): string => str_replace('png', 'jpeg', $content),
-        'png content here',
-        TRUE,
-        TRUE,
-      ],
-    ];
-  }
-
-  public function testReplaceContentCallbackInFileInvalidCallable(): void {
-    $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
-    file_put_contents($file_path, 'content');
-
-    $this->expectException(\TypeError::class);
-    // @phpstan-ignore-next-line
-    File::replaceContentCallbackInFile($file_path, 'not_callable');
-
-    unlink($file_path);
-  }
-
-  public function testReplaceContentCallbackInFileCallbackException(): void {
-    $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
-    file_put_contents($file_path, 'content');
-
-    $this->expectException(FileException::class);
-    $this->expectExceptionMessageMatches('/Error processing file.*test\.txt.*Test exception/');
-
-    File::replaceContentCallbackInFile($file_path, function (string $content, string $file_path): void {
-      throw new \Exception('Test exception');
-    });
-
-    unlink($file_path);
-  }
-
-  public function testReplaceContentCallbackInFileInvalidReturnType(): void {
-    $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
-    file_put_contents($file_path, 'content');
-
-    $this->expectException(FileException::class);
-    $this->expectExceptionMessageMatches('/Error processing file.*Processor must return a string/');
-
-    File::replaceContentCallbackInFile($file_path, function (string $content, string $file_path): int {
-      return 123;
-    });
-
-    unlink($file_path);
-  }
-
-  public function testReplaceContentCallbackInDir(): void {
-    $subdir = static::$sut . DIRECTORY_SEPARATOR . 'subdir';
-    mkdir($subdir);
-
-    $file1 = static::$sut . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $subdir . DIRECTORY_SEPARATOR . 'file2.txt';
-
-    file_put_contents($file1, 'Hello, world!');
-    file_put_contents($file2, 'Goodbye, world!');
-
-    File::replaceContentCallbackInDir(static::$sut, function (string $content, string $file_path): string {
-      return str_replace('world', 'universe', $content);
-    });
-
-    $this->assertSame('Hello, universe!', file_get_contents($file1));
-    $this->assertSame('Goodbye, universe!', file_get_contents($file2));
-
-    unlink($file1);
-    unlink($file2);
-    rmdir($subdir);
-  }
-
-  public function testReplaceContentCallbackInDirInvalidCallable(): void {
-    $this->expectException(\TypeError::class);
-    // @phpstan-ignore-next-line
-    File::replaceContentCallbackInDir(static::$sut, 'not_callable');
-  }
-
-  public function testReplaceContentCallbackInDirWithFilePathUsage(): void {
-    $subdir = static::$sut . DIRECTORY_SEPARATOR . 'subdir';
-    mkdir($subdir);
-
-    $file1 = static::$sut . DIRECTORY_SEPARATOR . 'config.json';
-    $file2 = static::$sut . DIRECTORY_SEPARATOR . 'readme.md';
-    $file3 = $subdir . DIRECTORY_SEPARATOR . 'other.txt';
-
-    file_put_contents($file1, '{"env":"dev"}');
-    file_put_contents($file2, 'Documentation');
-    file_put_contents($file3, 'Regular content');
-
-    File::replaceContentCallbackInDir(static::$sut, function (string $content, string $file_path): string {
-      if (str_ends_with($file_path, '.json')) {
-        return str_replace('dev', 'prod', $content);
-      }
-      if (str_ends_with($file_path, '.md')) {
-        return '# ' . $content;
-      }
-      return strtoupper($content);
-    });
-
-    $this->assertSame('{"env":"prod"}', file_get_contents($file1));
-    $this->assertSame('# Documentation', file_get_contents($file2));
-    $this->assertSame('REGULAR CONTENT', file_get_contents($file3));
-
-    unlink($file1);
-    unlink($file2);
-    unlink($file3);
-    rmdir($subdir);
-  }
-
-  public function testReplaceContentCallbackInDirCallbackException(): void {
-    $file_path = static::$sut . DIRECTORY_SEPARATOR . 'test.txt';
-    file_put_contents($file_path, 'content');
-
-    $this->expectException(FileException::class);
-    $this->expectExceptionMessageMatches('/Error processing file.*test\.txt.*Callback error/');
-
-    File::replaceContentCallbackInDir(static::$sut, function (string $content, string $file_path): string {
-      throw new \Exception('Callback error');
-    });
-
-    unlink($file_path);
+    // Now 'foo' should NOT be replaced (fresh Replacer without the rule).
+    $content2 = File::replaceContent('foo test', 'test', 'example');
+    $this->assertSame('foo example', $content2);
   }
 
 }
