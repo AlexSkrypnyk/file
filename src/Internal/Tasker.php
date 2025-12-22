@@ -70,7 +70,7 @@ class Tasker {
     if (!$generator instanceof \Generator) {
       throw new \InvalidArgumentException(sprintf(
         'Iterator callable must return a Generator instance, %s given',
-        is_object($generator) ? get_class($generator) : gettype($generator)
+        get_debug_type($generator)
       ));
     }
 

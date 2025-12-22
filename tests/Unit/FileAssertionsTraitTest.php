@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(FileAssertionsTrait::class)]
-class FileAssertionsTraitTest extends TestCase {
+final class FileAssertionsTraitTest extends TestCase {
 
   use FileAssertionsTrait;
 
@@ -330,14 +330,12 @@ class FileAssertionsTraitTest extends TestCase {
   /**
    * Data provider for assertFilesExist tests.
    */
-  public static function dataProviderAssertFilesExist(): array {
-    return [
-      'single file success' => [['test1.txt'], [], TRUE, ''],
-      'multiple files success' => [['test1.txt', 'test2.txt', 'test3.txt'], [], TRUE, ''],
-      'files with different extensions success' => [['test.txt', 'data.json', 'config.yml'], [], TRUE, ''],
-      'empty array success' => [[], [], TRUE, ''],
-      'nonexistent file failure' => [['existing.txt', 'nonexistent.txt'], ['existing.txt'], FALSE, 'nonexistent.txt'],
-    ];
+  public static function dataProviderAssertFilesExist(): \Iterator {
+    yield 'single file success' => [['test1.txt'], [], TRUE, ''];
+    yield 'multiple files success' => [['test1.txt', 'test2.txt', 'test3.txt'], [], TRUE, ''];
+    yield 'files with different extensions success' => [['test.txt', 'data.json', 'config.yml'], [], TRUE, ''];
+    yield 'empty array success' => [[], [], TRUE, ''];
+    yield 'nonexistent file failure' => [['existing.txt', 'nonexistent.txt'], ['existing.txt'], FALSE, 'nonexistent.txt'];
   }
 
   /**
@@ -370,14 +368,12 @@ class FileAssertionsTraitTest extends TestCase {
   /**
    * Data provider for assertFilesDoNotExist tests.
    */
-  public static function dataProviderAssertFilesDoNotExist(): array {
-    return [
-      'single nonexistent file success' => [['nonexistent1.txt'], [], TRUE, ''],
-      'multiple nonexistent files success' => [['nonexistent1.txt', 'nonexistent2.txt', 'nonexistent3.txt'], [], TRUE, ''],
-      'files with different extensions success' => [['missing.txt', 'absent.json', 'gone.yml'], [], TRUE, ''],
-      'empty array success' => [[], [], TRUE, ''],
-      'existing file failure' => [['existing.txt'], ['existing.txt'], FALSE, 'existing.txt'],
-    ];
+  public static function dataProviderAssertFilesDoNotExist(): \Iterator {
+    yield 'single nonexistent file success' => [['nonexistent1.txt'], [], TRUE, ''];
+    yield 'multiple nonexistent files success' => [['nonexistent1.txt', 'nonexistent2.txt', 'nonexistent3.txt'], [], TRUE, ''];
+    yield 'files with different extensions success' => [['missing.txt', 'absent.json', 'gone.yml'], [], TRUE, ''];
+    yield 'empty array success' => [[], [], TRUE, ''];
+    yield 'existing file failure' => [['existing.txt'], ['existing.txt'], FALSE, 'existing.txt'];
   }
 
   /**
@@ -426,16 +422,14 @@ class FileAssertionsTraitTest extends TestCase {
   /**
    * Data provider for assertFilesWildcardExists tests.
    */
-  public static function dataProviderAssertFilesWildcardExists(): array {
-    return [
-      'single pattern string success' => ['*.txt', ['test.txt'], TRUE, ''],
-      'single pattern array success' => [['*.txt'], ['test.txt'], TRUE, ''],
-      'multiple patterns success' => [['*.txt', '*.json'], ['test.txt', 'data.json'], TRUE, ''],
-      'directory pattern success' => ['subdir/*.txt', ['subdir/file.txt'], TRUE, ''],
-      'prefix pattern success' => ['test_*.txt', ['test_file.txt'], TRUE, ''],
-      'no matches failure' => ['*.nonexistent', [], FALSE, 'No files found matching wildcard pattern'],
-      'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
-    ];
+  public static function dataProviderAssertFilesWildcardExists(): \Iterator {
+    yield 'single pattern string success' => ['*.txt', ['test.txt'], TRUE, ''];
+    yield 'single pattern array success' => [['*.txt'], ['test.txt'], TRUE, ''];
+    yield 'multiple patterns success' => [['*.txt', '*.json'], ['test.txt', 'data.json'], TRUE, ''];
+    yield 'directory pattern success' => ['subdir/*.txt', ['subdir/file.txt'], TRUE, ''];
+    yield 'prefix pattern success' => ['test_*.txt', ['test_file.txt'], TRUE, ''];
+    yield 'no matches failure' => ['*.nonexistent', [], FALSE, 'No files found matching wildcard pattern'];
+    yield 'empty patterns exception' => [[], [], 'exception', 'Empty patterns'];
   }
 
   /**
@@ -479,15 +473,13 @@ class FileAssertionsTraitTest extends TestCase {
   /**
    * Data provider for assertFilesWildcardDoNotExist tests.
    */
-  public static function dataProviderAssertFilesWildcardDoNotExist(): array {
-    return [
-      'single pattern string success' => ['*.nonexistent', [], TRUE, ''],
-      'single pattern array success' => [['*.nonexistent'], [], TRUE, ''],
-      'multiple patterns success' => [['*.nonexistent', '*.missing'], [], TRUE, ''],
-      'directory pattern success' => ['nonexistent_dir/*.txt', [], TRUE, ''],
-      'matching files failure' => ['*.txt', ['test.txt'], FALSE, 'Found 1 file(s) matching wildcard pattern that should not exist'],
-      'empty patterns exception' => [[], [], 'exception', 'Empty patterns'],
-    ];
+  public static function dataProviderAssertFilesWildcardDoNotExist(): \Iterator {
+    yield 'single pattern string success' => ['*.nonexistent', [], TRUE, ''];
+    yield 'single pattern array success' => [['*.nonexistent'], [], TRUE, ''];
+    yield 'multiple patterns success' => [['*.nonexistent', '*.missing'], [], TRUE, ''];
+    yield 'directory pattern success' => ['nonexistent_dir/*.txt', [], TRUE, ''];
+    yield 'matching files failure' => ['*.txt', ['test.txt'], FALSE, 'Found 1 file(s) matching wildcard pattern that should not exist'];
+    yield 'empty patterns exception' => [[], [], 'exception', 'Empty patterns'];
   }
 
   public function testAssertFileContainsWordWithSlashes(): void {

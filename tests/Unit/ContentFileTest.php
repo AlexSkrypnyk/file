@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(ContentFile::class)]
-class ContentFileTest extends UnitTestCase {
+final class ContentFileTest extends UnitTestCase {
 
   protected string $testTmpDir;
 
@@ -134,21 +134,19 @@ class ContentFileTest extends UnitTestCase {
     $this->assertSame($content, $content_file->getContent());
   }
 
-  public static function dataProviderContentVariations(): array {
-    return [
-      'empty string' => [''],
-      'single character' => ['x'],
-      'zero string' => ['0'],
-      'whitespace only' => ['   '],
-      'newlines' => ["line1\nline2\nline3"],
-      'carriage returns' => ["line1\r\nline2\r\n"],
-      'tabs' => ["col1\tcol2\tcol3"],
-      'unicode content' => ['Héllo Wörld 你好'],
-      'special characters' => ['!@#$%^&*()_+-=[]{}|;:,.<>?'],
-      'null bytes' => ["before\0after"],
-      'long content' => [str_repeat('a', 10000)],
-      'multiline with mixed endings' => ["line1\nline2\r\nline3\rline4"],
-    ];
+  public static function dataProviderContentVariations(): \Iterator {
+    yield 'empty string' => [''];
+    yield 'single character' => ['x'];
+    yield 'zero string' => ['0'];
+    yield 'whitespace only' => ['   '];
+    yield 'newlines' => ["line1\nline2\nline3"];
+    yield 'carriage returns' => ["line1\r\nline2\r\n"];
+    yield 'tabs' => ["col1\tcol2\tcol3"];
+    yield 'unicode content' => ['Héllo Wörld 你好'];
+    yield 'special characters' => ['!@#$%^&*()_+-=[]{}|;:,.<>?'];
+    yield 'null bytes' => ["before\0after"];
+    yield 'long content' => [str_repeat('a', 10000)];
+    yield 'multiline with mixed endings' => ["line1\nline2\r\nline3\rline4"];
   }
 
   public function testSetContentVariations(): void {
