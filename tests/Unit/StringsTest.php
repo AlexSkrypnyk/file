@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[CoversClass(Strings::class)]
-class StringsTest extends UnitTestCase {
+final class StringsTest extends UnitTestCase {
 
   #[DataProvider('dataProviderIsRegex')]
   public function testIsRegex(string $value, bool $expected): void {

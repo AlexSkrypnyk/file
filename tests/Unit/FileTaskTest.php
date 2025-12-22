@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\CoversMethod;
 #[CoversMethod(File::class, 'runDirectoryTasks')]
 #[CoversMethod(File::class, 'clearDirectoryTasks')]
 #[CoversMethod(File::class, 'getTasker')]
-class FileTaskTest extends UnitTestCase {
+final class FileTaskTest extends UnitTestCase {
 
   protected string $testTmpDir;
 
@@ -463,7 +463,7 @@ class FileTaskTest extends UnitTestCase {
     // Use realpath to resolve symlinks for comparison
     // (macOS /var -> /private/var).
     $expected_realpath = realpath($regular_file);
-    $processed_realpaths = array_map('realpath', $processed_files);
+    $processed_realpaths = array_map(realpath(...), $processed_files);
     $this->assertContains($expected_realpath, $processed_realpaths, 'Regular file should be processed');
 
     // Verify excluded directory files are not processed.

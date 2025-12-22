@@ -64,9 +64,7 @@ class File {
 
     // Resolve path parts (single dot, double dot and double delimiters).
     $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
-    $parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), static function (string $part): bool {
-      return $part !== '';
-    });
+    $parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), static fn(string $part): bool => $part !== '');
 
     $absolutes = [];
     foreach ($parts as $part) {
@@ -190,7 +188,7 @@ class File {
     try {
       static::dir($directory);
     }
-    catch (FileException $file_exception) {
+    catch (FileException) {
       // If path exists and is a file, throw exception immediately.
       if (static::exists($directory) && is_file($directory)) {
         throw new FileException(sprintf('Cannot create directory "%s": path exists and is a file.', $directory));
@@ -361,7 +359,7 @@ class File {
             $filesystem->symlink($link, basename($dest));
           }
           // @codeCoverageIgnoreStart
-          catch (\Exception $e) {
+          catch (\Exception) {
             $ret = FALSE;
           }
           // @codeCoverageIgnoreEnd
@@ -379,7 +377,7 @@ class File {
         return TRUE;
       }
       // @codeCoverageIgnoreStart
-      catch (\Exception $e) {
+      catch (\Exception) {
         return FALSE;
       }
       // @codeCoverageIgnoreEnd
@@ -391,7 +389,10 @@ class File {
 
     $dir = dir($source);
     while ($dir && FALSE !== $entry = $dir->read()) {
-      if ($entry === '.' || $entry === '..') {
+      if ($entry === '.') {
+        continue;
+      }
+      if ($entry === '..') {
         continue;
       }
       static::copy(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE);
@@ -443,7 +444,7 @@ class File {
     try {
       $directory = static::dir($directory);
     }
-    catch (FileException $file_exception) {
+    catch (FileException) {
       return [];
     }
 
@@ -954,7 +955,7 @@ class File {
       return $content;
     }
 
-    $token_end = $token_end ?? $token_begin;
+    $token_end ??= $token_begin;
 
     if ($token_begin !== $token_end) {
       $token_begin_count = preg_match_all('/' . preg_quote($token_begin, '/') . '/', $content);
@@ -990,7 +991,7 @@ class File {
         }
         continue;
       }
-      elseif (str_contains($line, $token_end)) {
+      if (str_contains($line, $token_end)) {
         if ($with_content) {
           $within_token = FALSE;
         }

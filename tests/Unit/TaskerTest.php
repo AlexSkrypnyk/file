@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 #[CoversMethod(Tasker::class, 'setIterator')]
 #[CoversMethod(Tasker::class, 'process')]
 #[CoversMethod(Tasker::class, 'clear')]
-class TaskerTest extends UnitTestCase {
+final class TaskerTest extends UnitTestCase {
 
   public function testProcessWithGenericContext(): void {
     $tasker = new Tasker();
@@ -61,7 +61,7 @@ class TaskerTest extends UnitTestCase {
     // Verify context was processed by both tasks.
     $this->assertCount(2, $final_results, 'Should have processed 2 items');
     foreach ($final_results as $value) {
-      $this->assertStringContainsString('_task1_task2', $value, 'Context should be processed by both tasks');
+      $this->assertStringContainsString('_task1_task2', (string) $value, 'Context should be processed by both tasks');
     }
   }
 
@@ -89,13 +89,11 @@ class TaskerTest extends UnitTestCase {
     $this->assertSame($should_execute, $executed, 'Execution should match expected behavior based on missing components');
   }
 
-  public static function dataProviderProcessWithMissingComponents(): array {
-    return [
-      'has tasks and iterator' => [TRUE, TRUE, TRUE],
-      'has tasks, no iterator' => [TRUE, FALSE, FALSE],
-      'no tasks, has iterator' => [FALSE, TRUE, FALSE],
-      'no tasks, no iterator' => [FALSE, FALSE, FALSE],
-    ];
+  public static function dataProviderProcessWithMissingComponents(): \Iterator {
+    yield 'has tasks and iterator' => [TRUE, TRUE, TRUE];
+    yield 'has tasks, no iterator' => [TRUE, FALSE, FALSE];
+    yield 'no tasks, has iterator' => [FALSE, TRUE, FALSE];
+    yield 'no tasks, no iterator' => [FALSE, FALSE, FALSE];
   }
 
   public function testProcessClearsQueueAfterExecution(): void {
@@ -142,9 +140,7 @@ class TaskerTest extends UnitTestCase {
     $tasker = new Tasker();
 
     foreach ($setup_batches as $batch_name) {
-      $tasker->addTask(function ($context) {
-        return $context;
-      }, $batch_name);
+      $tasker->addTask(fn($context) => $context, $batch_name);
       $tasker->setIterator(function () {
         // Empty generator - yield nothing.
         // @phpstan-ignore-next-line
@@ -200,23 +196,21 @@ class TaskerTest extends UnitTestCase {
     }
   }
 
-  public static function dataProviderClear(): array {
-    return [
-      'clear specific batch from multiple' => [
-        'batch1',
+  public static function dataProviderClear(): \Iterator {
+    yield 'clear specific batch from multiple' => [
+      'batch1',
         ['batch1', 'batch2', 'batch3'],
         ['batch2', 'batch3'],
-      ],
-      'clear all batches' => [
-        NULL,
+    ];
+    yield 'clear all batches' => [
+      NULL,
         ['batch1', 'batch2', 'batch3'],
         [],
-      ],
-      'clear non-existent batch' => [
-        'non_existent',
+    ];
+    yield 'clear non-existent batch' => [
+      'non_existent',
         ['batch1', 'batch2'],
         ['batch1', 'batch2'],
-      ],
     ];
   }
 
@@ -272,44 +266,30 @@ class TaskerTest extends UnitTestCase {
     $tasker->process('test_batch');
   }
 
-  public static function dataProviderProcessExceptions(): array {
-    return [
-      'non-object context' => [
-        function ($context) {
-          return $context;
-        },
-        function () {
+  public static function dataProviderProcessExceptions(): \Iterator {
+    yield 'non-object context' => [
+      fn($context) => $context,
+      function () {
           yield 'not_an_object';
-        },
-        'Context must be an object, string given',
-      ],
-      'non-object return from task' => [
-        function ($context): string {
-          return 'not_an_object';
-        },
-        function () {
+      },
+      'Context must be an object, string given',
+    ];
+    yield 'non-object return from task' => [
+      fn($context): string => 'not_an_object',
+      function () {
           yield (object) ['test' => 'value'];
-        },
-        'Task callback must return an object, string returned',
-      ],
-      'non-generator iterator return (string)' => [
-        function ($context) {
-          return $context;
-        },
-        function (): string {
-          return 'not_a_generator';
-        },
-        'Iterator callable must return a Generator instance, string given',
-      ],
-      'non-generator iterator return (object)' => [
-        function ($context) {
-          return $context;
-        },
-        function (): \stdClass {
-          return new \stdClass();
-        },
-        'Iterator callable must return a Generator instance, stdClass given',
-      ],
+      },
+      'Task callback must return an object, string returned',
+    ];
+    yield 'non-generator iterator return (string)' => [
+      fn($context) => $context,
+      fn(): string => 'not_a_generator',
+      'Iterator callable must return a Generator instance, string given',
+    ];
+    yield 'non-generator iterator return (object)' => [
+      fn($context) => $context,
+      fn(): \stdClass => new \stdClass(),
+      'Iterator callable must return a Generator instance, stdClass given',
     ];
   }
 

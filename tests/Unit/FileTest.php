@@ -27,7 +27,7 @@ use Symfony\Component\Filesystem\Filesystem;
 #[CoversMethod(File::class, 'copy')]
 #[CoversMethod(File::class, 'append')]
 #[CoversMethod(File::class, 'remove')]
-class FileTest extends UnitTestCase {
+final class FileTest extends UnitTestCase {
 
   protected string $testTmpDir;
 
@@ -131,21 +131,16 @@ class FileTest extends UnitTestCase {
     $this->assertSame($expected, File::absolute($file, $base));
   }
 
-  public static function dataProviderAbsolute(): array {
-    return [
-      // Absolute path remains unchanged.
-      ['/var/www/file.txt', NULL, '/var/www/file.txt'],
-      ['/var/www/file.txt', '/base/path', '/var/www/file.txt'],
-
-      // Relative path resolved from current working directory.
-      ['file.txt', NULL, File::cwd() . DIRECTORY_SEPARATOR . 'file.txt'],
-
-      // Relative path resolved from provided base path.
-      ['file.txt', '/base/path', '/base/path/file.txt'],
-
-      // Handling nested relative paths.
-      ['../file.txt', '/base/path/subdir', '/base/path/file.txt'],
-    ];
+  public static function dataProviderAbsolute(): \Iterator {
+    // Absolute path remains unchanged.
+    yield ['/var/www/file.txt', NULL, '/var/www/file.txt'];
+    yield ['/var/www/file.txt', '/base/path', '/var/www/file.txt'];
+    // Relative path resolved from current working directory.
+    yield ['file.txt', NULL, File::cwd() . DIRECTORY_SEPARATOR . 'file.txt'];
+    // Relative path resolved from provided base path.
+    yield ['file.txt', '/base/path', '/base/path/file.txt'];
+    // Handling nested relative paths.
+    yield ['../file.txt', '/base/path/subdir', '/base/path/file.txt'];
   }
 
   #[DataProvider('dataProviderDir')]
@@ -176,12 +171,10 @@ class FileTest extends UnitTestCase {
     }
   }
 
-  public static function dataProviderDir(): array {
-    return [
-      ['existing_dir', 0777, FALSE],
-      ['non_existing_dir', 0777, TRUE],
-      ['existing_file', 0777, TRUE],
-    ];
+  public static function dataProviderDir(): \Iterator {
+    yield ['existing_dir', 0777, FALSE];
+    yield ['non_existing_dir', 0777, TRUE];
+    yield ['existing_file', 0777, TRUE];
   }
 
   #[DataProvider('dataProviderMkdir')]
@@ -212,12 +205,10 @@ class FileTest extends UnitTestCase {
     }
   }
 
-  public static function dataProviderMkdir(): array {
-    return [
-      ['existing_dir', 0777, FALSE],
-      ['non_existing_dir', 0777, FALSE],
-      ['existing_file', 0777, TRUE],
-    ];
+  public static function dataProviderMkdir(): \Iterator {
+    yield ['existing_dir', 0777, FALSE];
+    yield ['non_existing_dir', 0777, FALSE];
+    yield ['existing_file', 0777, TRUE];
   }
 
   public function testMkdirThrowsSpecificExceptionForExistingFile(): void {
@@ -253,15 +244,12 @@ class FileTest extends UnitTestCase {
     rmdir($path);
   }
 
-  public static function dataProviderTmpDir(): array {
+  public static function dataProviderTmpDir(): \Iterator {
     $base = sys_get_temp_dir();
-
-    return [
-      'default dir, default prefix' => [NULL, 'tmp_'],
-      'default dir, custom prefix' => [NULL, 'custom_'],
-      'custom dir, default prefix' => [$base . DIRECTORY_SEPARATOR . 'custom_dir', 'tmp_'],
-      'custom dir, custom prefix' => [$base . DIRECTORY_SEPARATOR . 'custom_dir', 'custom_'],
-    ];
+    yield 'default dir, default prefix' => [NULL, 'tmp_'];
+    yield 'default dir, custom prefix' => [NULL, 'custom_'];
+    yield 'custom dir, default prefix' => [$base . DIRECTORY_SEPARATOR . 'custom_dir', 'tmp_'];
+    yield 'custom dir, custom prefix' => [$base . DIRECTORY_SEPARATOR . 'custom_dir', 'custom_'];
   }
 
   #[DataProvider('dataProviderFindMatchingPath')]
@@ -354,7 +342,7 @@ class FileTest extends UnitTestCase {
     $result = File::copyIfExists($source_file, $dest_file);
     $this->assertTrue($result);
     $this->assertFileExists($dest_file);
-    $this->assertEquals('test content', file_get_contents($dest_file));
+    $this->assertSame('test content', file_get_contents($dest_file));
 
     $nonexistent_source = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
     $nonexistent_dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent_dest.txt';
@@ -417,7 +405,7 @@ class FileTest extends UnitTestCase {
     $result = File::copy($source_dir . DIRECTORY_SEPARATOR . 'file.txt', $dest_dir . DIRECTORY_SEPARATOR . 'file.txt');
     $this->assertTrue($result);
     $this->assertFileExists($dest_dir . DIRECTORY_SEPARATOR . 'file.txt');
-    $this->assertEquals('file content', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . 'file.txt'));
+    $this->assertSame('file content', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . 'file.txt'));
 
     $dest_symlink = $dest_dir . DIRECTORY_SEPARATOR . 'symlink.txt';
     $result = File::copy($symlink, $dest_symlink);
@@ -480,15 +468,13 @@ class FileTest extends UnitTestCase {
     $this->assertSame($expected_content, $actual_content);
   }
 
-  public static function dataProviderAppend(): array {
-    return [
-      'append to empty file' => ['', 'Hello World', 'Hello World'],
-      'append to existing content' => ['Hello', ' World', 'Hello World'],
-      'append multiline content' => ["First line\n", "Second line\n", "First line\nSecond line\n"],
-      'append empty string' => ['Existing content', '', 'Existing content'],
-      'append special characters' => ['Base: ', '«Special»', 'Base: «Special»'],
-      'append with newlines' => ['Line 1', "\nLine 2\nLine 3", "Line 1\nLine 2\nLine 3"],
-    ];
+  public static function dataProviderAppend(): \Iterator {
+    yield 'append to empty file' => ['', 'Hello World', 'Hello World'];
+    yield 'append to existing content' => ['Hello', ' World', 'Hello World'];
+    yield 'append multiline content' => ["First line\n", "Second line\n", "First line\nSecond line\n"];
+    yield 'append empty string' => ['Existing content', '', 'Existing content'];
+    yield 'append special characters' => ['Base: ', '«Special»', 'Base: «Special»'];
+    yield 'append with newlines' => ['Line 1', "\nLine 2\nLine 3", "Line 1\nLine 2\nLine 3"];
   }
 
   public function testAppendThrowsExceptionForNonExistentFile(): void {
@@ -577,14 +563,12 @@ class FileTest extends UnitTestCase {
     $this->assertDirectoryDoesNotExist($path);
   }
 
-  public static function dataProviderRemove(): array {
-    return [
-      'single file' => ['file', 'single.txt'],
-      'empty directory' => ['directory', 'empty_dir'],
-      'nested directory with files' => ['nested_directory', 'nested_dir'],
-      'file with special chars' => ['file', 'special-file_name.txt'],
-      'hidden file' => ['file', '.hidden_file'],
-    ];
+  public static function dataProviderRemove(): \Iterator {
+    yield 'single file' => ['file', 'single.txt'];
+    yield 'empty directory' => ['directory', 'empty_dir'];
+    yield 'nested directory with files' => ['nested_directory', 'nested_dir'];
+    yield 'file with special chars' => ['file', 'special-file_name.txt'];
+    yield 'hidden file' => ['file', '.hidden_file'];
   }
 
 }

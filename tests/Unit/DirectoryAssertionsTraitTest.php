@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(DirectoryAssertionsTrait::class)]
-class DirectoryAssertionsTraitTest extends TestCase {
+final class DirectoryAssertionsTraitTest extends TestCase {
 
   use DirectoryAssertionsTrait;
 
