@@ -39,32 +39,33 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
-  public static function versions(): static {
-    return static::create()
-      // SRI integrity hashes.
-      ->addReplacement(Replacement::create('integrity', '/sha512\-[A-Za-z0-9+\/]{86}={0,2}/', Replacement::INTEGRITY))
-      // GitHub Actions with digests and version comments.
-      ->addReplacement(Replacement::create('gha_digest_versioned', '/([\w.-]+\/[\w.-]+)@[a-f0-9]{40}\s*#\s*v\d+(?:\.\d+)*/', '${1}@' . Replacement::HASH . ' # ' . Replacement::VERSION))
-      // GitHub Actions with digests (no version comments).
-      ->addReplacement(Replacement::create('gha_digest', '/([\w.-]+\/[\w.-]+)@[a-f0-9]{40}/', '${1}@' . Replacement::HASH))
-      // Git commit hashes (prefixed with #).
-      ->addReplacement(Replacement::create('hash_anchor', '/#[a-fA-F0-9]{39,40}/', '#' . Replacement::HASH))
-      // Git commit hashes (prefixed with @).
-      ->addReplacement(Replacement::create('hash_at', '/@[a-fA-F0-9]{39,40}/', '@' . Replacement::HASH))
-      // composer.json and package.json versions.
-      ->addReplacement(Replacement::create('json_version', '/": "(?:\^|~|>=|<=)?\d+(?:\.\d+){0,2}(?:(?:-|@)[\w.-]+)?"/', '": "' . Replacement::VERSION . '"'))
-      // Docker images with digests (must come before regular docker pattern).
-      ->addReplacement(Replacement::create('docker_digest', '/([\w.-]+\/[\w.-]+:)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?@sha256:[a-f0-9]{64}/', '${1}' . Replacement::VERSION))
-      // Docker image tags.
-      ->addReplacement(Replacement::create('docker_tag', '/([\w.-]+\/[\w.-]+:)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}' . Replacement::VERSION))
-      // Docker canary tags.
-      ->addReplacement(Replacement::create('docker_canary', '/([\w.-]+\/[\w.-]+:)canary$/m', '${1}' . Replacement::VERSION))
-      // GitHub Actions versions.
-      ->addReplacement(Replacement::create('gha_version', '/([\w.-]+\/[\w.-]+)@(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}@' . Replacement::VERSION))
-      // Node version in workflows.
-      ->addReplacement(Replacement::create('node_version', '/(node-version:\s)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}' . Replacement::VERSION))
-      // Catch-all semver pattern.
-      ->addReplacement(Replacement::create('semver', '/(?:\^|~)?v?\d+\.\d+\.\d+(?:(?:-|@)[\w.-]+)?/'));
+  public function addVersionReplacements(): static {
+    // SRI integrity hashes.
+    $this->addReplacement(Replacement::create('integrity', '/sha512\-[A-Za-z0-9+\/]{86}={0,2}/', Replacement::INTEGRITY));
+    // GitHub Actions with digests and version comments.
+    $this->addReplacement(Replacement::create('gha_digest_versioned', '/([\w.-]+\/[\w.-]+)@[a-f0-9]{40}\s*#\s*v\d+(?:\.\d+)*/', '${1}@' . Replacement::HASH . ' # ' . Replacement::VERSION));
+    // GitHub Actions with digests (no version comments).
+    $this->addReplacement(Replacement::create('gha_digest', '/([\w.-]+\/[\w.-]+)@[a-f0-9]{40}/', '${1}@' . Replacement::HASH));
+    // Git commit hashes (prefixed with #).
+    $this->addReplacement(Replacement::create('hash_anchor', '/#[a-fA-F0-9]{39,40}/', '#' . Replacement::HASH));
+    // Git commit hashes (prefixed with @).
+    $this->addReplacement(Replacement::create('hash_at', '/@[a-fA-F0-9]{39,40}/', '@' . Replacement::HASH));
+    // composer.json and package.json versions.
+    $this->addReplacement(Replacement::create('json_version', '/": "(?:\^|~|>=|<=)?\d+(?:\.\d+){0,2}(?:(?:-|@)[\w.-]+)?"/', '": "' . Replacement::VERSION . '"'));
+    // Docker images with digests (must come before regular docker pattern).
+    $this->addReplacement(Replacement::create('docker_digest', '/([\w.-]+\/[\w.-]+:)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?@sha256:[a-f0-9]{64}/', '${1}' . Replacement::VERSION));
+    // Docker image tags.
+    $this->addReplacement(Replacement::create('docker_tag', '/([\w.-]+\/[\w.-]+:)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}' . Replacement::VERSION));
+    // Docker canary tags.
+    $this->addReplacement(Replacement::create('docker_canary', '/([\w.-]+\/[\w.-]+:)canary$/m', '${1}' . Replacement::VERSION));
+    // GitHub Actions versions.
+    $this->addReplacement(Replacement::create('gha_version', '/([\w.-]+\/[\w.-]+)@(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}@' . Replacement::VERSION));
+    // Node version in workflows.
+    $this->addReplacement(Replacement::create('node_version', '/(node-version:\s)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}' . Replacement::VERSION));
+    // Catch-all semver pattern.
+    $this->addReplacement(Replacement::create('semver', '/(?:\^|~)?v?\d+\.\d+\.\d+(?:(?:-|@)[\w.-]+)?/'));
+
+    return $this;
   }
 
   /**

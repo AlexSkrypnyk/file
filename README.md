@@ -228,7 +228,7 @@ use AlexSkrypnyk\File\Internal\Replacer\Replacer;
 use AlexSkrypnyk\File\Internal\Replacer\Replacement;
 
 // Use preset version patterns
-$replacer = Replacer::versions();
+$replacer = Replacer::create()->addVersionReplacements();
 $replacer->replaceInDir($directory);
 
 // Or create custom replacer
@@ -246,8 +246,8 @@ $replacer->replaceInDir($directory);
 
 #### Version Patterns Preset
 
-The `Replacer::versions()` factory method creates a replacer with common patterns
-for normalizing volatile content:
+The `addVersionReplacements()` method adds common patterns for normalizing
+volatile content:
 
 | Pattern | Example Input | Output |
 |---------|---------------|--------|
@@ -263,7 +263,8 @@ for normalizing volatile content:
 Add exclusions to prevent specific matches from being replaced:
 
 ```php
-$replacer = Replacer::versions()
+$replacer = Replacer::create()
+    ->addVersionReplacements()
     ->setMaxReplacements(0)
     ->addExclusions(['/^0\.0\./'], 'semver');  // Don't replace 0.0.x versions
 
