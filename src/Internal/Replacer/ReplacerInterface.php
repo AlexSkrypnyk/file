@@ -18,12 +18,15 @@ interface ReplacerInterface {
   public static function create(): static;
 
   /**
-   * Create a replacer with version normalization patterns preset.
+   * Add version normalization replacement patterns.
+   *
+   * Adds preset patterns for normalizing semver versions, git hashes,
+   * SRI integrity hashes, Docker image tags, GitHub Actions versions, etc.
    *
    * @return static
-   *   A new replacer instance with version patterns.
+   *   The replacer instance for chaining.
    */
-  public static function versions(): static;
+  public function addVersionReplacements(): static;
 
   /**
    * Add a replacement (replaces if name already exists).

@@ -18,7 +18,7 @@ final class ReplacerTest extends UnitTestCase {
 
   #[DataProvider('dataProviderVersionsPreset')]
   public function testVersionsPreset(string $name, string $input, string $expected, bool $expected_changed): void {
-    $replacement = Replacer::versions()->getReplacement($name);
+    $replacement = Replacer::create()->addVersionReplacements()->getReplacement($name);
     $this->assertInstanceOf(ReplacementInterface::class, $replacement, sprintf('Replacement "%s" not found', $name));
 
     $result = $replacement->apply($input);
@@ -381,7 +381,7 @@ final class ReplacerTest extends UnitTestCase {
     // Copy fixture to temp.
     File::copy($before_dir, $temp_dir);
 
-    $replacer = Replacer::versions()->setMaxReplacements(0);
+    $replacer = Replacer::create()->addVersionReplacements()->setMaxReplacements(0);
 
     $result = $replacer->replaceInDir($temp_dir);
 
@@ -401,7 +401,7 @@ final class ReplacerTest extends UnitTestCase {
     file_put_contents($temp_dir . '/root.txt', 'version 1.2.3');
     file_put_contents($ignored_dir . '/ignored.txt', 'version 4.5.6');
 
-    $replacer = Replacer::versions()->setMaxReplacements(0);
+    $replacer = Replacer::create()->addVersionReplacements()->setMaxReplacements(0);
 
     $result = $replacer->replaceInDir($temp_dir, [$ignored_dir]);
 
@@ -515,7 +515,8 @@ final class ReplacerTest extends UnitTestCase {
   }
 
   public function testAddExclusionsIntegrationWithVersionsPreset(): void {
-    $replacer = Replacer::versions()
+    $replacer = Replacer::create()
+      ->addVersionReplacements()
       ->setMaxReplacements(0)
       ->addExclusions(['/^0\.0\./'], 'semver');
 
@@ -537,7 +538,8 @@ final class ReplacerTest extends UnitTestCase {
   }
 
   public function testAddExclusionsWithIpAddress(): void {
-    $replacer = Replacer::versions()
+    $replacer = Replacer::create()
+      ->addVersionReplacements()
       ->setMaxReplacements(0)
       ->addExclusions(['127.0.0.1']);
 
