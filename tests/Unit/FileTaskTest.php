@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
-use AlexSkrypnyk\File\Internal\ContentFile;
+use AlexSkrypnyk\File\ContentFile\ContentFile;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;

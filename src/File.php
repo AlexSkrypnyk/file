@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File;
 
+use AlexSkrypnyk\File\ContentFile\ContentFile;
+use AlexSkrypnyk\File\ContentFile\ContentFileInterface;
 use AlexSkrypnyk\File\Exception\FileException;
-use AlexSkrypnyk\File\Internal\ContentFile;
-use AlexSkrypnyk\File\Internal\ContentFileInterface;
-use AlexSkrypnyk\File\Internal\Replacer\Replacement;
-use AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface;
-use AlexSkrypnyk\File\Internal\Replacer\Replacer;
-use AlexSkrypnyk\File\Internal\Strings;
-use AlexSkrypnyk\File\Internal\Tasker;
+use AlexSkrypnyk\File\Replacer\Replacement;
+use AlexSkrypnyk\File\Replacer\ReplacementInterface;
+use AlexSkrypnyk\File\Replacer\Replacer;
+use AlexSkrypnyk\File\Task\Tasker;
+use AlexSkrypnyk\File\Util\Strings;
 use Symfony\Component\Filesystem\Filesystem;
 
 /**
@@ -639,7 +639,7 @@ class File {
    *
    * @param string $directory
    *   Directory to search in.
-   * @param string|\AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $needle
+   * @param string|\AlexSkrypnyk\File\Replacer\ReplacementInterface $needle
    *   String, regex pattern, or ReplacementInterface instance.
    * @param string $replacement
    *   String to replace with (ignored when $needle is ReplacementInterface).
@@ -660,7 +660,7 @@ class File {
    *
    * @param string $file
    *   File path to process.
-   * @param string|\AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $needle
+   * @param string|\AlexSkrypnyk\File\Replacer\ReplacementInterface $needle
    *   String, regex pattern, or ReplacementInterface instance.
    * @param string $replacement
    *   String to replace with (ignored when $needle is ReplacementInterface).
@@ -820,7 +820,7 @@ class File {
    *
    * @param string $content
    *   Content string to process.
-   * @param string|\AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $needle
+   * @param string|\AlexSkrypnyk\File\Replacer\ReplacementInterface $needle
    *   String, regex pattern, or ReplacementInterface instance.
    * @param string $replacement
    *   String to replace with (ignored when $needle is ReplacementInterface).
@@ -1139,7 +1139,7 @@ class File {
   /**
    * Get the shared Tasker instance.
    *
-   * @return \AlexSkrypnyk\File\Internal\Tasker
+   * @return \AlexSkrypnyk\File\Task\Tasker
    *   The shared tasker instance.
    */
   protected static function getTasker(): Tasker {
@@ -1160,7 +1160,7 @@ class File {
   /**
    * Set the Replacer instance.
    *
-   * @param \AlexSkrypnyk\File\Internal\Replacer\Replacer|null $replacer
+   * @param \AlexSkrypnyk\File\Replacer\Replacer|null $replacer
    *   The Replacer instance, or NULL to reset to default.
    */
   public static function setReplacer(?Replacer $replacer): void {
@@ -1174,7 +1174,7 @@ class File {
    * instance. Otherwise, returns a fresh Replacer instance for each call
    * to avoid accumulating replacements across operations.
    *
-   * @return \AlexSkrypnyk\File\Internal\Replacer\Replacer
+   * @return \AlexSkrypnyk\File\Replacer\Replacer
    *   The Replacer instance.
    */
   public static function getReplacer(): Replacer {

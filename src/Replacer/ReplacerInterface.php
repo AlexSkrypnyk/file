@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Internal\Replacer;
+namespace AlexSkrypnyk\File\Replacer;
 
 /**
  * Interface for content replacement in directories.
@@ -31,7 +31,7 @@ interface ReplacerInterface {
   /**
    * Add a replacement (replaces if name already exists).
    *
-   * @param \AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface $replacement
+   * @param \AlexSkrypnyk\File\Replacer\ReplacementInterface $replacement
    *   The replacement to add.
    *
    * @return static
@@ -67,7 +67,7 @@ interface ReplacerInterface {
    * @param string $name
    *   Replacement name.
    *
-   * @return \AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface|null
+   * @return \AlexSkrypnyk\File\Replacer\ReplacementInterface|null
    *   The replacement or NULL if not found.
    */
   public function getReplacement(string $name): ?ReplacementInterface;
@@ -75,7 +75,7 @@ interface ReplacerInterface {
   /**
    * Get all configured replacements.
    *
-   * @return array<string, \AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface>
+   * @return array<string, \AlexSkrypnyk\File\Replacer\ReplacementInterface>
    *   All replacements keyed by name.
    */
   public function getReplacements(): array;

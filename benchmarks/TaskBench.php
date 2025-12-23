@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Benchmarks;
 
+use AlexSkrypnyk\File\ContentFile\ContentFile;
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Internal\ContentFile;
 
 /**
  * Benchmarks comparing different task processing approaches.

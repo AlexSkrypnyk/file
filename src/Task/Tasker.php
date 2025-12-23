@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Internal;
+namespace AlexSkrypnyk\File\Task;
 
 /**
  * Generic queue management system for batch operations.

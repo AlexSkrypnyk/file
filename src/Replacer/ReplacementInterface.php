@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Internal\Replacer;
+namespace AlexSkrypnyk\File\Replacer;
 
 /**
  * Interface for a single replacement definition.

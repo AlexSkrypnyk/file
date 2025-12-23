@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Internal;
+namespace AlexSkrypnyk\File\ContentFile;
 
 /**
  * Interface for file objects with mutable content.

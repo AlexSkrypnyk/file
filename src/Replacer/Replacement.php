@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlexSkrypnyk\File\Internal\Replacer;
+namespace AlexSkrypnyk\File\Replacer;
 
-use AlexSkrypnyk\File\Internal\Strings;
+use AlexSkrypnyk\File\Util\Strings;
 
 /**
  * Represents a single replacement definition.
