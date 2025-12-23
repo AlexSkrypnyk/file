@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\Internal\Replacer\Replacement;
-use AlexSkrypnyk\File\Internal\Replacer\ReplacementInterface;
-use AlexSkrypnyk\File\Internal\Replacer\Replacer;
+use AlexSkrypnyk\File\Replacer\Replacement;
+use AlexSkrypnyk\File\Replacer\ReplacementInterface;
+use AlexSkrypnyk\File\Replacer\Replacer;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
