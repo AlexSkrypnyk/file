@@ -18,15 +18,15 @@
     },
     "require": {
         "php": ">=8.2",
-        "symfony/filesystem": "^7.2"
+        "symfony/filesystem": "^7.4.6"
     },
     "require-dev": {
         "alexskrypnyk/phpunit-helpers": "^0.15.0",
         "dealerdirect/phpcodesniffer-composer-installer": "^1",
         "drevops/phpcs-standard": "^0.7",
         "drupal/coder": "^9.0",
-        "ergebnis/composer-normalize": "^2.42",
-        "phpbench/phpbench": "^1.4",
+        "ergebnis/composer-normalize": "^2.50.0",
+        "phpbench/phpbench": "^1.5.1",
         "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^11",
         "rector/rector": "^2"
