@@ -209,39 +209,39 @@ final class FileStringsTest extends UnitTestCase {
     yield [
       'BAR',
       'FOO',
-        ['empty.txt'],
-        ['empty.txt'],
+      ['empty.txt'],
+      ['empty.txt'],
     ];
     yield [
       'BAR',
       'FOO',
-        ['foobar_b.txt', 'foobar_m.txt', 'foobar_e.txt'],
-        ['foofoo_b.txt', 'foofoo_m.txt', 'foofoo_e.txt'],
+      ['foobar_b.txt', 'foobar_m.txt', 'foobar_e.txt'],
+      ['foofoo_b.txt', 'foofoo_m.txt', 'foofoo_e.txt'],
     ];
     yield [
       'BAR',
       'FOO',
-        ['dir1/foobar_b.txt'],
-        ['dir1/foofoo_b.txt'],
+      ['dir1/foobar_b.txt'],
+      ['dir1/foofoo_b.txt'],
     ];
     yield [
       '/BAR/',
       'FOO',
-        ['dir1/foobar_b.txt'],
-        ['dir1/foofoo_b.txt'],
+      ['dir1/foobar_b.txt'],
+      ['dir1/foofoo_b.txt'],
     ];
     // ReplacementInterface tests.
     yield [
       Replacement::create('test', 'BAR', 'FOO'),
       '',
-        ['foobar_b.txt'],
-        ['foofoo_b.txt'],
+      ['foobar_b.txt'],
+      ['foofoo_b.txt'],
     ];
     yield [
       Replacement::create('test', '/BAR/', 'FOO'),
       '',
-        ['dir1/foobar_b.txt'],
-        ['dir1/foofoo_b.txt'],
+      ['dir1/foobar_b.txt'],
+      ['dir1/foofoo_b.txt'],
     ];
   }
 
@@ -464,20 +464,20 @@ final class FileStringsTest extends UnitTestCase {
 
   public static function dataProviderRenameInDir(): \Iterator {
     yield [
-        ['empty.txt'],
-        ['empty.txt'],
+      ['empty.txt'],
+      ['empty.txt'],
     ];
     yield [
-        ['foofoo_b.txt'],
-        ['barbar_b.txt'],
+      ['foofoo_b.txt'],
+      ['barbar_b.txt'],
     ];
     yield [
-        ['dir1/foofoo_b.txt'],
-        ['dir1/barbar_b.txt'],
+      ['dir1/foofoo_b.txt'],
+      ['dir1/barbar_b.txt'],
     ];
     yield [
-        ['foo/foofoo_b.txt'],
-        ['bar/barbar_b.txt'],
+      ['foo/foofoo_b.txt'],
+      ['bar/barbar_b.txt'],
     ];
   }
 
