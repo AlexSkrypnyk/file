@@ -1,6 +1,6 @@
 <p align="center">
   <a href="" rel="noopener">
-  <img width=200px height=200px src="logo.png" alt="File logo"/></a>
+  <img height=100px src="logo.png" alt="File logo"/></a>
 </p>
 
 <h1 align="center">Utilities to work with files and directories</h1>
