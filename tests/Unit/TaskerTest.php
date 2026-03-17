@@ -199,18 +199,18 @@ final class TaskerTest extends UnitTestCase {
   public static function dataProviderClear(): \Iterator {
     yield 'clear specific batch from multiple' => [
       'batch1',
-        ['batch1', 'batch2', 'batch3'],
-        ['batch2', 'batch3'],
+      ['batch1', 'batch2', 'batch3'],
+      ['batch2', 'batch3'],
     ];
     yield 'clear all batches' => [
       NULL,
-        ['batch1', 'batch2', 'batch3'],
-        [],
+      ['batch1', 'batch2', 'batch3'],
+      [],
     ];
     yield 'clear non-existent batch' => [
       'non_existent',
-        ['batch1', 'batch2'],
-        ['batch1', 'batch2'],
+      ['batch1', 'batch2'],
+      ['batch1', 'batch2'],
     ];
   }
 
