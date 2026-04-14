@@ -10,7 +10,7 @@
 [![GitHub Issues](https://img.shields.io/github/issues/AlexSkrypnyk/file.svg)](https://github.com/AlexSkrypnyk/file/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/AlexSkrypnyk/file.svg)](https://github.com/AlexSkrypnyk/file/pulls)
 [![Test PHP](https://github.com/AlexSkrypnyk/file/actions/workflows/test-php.yml/badge.svg)](https://github.com/AlexSkrypnyk/file/actions/workflows/test-php.yml)
-[![codecov](https://codecov.io/gh/AlexSkrypnyk/file/graph/badge.svg?token=7WEB1IXBYT)](https://codecov.io/gh/AlexSkrypnyk/file)
+[![codecov](https://codecov.io/gh/AlexSkrypnyk/file/graph/badge.svg?token=Ln629nGv67)](https://codecov.io/gh/AlexSkrypnyk/file)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/AlexSkrypnyk/file)
 ![LICENSE](https://img.shields.io/github/license/AlexSkrypnyk/file)
 ![Renovate](https://img.shields.io/badge/renovate-enabled-green?logo=renovatebot)
