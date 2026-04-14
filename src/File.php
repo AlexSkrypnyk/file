@@ -219,7 +219,7 @@ class File {
    */
   public static function dirIsEmpty(string $directory): bool {
     $directory = static::dir($directory);
-    return count(static::scandir($directory) ?: []) === 0;
+    return count(static::scandir($directory)) === 0;
   }
 
   /**
