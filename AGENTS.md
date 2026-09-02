@@ -32,7 +32,9 @@ Add classes under `src/` and cover each one with a test in `tests/Unit/`.
   extends `SplFileInfo`
 - `ContentFileInterface` - interface for file objects with mutable content
 - `Tasker` - queue management for batch operations
-- `Replacer` - token replacement across file trees
+- `Replacer` - pattern-based content replacement across file trees
+- `Replacement` - a single named replacement rule with optional exclusions
+- `Strings` (`src/Util/`) - string helpers shared across the library
 - `DirectoryAssertionsTrait`, `FileAssertionsTrait` (`src/Testing/`) - PHPUnit
   assertions for directory and file state
 
@@ -118,16 +120,19 @@ composer install
 1. **PHP_CodeSniffer** - Drupal coding standards + strict types requirement
   - Config: `phpcs.xml`
   - Rules: Drupal standard, DrevOps standard, Generic.PHP.RequireStrictTypes
-  - Relaxed rules in test files (long arrays, missing function docs)
+  - Relaxed rules in test files (long arrays, missing function, class and
+    member variable docs)
 
 2. **PHPStan** - Level 9 static analysis
   - Config: `phpstan.neon`
-  - Ignores: untyped iterables in tests and data providers, PHPBench attributes
+  - Ignores: untyped iterables, PHPBench attributes
 
 3. **Rector** - PHP 8.2 modernization + code quality
   - Config: `rector.php`
-  - Sets: PHP_82, CODE_QUALITY, CODING_STYLE, DEAD_CODE,
-    TYPE_DECLARATION
+  - PHP set: 8.2
+  - Prepared sets: dead code, code quality, coding style, type declarations,
+    naming, instanceof, early return, PHPUnit code quality
+  - Composer-based PHPUnit set, plus `DeclareStrictTypesRector`
 
 ### Coding Conventions
 
