@@ -20,6 +20,11 @@ use Symfony\Component\Filesystem\Filesystem;
 class File {
 
   /**
+   * The shared Replacer instance.
+   */
+  protected static ?Replacer $replacer = NULL;
+
+  /**
    * Get current working directory with absolute path.
    *
    * @return string
@@ -1149,11 +1154,6 @@ class File {
 
     return $tasker;
   }
-
-  /**
-   * The shared Replacer instance.
-   */
-  protected static ?Replacer $replacer = NULL;
 
   /**
    * Set the Replacer instance.
