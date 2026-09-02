@@ -16,18 +16,18 @@ final class FileAssertionsTraitTest extends TestCase {
 
   use FileAssertionsTrait;
 
-  protected string $tmpDir;
+  protected string $testTmpDir;
   protected string $testFile;
 
   protected function setUp(): void {
-    $this->tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_assertions_test_', TRUE);
-    mkdir($this->tmpDir, 0777, TRUE);
-    $this->testFile = $this->tmpDir . DIRECTORY_SEPARATOR . 'test.txt';
+    $this->testTmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_assertions_test_', TRUE);
+    mkdir($this->testTmpDir, 0777, TRUE);
+    $this->testFile = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test.txt';
   }
 
   protected function tearDown(): void {
-    if (is_dir($this->tmpDir)) {
-      File::remove($this->tmpDir);
+    if (is_dir($this->testTmpDir)) {
+      File::remove($this->testTmpDir);
     }
   }
 
@@ -157,8 +157,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFileEqualsFileSuccess(): void {
-    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
     $content = 'This is a test content';
     file_put_contents($file1, $content);
@@ -172,8 +172,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFileEqualsFileFailure(): void {
-    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
     file_put_contents($file1, 'This is content for file 1');
     file_put_contents($file2, 'This is different content for file 2');
@@ -188,8 +188,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFileEqualsFileNonexistentFiles(): void {
-    $file = $this->tmpDir . DIRECTORY_SEPARATOR . 'file.txt';
-    $nonexistent = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
+    $file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file.txt';
+    $nonexistent = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
 
     file_put_contents($file, 'Some content');
 
@@ -213,8 +213,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFileNotEqualsFileSuccess(): void {
-    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
     file_put_contents($file1, 'Content for file 1');
     file_put_contents($file2, 'Different content for file 2');
@@ -223,8 +223,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFileNotEqualsFileFailure(): void {
-    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
     $content = 'Identical content in both files';
     file_put_contents($file1, $content);
@@ -240,8 +240,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFileNotEqualsFileNonexistentFiles(): void {
-    $file = $this->tmpDir . DIRECTORY_SEPARATOR . 'file.txt';
-    $nonexistent = $this->tmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
+    $file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file.txt';
+    $nonexistent = $this->testTmpDir . DIRECTORY_SEPARATOR . 'nonexistent.txt';
 
     file_put_contents($file, 'Some content');
 
@@ -265,8 +265,8 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testFileComparisonCustomMessages(): void {
-    $file1 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
-    $file2 = $this->tmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
+    $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
+    $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
     file_put_contents($file1, 'Content for file 1');
     file_put_contents($file2, 'Different content for file 2');
@@ -300,25 +300,25 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFilesExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
     // Create specified files.
     foreach ($create_files as $file) {
-      file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'content');
+      file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'content');
     }
 
     // If no specific files to create, create all files from the test case.
     if (empty($create_files) && $should_pass) {
       foreach ($files as $file) {
-        file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'test content');
+        file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'test content');
       }
     }
 
     if ($should_pass) {
-      $this->assertFilesExist($this->tmpDir, $files);
+      $this->assertFilesExist($this->testTmpDir, $files);
       // Add assertion to avoid risky tests for empty arrays.
       // @phpstan-ignore-next-line
       $this->assertTrue(TRUE);
     }
     else {
       try {
-        $this->assertFilesExist($this->tmpDir, $files);
+        $this->assertFilesExist($this->testTmpDir, $files);
         $this->fail('Assertion should have failed');
       }
       catch (AssertionFailedError $assertion_failed_error) {
@@ -345,18 +345,18 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFilesDoNotExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
     // Create specified files.
     foreach ($create_files as $file) {
-      file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'content');
+      file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'content');
     }
 
     if ($should_pass) {
-      $this->assertFilesDoNotExist($this->tmpDir, $files);
+      $this->assertFilesDoNotExist($this->testTmpDir, $files);
       // Add assertion to avoid risky tests for empty arrays.
       // @phpstan-ignore-next-line
       $this->assertTrue(TRUE);
     }
     else {
       try {
-        $this->assertFilesDoNotExist($this->tmpDir, $files);
+        $this->assertFilesDoNotExist($this->testTmpDir, $files);
         $this->fail('Assertion should have failed');
       }
       catch (AssertionFailedError $assertion_failed_error) {
@@ -383,7 +383,7 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFilesWildcardExists(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
     // Create files.
     foreach ($create_files as $file) {
-      $file_path = $this->tmpDir . DIRECTORY_SEPARATOR . $file;
+      $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . $file;
       $dir = dirname($file_path);
       if (!is_dir($dir)) {
         mkdir($dir, 0777, TRUE);
@@ -393,8 +393,8 @@ final class FileAssertionsTraitTest extends TestCase {
 
     // Convert patterns to full paths.
     $full_patterns = is_array($patterns) ?
-      array_map(fn($p): string => $this->tmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
-      $this->tmpDir . DIRECTORY_SEPARATOR . $patterns;
+      array_map(fn($p): string => $this->testTmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
+      $this->testTmpDir . DIRECTORY_SEPARATOR . $patterns;
 
     if ($should_pass === 'exception') {
       try {
@@ -439,13 +439,13 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFilesWildcardDoNotExist(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
     // Create files.
     foreach ($create_files as $file) {
-      file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . $file, 'content');
+      file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'content');
     }
 
     // Convert patterns to full paths.
     $full_patterns = is_array($patterns) ?
-      array_map(fn($p): string => $this->tmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
-      $this->tmpDir . DIRECTORY_SEPARATOR . $patterns;
+      array_map(fn($p): string => $this->testTmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
+      $this->testTmpDir . DIRECTORY_SEPARATOR . $patterns;
 
     if ($should_pass === 'exception') {
       try {
@@ -494,14 +494,14 @@ final class FileAssertionsTraitTest extends TestCase {
 
   public function testAssertFilesExistWithCustomMessage(): void {
     // Create test files.
-    file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . 'test1.txt', 'content');
+    file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . 'test1.txt', 'content');
 
     // Test successful assertion with custom message.
-    $this->assertFilesExist($this->tmpDir, ['test1.txt'], 'Custom success message');
+    $this->assertFilesExist($this->testTmpDir, ['test1.txt'], 'Custom success message');
 
     // Test failed assertion with custom message.
     try {
-      $this->assertFilesExist($this->tmpDir, ['nonexistent.txt'], 'Custom failure message');
+      $this->assertFilesExist($this->testTmpDir, ['nonexistent.txt'], 'Custom failure message');
       $this->fail('Assertion should have failed');
     }
     catch (AssertionFailedError $assertion_failed_error) {
@@ -511,14 +511,14 @@ final class FileAssertionsTraitTest extends TestCase {
 
   public function testAssertFilesWildcardExistsWithCustomMessage(): void {
     // Create test files.
-    file_put_contents($this->tmpDir . DIRECTORY_SEPARATOR . 'test.txt', 'content');
+    file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . 'test.txt', 'content');
 
     // Test successful assertion with custom message.
-    $pattern = $this->tmpDir . DIRECTORY_SEPARATOR . '*.txt';
+    $pattern = $this->testTmpDir . DIRECTORY_SEPARATOR . '*.txt';
     $this->assertFilesWildcardExists($pattern, 'Custom success message');
 
     // Test failed assertion with custom message.
-    $nonexistent_pattern = $this->tmpDir . DIRECTORY_SEPARATOR . '*.nonexistent';
+    $nonexistent_pattern = $this->testTmpDir . DIRECTORY_SEPARATOR . '*.nonexistent';
     try {
       $this->assertFilesWildcardExists($nonexistent_pattern, 'Custom failure message');
       $this->fail('Assertion should have failed');
