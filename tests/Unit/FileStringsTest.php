@@ -64,7 +64,7 @@ final class FileStringsTest extends UnitTestCase {
 
     $actual = File::contains($created_file, $string);
 
-    $this->assertEquals($expected, $actual);
+    $this->assertSame($expected, $actual);
   }
 
   public static function dataProviderContainsInFile(): \Iterator {
