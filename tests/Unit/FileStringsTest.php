@@ -498,21 +498,6 @@ final class FileStringsTest extends UnitTestCase {
     $this->assertFalse(File::contains(self::$sut . '/bar/barbar_b.txt', 'BAR'));
   }
 
-  protected function flattenFileTree(array $tree, string $parent = '.'): array {
-    $flatten = [];
-
-    foreach ($tree as $dir => $file) {
-      if (is_array($file)) {
-        $flatten = array_merge($flatten, $this->flattenFileTree($file, $parent . DIRECTORY_SEPARATOR . $dir));
-      }
-      else {
-        $flatten[] = $parent . DIRECTORY_SEPARATOR . $file;
-      }
-    }
-
-    return $flatten;
-  }
-
   #[DataProvider('dataProviderReplaceContent')]
   public function testReplaceContent(string $content, string|Replacement $needle, string $replacement, string $expected): void {
     $result = File::replaceContent($content, $needle, $replacement);
@@ -1117,6 +1102,21 @@ EOT;
     // Now 'foo' should NOT be replaced (fresh Replacer without the rule).
     $content2 = File::replaceContent('foo test', 'test', 'example');
     $this->assertSame('foo example', $content2);
+  }
+
+  protected function flattenFileTree(array $tree, string $parent = '.'): array {
+    $flatten = [];
+
+    foreach ($tree as $dir => $file) {
+      if (is_array($file)) {
+        $flatten = array_merge($flatten, $this->flattenFileTree($file, $parent . DIRECTORY_SEPARATOR . $dir));
+      }
+      else {
+        $flatten[] = $parent . DIRECTORY_SEPARATOR . $file;
+      }
+    }
+
+    return $flatten;
   }
 
 }
