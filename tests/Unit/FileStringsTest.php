@@ -58,9 +58,8 @@ final class FileStringsTest extends UnitTestCase {
     $created_files = self::locationsCopyFilesToSut($files, $dir);
     $created_file = reset($created_files);
 
-    if (empty($created_file) || !file_exists($created_file)) {
-      throw new FileException('File does not exist.');
-    }
+    $this->assertIsString($created_file, 'File does not exist.');
+    $this->assertFileExists($created_file);
 
     $actual = File::contains($created_file, $string);
 
@@ -145,9 +144,8 @@ final class FileStringsTest extends UnitTestCase {
     $sut_files = self::locationsCopyFilesToSut($files, $dir);
     $sut_file = reset($sut_files);
 
-    if (empty($sut_file) || !file_exists($sut_file)) {
-      throw new FileException('File does not exist.');
-    }
+    $this->assertIsString($sut_file, 'File does not exist.');
+    $this->assertFileExists($sut_file);
 
     if ($expect_exception) {
       $this->expectException(FileException::class);
@@ -191,9 +189,7 @@ final class FileStringsTest extends UnitTestCase {
 
     $fixture_files = $this->flattenFileTree($fixture_files, $dir);
     $sut_files = self::locationsCopyFilesToSut($fixture_files, $dir);
-    if (count($sut_files) !== count($expected_files)) {
-      throw new FileException('Provided files number is not equal to expected files number.');
-    }
+    $this->assertCount(count($expected_files), $sut_files, 'Provided files number is not equal to expected files number.');
 
     File::replaceContentInDir(self::$sut, $from, $to);
 
@@ -451,9 +447,7 @@ final class FileStringsTest extends UnitTestCase {
     $fixture_files = $this->flattenFileTree($fixture_files, $dir);
     $sut_files = self::locationsCopyFilesToSut($fixture_files, $dir, FALSE);
 
-    if (count($sut_files) !== count($expected_files)) {
-      throw new FileException('Provided files count is not equal to expected files count.');
-    }
+    $this->assertCount(count($expected_files), $sut_files, 'Provided files count is not equal to expected files count.');
 
     File::renameInDir(self::$sut, 'foo', 'bar');
 
