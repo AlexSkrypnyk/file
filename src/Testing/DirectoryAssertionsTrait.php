@@ -22,7 +22,7 @@ trait DirectoryAssertionsTrait {
    *
    * Example usage in test class:
    * ```php
-   * public static function ignoredPath(): array {
+   * public static function ignoredPaths(): array {
    *   return ['.git', 'node_modules', 'temp/cache'];
    * }
    * ```
