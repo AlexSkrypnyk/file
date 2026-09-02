@@ -849,18 +849,7 @@ class File {
       return $content;
     }
 
-    // Detect the dominant line ending.
-    $crlf_count = substr_count($content, "\r\n");
-    $lf_count = substr_count($content, "\n") - $crlf_count;
-    $cr_count = substr_count($content, "\r") - $crlf_count;
-
-    $line_ending = "\n";
-    if ($crlf_count > $lf_count && $crlf_count > $cr_count) {
-      $line_ending = "\r\n";
-    }
-    elseif ($cr_count > $lf_count && $cr_count > $crlf_count) {
-      $line_ending = "\r";
-    }
+    $line_ending = static::detectLineEnding($content);
 
     $normalized = str_replace(["\r\n", "\r"], "\n", $content);
 
@@ -1048,7 +1037,10 @@ class File {
   }
 
   /**
-   * Detect the line ending used in content.
+   * Detect the dominant line ending used in content.
+   *
+   * Each kind of ending is counted and the most frequent one wins. A tie
+   * resolves to LF, including when LF is absent from the content.
    *
    * @param string $content
    *   Content to inspect.
@@ -1057,11 +1049,15 @@ class File {
    *   The detected line ending.
    */
   protected static function detectLineEnding(string $content): string {
-    if (str_contains($content, "\r\n")) {
+    $crlf_count = substr_count($content, "\r\n");
+    $lf_count = substr_count($content, "\n") - $crlf_count;
+    $cr_count = substr_count($content, "\r") - $crlf_count;
+
+    if ($crlf_count > $lf_count && $crlf_count > $cr_count) {
       return "\r\n";
     }
 
-    if (str_contains($content, "\r")) {
+    if ($cr_count > $lf_count && $cr_count > $crlf_count) {
       return "\r";
     }
 
