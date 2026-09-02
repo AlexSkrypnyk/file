@@ -68,10 +68,10 @@ class File {
 
     $absolutes = [];
     foreach ($parts as $part) {
-      if ('.' === $part) {
+      if ($part === '.') {
         continue;
       }
-      if ('..' === $part) {
+      if ($part === '..') {
         array_pop($absolutes);
       }
       else {
@@ -388,7 +388,7 @@ class File {
     }
 
     $dir = dir($source);
-    while ($dir && FALSE !== $entry = $dir->read()) {
+    while ($dir && ($entry = $dir->read()) !== FALSE) {
       if ($entry === '.') {
         continue;
       }
