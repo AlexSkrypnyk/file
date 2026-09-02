@@ -1104,12 +1104,12 @@ class File {
   public static function runDirectoryTasks(string $directory): void {
     $iterator = function () use ($directory) {
       $files = static::scandir($directory, static::ignoredPaths());
-      foreach ($files as $path) {
-        if (File::isExcluded($path)) {
+      foreach ($files as $filename) {
+        if (static::isExcluded($filename)) {
           continue;
         }
 
-        $file = new ContentFile($path);
+        $file = new ContentFile($filename);
         $original_content = $file->getContent();
 
         $processed_file = yield $file;
