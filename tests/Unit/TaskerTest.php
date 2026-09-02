@@ -169,7 +169,7 @@ final class TaskerTest extends UnitTestCase {
       $this->assertCount(0, $expected_remaining_batches, 'All batches should be cleared successfully');
     }
 
-    // Cleared batches do not execute when a specific batch was cleared.
+    // A cleared batch runs again once a task and an iterator are re-added.
     if ($clear_batch_name !== NULL) {
       $cleared_executed = FALSE;
 
