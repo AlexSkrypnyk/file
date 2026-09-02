@@ -287,6 +287,26 @@ final class FileStringsTest extends UnitTestCase {
       'remove me',
       "line1\rline3\r",
     ];
+    yield 'mixed line endings, lf dominant' => [
+      "line1\nremove me\nline3\r\nline4\n",
+      'remove me',
+      "line1\nline3\nline4\n",
+    ];
+    yield 'mixed line endings, crlf dominant' => [
+      "line1\r\nremove me\r\nline3\nline4\r\n",
+      'remove me',
+      "line1\r\nline3\r\nline4\r\n",
+    ];
+    yield 'mixed line endings, cr dominant' => [
+      "line1\rremove me\rline3\nline4\r",
+      'remove me',
+      "line1\rline3\rline4\r",
+    ];
+    yield 'mixed line endings, crlf and cr tied' => [
+      "line1\r\nremove me\rline3",
+      'remove me',
+      "line1\nline3",
+    ];
   }
 
   #[DataProvider('dataProviderRemoveLineInFile')]
@@ -332,6 +352,12 @@ final class FileStringsTest extends UnitTestCase {
       "line1\rremove me\rline3\r",
       'remove me',
       "line1\rline3\r",
+    ];
+    yield 'handle mixed line endings (LF dominant)' => [
+      'test.txt',
+      "line1\nremove me\nline3\r\nline4\n",
+      'remove me',
+      "line1\nline3\nline4\n",
     ];
     yield 'empty file' => [
       'test.txt',
@@ -734,6 +760,15 @@ final class FileStringsTest extends UnitTestCase {
       "line1\r\nline2\r\n",
       "line1\r\nline2\r\n",
     ];
+    // Mixed line endings.
+    yield 'mixed line endings, lf dominant' => [
+      "line1\n\n\nline2\r\nline3\n",
+      "line1\n\nline2\nline3\n",
+    ];
+    yield 'mixed line endings, crlf dominant' => [
+      "line1\r\n\r\nline2\r\nline3\nline4\r\n",
+      "line1\r\nline2\r\nline3\r\nline4\r\n",
+    ];
   }
 
   public function testCollapseEmptyLinesInFile(): void {
@@ -842,6 +877,11 @@ final class FileStringsTest extends UnitTestCase {
     yield 'old mac line endings (CR)' => ["line1\rTOKEN\rline3\r", 'TOKEN', 'TOKEN', FALSE, "line1\rline3\r"];
     yield 'unix line endings' => ["line1\nTOKEN\nline3\n", 'TOKEN', 'TOKEN', FALSE, "line1\nline3\n"];
     yield 'crlf with content removal' => ["START\r\ncontent\r\nEND\r\nafter\r\n", 'START', 'END', TRUE, "after\r\n"];
+    // Mixed line endings resolve to the dominant one.
+    yield 'mixed line endings, lf dominant' => ["line1\nTOKEN\nline3\r\nline4", 'TOKEN', 'TOKEN', FALSE, "line1\nline3\nline4"];
+    yield 'mixed line endings, crlf dominant' => ["line1\r\nTOKEN\r\nline3\nline4\r\n", 'TOKEN', 'TOKEN', FALSE, "line1\r\nline3\r\nline4\r\n"];
+    yield 'mixed line endings, cr dominant' => ["line1\rTOKEN\rline3\nline4\r", 'TOKEN', 'TOKEN', FALSE, "line1\rline3\rline4\r"];
+    yield 'mixed line endings, crlf and cr tied' => ["line1\r\nTOKEN\rline3", 'TOKEN', 'TOKEN', FALSE, "line1\nline3"];
     // Special characters in tokens.
     yield 'tokens with square brackets' => ["line1\n[TOKEN]\nline3\n(TOKEN)\nline5", '[TOKEN]', '[TOKEN]', FALSE, "line1\nline3\n(TOKEN)\nline5"];
     yield 'tokens with parentheses' => ["line1\n[TOKEN]\nline3\n(TOKEN)\nline5", '(TOKEN)', '(TOKEN)', FALSE, "line1\n[TOKEN]\nline3\nline5"];
