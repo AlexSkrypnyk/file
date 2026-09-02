@@ -143,7 +143,7 @@ final class FileTest extends UnitTestCase {
   }
 
   #[DataProvider('dataProviderDir')]
-  public function testDir(string $directory, int $permissions, bool $expect_exception): void {
+  public function testDir(string $directory, bool $expect_exception): void {
     if ($expect_exception) {
       $this->expectException(FileException::class);
     }
@@ -171,9 +171,9 @@ final class FileTest extends UnitTestCase {
   }
 
   public static function dataProviderDir(): \Iterator {
-    yield ['existing_dir', 0777, FALSE];
-    yield ['non_existing_dir', 0777, TRUE];
-    yield ['existing_file', 0777, TRUE];
+    yield ['existing_dir', FALSE];
+    yield ['non_existing_dir', TRUE];
+    yield ['existing_file', TRUE];
   }
 
   #[DataProvider('dataProviderMkdir')]
