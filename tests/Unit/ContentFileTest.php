@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\ContentFile\ContentFile;
+use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -23,21 +24,7 @@ final class ContentFileTest extends UnitTestCase {
   #[\Override]
   protected function tearDown(): void {
     if (is_dir($this->testTmpDir)) {
-      /** @var \RecursiveIteratorIterator<\RecursiveDirectoryIterator> $files */
-      $files = new \RecursiveIteratorIterator(
-        new \RecursiveDirectoryIterator($this->testTmpDir, \RecursiveDirectoryIterator::SKIP_DOTS),
-        \RecursiveIteratorIterator::CHILD_FIRST
-      );
-      /** @var \SplFileInfo $file */
-      foreach ($files as $file) {
-        if ($file->isDir()) {
-          rmdir((string) $file->getRealPath());
-        }
-        else {
-          unlink((string) $file->getRealPath());
-        }
-      }
-      rmdir($this->testTmpDir);
+      File::remove($this->testTmpDir);
     }
   }
 

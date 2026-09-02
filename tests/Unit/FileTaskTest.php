@@ -28,7 +28,7 @@ final class FileTaskTest extends UnitTestCase {
   #[\Override]
   protected function tearDown(): void {
     if (is_dir($this->testTmpDir)) {
-      File::rmdir($this->testTmpDir);
+      File::remove($this->testTmpDir);
     }
     File::clearDirectoryTasks();
   }

@@ -10,7 +10,6 @@ use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Symfony\Component\Filesystem\Filesystem;
 
 #[CoversClass(File::class)]
 #[CoversMethod(File::class, 'cwd')]
@@ -40,7 +39,7 @@ final class FileTest extends UnitTestCase {
   #[\Override]
   protected function tearDown(): void {
     if (is_dir($this->testTmpDir)) {
-      (new Filesystem())->remove($this->testTmpDir);
+      File::remove($this->testTmpDir);
     }
   }
 
