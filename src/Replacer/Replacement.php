@@ -136,10 +136,6 @@ class Replacement implements ReplacementInterface {
    * {@inheritdoc}
    */
   public function addExclusion(string|\Closure $exclusion): static {
-    // Store exclusions as-is. Type is determined by:
-    // - Closure: callback
-    // - String starting with '/': regex
-    // - Other string: exact string (checked via str_starts_with).
     $this->exclusions[] = $exclusion;
 
     return $this;

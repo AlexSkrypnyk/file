@@ -229,7 +229,6 @@ final class DirectoryAssertionsTraitTest extends TestCase {
       }
 
       public function addToAssertionCount(int $count): void {
-        // Mock implementation for testing.
       }
 
     };
@@ -266,7 +265,6 @@ final class DirectoryAssertionsTraitTest extends TestCase {
       }
 
       public function addToAssertionCount(int $count): void {
-        // Mock implementation for testing.
       }
 
     };
@@ -304,7 +302,6 @@ final class DirectoryAssertionsTraitTest extends TestCase {
       }
 
       public function addToAssertionCount(int $count): void {
-        // Mock implementation for testing.
       }
 
     };
@@ -337,7 +334,6 @@ final class DirectoryAssertionsTraitTest extends TestCase {
       }
 
       public function addToAssertionCount(int $count): void {
-        // Mock implementation for testing.
       }
 
     };
@@ -367,7 +363,6 @@ final class DirectoryAssertionsTraitTest extends TestCase {
       }
 
       public function addToAssertionCount(int $count): void {
-        // Mock implementation for testing.
       }
 
     };
