@@ -714,13 +714,7 @@ class File {
       return $content;
     }
 
-    $line_ending = "\n";
-    if (str_contains($content, "\r\n")) {
-      $line_ending = "\r\n";
-    }
-    elseif (str_contains($content, "\r")) {
-      $line_ending = "\r";
-    }
+    $line_ending = static::detectLineEnding($content);
 
     $lines = preg_split("/\r\n|\r|\n/", $content);
     if ($lines === FALSE) {
@@ -981,13 +975,7 @@ class File {
     }
 
     // Preserve original line endings.
-    $line_ending = "\n";
-    if (str_contains($content, "\r\n")) {
-      $line_ending = "\r\n";
-    }
-    elseif (str_contains($content, "\r")) {
-      $line_ending = "\r";
-    }
+    $line_ending = static::detectLineEnding($content);
 
     foreach ($lines as $line) {
       if (str_contains($line, $token_begin)) {
@@ -1075,6 +1063,27 @@ class File {
     ];
 
     return (bool) preg_match('/^(' . implode('|', $excluded_patterns) . ')$/', $file);
+  }
+
+  /**
+   * Detect the line ending used in content.
+   *
+   * @param string $content
+   *   Content to inspect.
+   *
+   * @return string
+   *   The detected line ending.
+   */
+  protected static function detectLineEnding(string $content): string {
+    if (str_contains($content, "\r\n")) {
+      return "\r\n";
+    }
+
+    if (str_contains($content, "\r")) {
+      return "\r";
+    }
+
+    return "\n";
   }
 
   /**
