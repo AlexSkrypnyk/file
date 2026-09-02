@@ -18,7 +18,7 @@
     },
     "require": {
         "php": ">=8.2",
-        "symfony/filesystem": "^7.2"
+        "symfony/filesystem": "^7.4.18"
     },
     "require-dev": {
         "alexskrypnyk/phpunit-helpers": "^0.16.0",
@@ -26,10 +26,10 @@
         "drevops/phpcs-standard": "^0.7",
         "drupal/coder": "^9.0.1",
         "ergebnis/composer-normalize": "^2.52.0",
-        "phpbench/phpbench": "^1.4",
-        "phpstan/phpstan": "^2.2.8",
+        "phpbench/phpbench": "^1.7.0",
+        "phpstan/phpstan": "^2.2.12",
         "phpunit/phpunit": "^11.5.56",
-        "rector/rector": "^2.6.3"
+        "rector/rector": "^2.6.5"
     },
     "suggest": {
         "phpunit/phpunit": "Required for using FileAssertionsTrait and DirectoryAssertionsTrait (^11)"
