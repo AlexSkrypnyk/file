@@ -12,7 +12,7 @@ composer install
 
 ## Linting
 
-`composer lint` runs PHP_CodeSniffer, PHPStan at level 9, and Rector in dry-run mode. CI fails on any violation.
+`composer lint` runs PHP_CodeSniffer, PHPStan at level 9, and Rector in dry-run mode. CI fails on any violation unless the `CI_LINT_IGNORE_FAILURE` repository variable is set to `1`, which makes the lint step non-blocking. The test step has the same escape hatch in `CI_TEST_IGNORE_FAILURE`.
 
 ```bash
 composer lint
