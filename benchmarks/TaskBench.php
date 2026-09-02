@@ -6,6 +6,11 @@ namespace AlexSkrypnyk\File\Benchmarks;
 
 use AlexSkrypnyk\File\ContentFile\ContentFile;
 use AlexSkrypnyk\File\File;
+use PhpBench\Attributes\AfterMethods;
+use PhpBench\Attributes\BeforeMethods;
+use PhpBench\Attributes\Iterations;
+use PhpBench\Attributes\Revs;
+use PhpBench\Attributes\Warmup;
 
 /**
  * Benchmarks comparing different task processing approaches.
@@ -46,13 +51,12 @@ class TaskBench {
    * Tests multiple directory scans with File::replaceContentInDir() and
    * File::removeTokenInDir() methods. This approach is simple but performs
    * multiple directory scans (one per operation).
-   *
-   * @BeforeMethods("setUp")
-   * @AfterMethods("tearDown")
-   * @Revs(10)
-   * @Warmup(2)
-   * @Iterations(20)
    */
+  #[BeforeMethods('setUp')]
+  #[AfterMethods('tearDown')]
+  #[Revs(10)]
+  #[Warmup(2)]
+  #[Iterations(20)]
   public function benchTraditionalApproach(): void {
     // Perform 10 operations, each requiring a full directory scan.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
@@ -69,13 +73,12 @@ class TaskBench {
    * Tests single directory scan followed by looping through files and
    * performing operations. This approach scans once but performs multiple
    * I/O operations per file.
-   *
-   * @BeforeMethods("setUp")
-   * @AfterMethods("tearDown")
-   * @Revs(10)
-   * @Warmup(2)
-   * @Iterations(20)
    */
+  #[BeforeMethods('setUp')]
+  #[AfterMethods('tearDown')]
+  #[Revs(10)]
+  #[Warmup(2)]
+  #[Iterations(20)]
   public function benchSimpleApproach(): void {
     // Single directory scan to get all files.
     $files = File::scandir($this->testDir, File::ignoredPaths());
@@ -100,13 +103,12 @@ class TaskBench {
    * Tests single directory scan with queue system using ContentFile.
    * This approach performs single directory scan and optimized I/O (single
    * read/write per file).
-   *
-   * @BeforeMethods("setUp")
-   * @AfterMethods("tearDown")
-   * @Revs(10)
-   * @Warmup(2)
-   * @Iterations(20)
    */
+  #[BeforeMethods('setUp')]
+  #[AfterMethods('tearDown')]
+  #[Revs(10)]
+  #[Warmup(2)]
+  #[Iterations(20)]
   public function benchBatchedApproach(): void {
     // Queue all operations using ContentFile.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
