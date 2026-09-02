@@ -275,8 +275,8 @@ final class FileTest extends UnitTestCase {
     $file3 = $test_dir . DIRECTORY_SEPARATOR . 'test_file.php';
     $file4 = $test_dir . DIRECTORY_SEPARATOR . 'Controller.php';
 
-    file_put_contents($file1, "This is a test file.");
-    file_put_contents($file2, "This is another file.");
+    file_put_contents($file1, 'This is a test file.');
+    file_put_contents($file2, 'This is another file.');
     file_put_contents($file3, "<?php\necho 'test';");
     file_put_contents($file4, "<?php\nclass Controller {}");
 

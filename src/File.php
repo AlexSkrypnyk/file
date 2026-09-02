@@ -886,7 +886,7 @@ class File {
 
     // Handle content that's only newlines.
     if (preg_match('/^\n*$/', $normalized)) {
-      return "";
+      return '';
     }
 
     // Remove leading newlines.
