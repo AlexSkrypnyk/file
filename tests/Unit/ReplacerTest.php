@@ -303,7 +303,7 @@ final class ReplacerTest extends UnitTestCase {
   public function testGetReplacementNotFound(): void {
     $replacer = Replacer::create();
 
-    $this->assertNotInstanceOf(ReplacementInterface::class, $replacer->getReplacement('nonexistent'));
+    $this->assertNull($replacer->getReplacement('nonexistent'));
   }
 
   public function testReplace(): void {
