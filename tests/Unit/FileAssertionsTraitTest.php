@@ -19,12 +19,14 @@ final class FileAssertionsTraitTest extends TestCase {
   protected string $testTmpDir;
   protected string $testFile;
 
+  #[\Override]
   protected function setUp(): void {
     $this->testTmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_assertions_test_', TRUE);
     mkdir($this->testTmpDir, 0777, TRUE);
     $this->testFile = $this->testTmpDir . DIRECTORY_SEPARATOR . 'test.txt';
   }
 
+  #[\Override]
   protected function tearDown(): void {
     if (is_dir($this->testTmpDir)) {
       File::remove($this->testTmpDir);

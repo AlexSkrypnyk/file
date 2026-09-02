@@ -17,11 +17,13 @@ final class DirectoryAssertionsTraitTest extends TestCase {
 
   protected string $testTmpDir;
 
+  #[\Override]
   protected function setUp(): void {
     $this->testTmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('directory_assertions_test_', TRUE);
     mkdir($this->testTmpDir, 0777, TRUE);
   }
 
+  #[\Override]
   protected function tearDown(): void {
     if (is_dir($this->testTmpDir)) {
       File::remove($this->testTmpDir);
