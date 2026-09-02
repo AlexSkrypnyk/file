@@ -28,7 +28,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testAssertDirectoryContainsStringPositive(): void {
+  public function testAssertDirectoryContainsStringSuccess(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -43,7 +43,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
   }
 
-  public function testAssertDirectoryContainsStringNegative(): void {
+  public function testAssertDirectoryContainsStringFailure(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -67,7 +67,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testAssertDirectoryNotContainsStringPositive(): void {
+  public function testAssertDirectoryNotContainsStringSuccess(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -81,7 +81,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
   }
 
-  public function testAssertDirectoryNotContainsStringNegative(): void {
+  public function testAssertDirectoryNotContainsStringFailure(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -106,7 +106,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testAssertDirectoryContainsWordPositive(): void {
+  public function testAssertDirectoryContainsWordSuccess(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -121,7 +121,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
   }
 
-  public function testAssertDirectoryContainsWordNegative(): void {
+  public function testAssertDirectoryContainsWordFailure(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -153,7 +153,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     }
   }
 
-  public function testAssertDirectoryNotContainsWordPositive(): void {
+  public function testAssertDirectoryNotContainsWordSuccess(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
@@ -170,7 +170,7 @@ final class DirectoryAssertionsTraitTest extends TestCase {
     $this->addToAssertionCount(1);
   }
 
-  public function testAssertDirectoryNotContainsWordNegative(): void {
+  public function testAssertDirectoryNotContainsWordFailure(): void {
     $file1 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file1.txt';
     $file2 = $this->testTmpDir . DIRECTORY_SEPARATOR . 'file2.txt';
 
