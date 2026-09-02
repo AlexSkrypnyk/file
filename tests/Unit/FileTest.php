@@ -85,7 +85,7 @@ final class FileTest extends UnitTestCase {
     $this->assertSame($expected, File::realpath($path));
   }
 
-  public static function dataProviderRealpath(): array {
+  public static function dataProviderRealpath(): \Iterator {
     $cwd = getcwd();
 
     if ($cwd === FALSE) {
@@ -106,23 +106,21 @@ final class FileTest extends UnitTestCase {
       symlink($symlink_target, $symlink_path);
     }
 
-    return [
-      // Absolute paths remain unchanged.
-      ['/var/www/file.txt', '/var/www/file.txt'],
+    // Absolute paths remain unchanged.
+    yield ['/var/www/file.txt', '/var/www/file.txt'];
 
-      // Relative path resolved from current working directory.
-      ['file.txt', $cwd . DIRECTORY_SEPARATOR . 'file.txt'],
+    // Relative path resolved from current working directory.
+    yield ['file.txt', $cwd . DIRECTORY_SEPARATOR . 'file.txt'];
 
-      // Parent directory resolution.
-      ['../file.txt', dirname($cwd) . DIRECTORY_SEPARATOR . 'file.txt'],
-      ['./file.txt', $cwd . DIRECTORY_SEPARATOR . 'file.txt'],
+    // Parent directory resolution.
+    yield ['../file.txt', dirname($cwd) . DIRECTORY_SEPARATOR . 'file.txt'];
+    yield ['./file.txt', $cwd . DIRECTORY_SEPARATOR . 'file.txt'];
 
-      // Temporary directory resolution.
-      [$tmp_dir . DIRECTORY_SEPARATOR . 'file.txt', $tmp_realpath . DIRECTORY_SEPARATOR . 'file.txt'],
+    // Temporary directory resolution.
+    yield [$tmp_dir . DIRECTORY_SEPARATOR . 'file.txt', $tmp_realpath . DIRECTORY_SEPARATOR . 'file.txt'];
 
-      // Symlink resolution.
-      [$symlink_path, $symlink_target],
-    ];
+    // Symlink resolution.
+    yield [$symlink_path, $symlink_target];
   }
 
   #[DataProvider('dataProviderAbsolute')]
@@ -265,7 +263,7 @@ final class FileTest extends UnitTestCase {
     }
   }
 
-  public static function dataProviderFindMatchingPath(): array {
+  public static function dataProviderFindMatchingPath(): \Iterator {
     $test_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . uniqid('file_test_', TRUE);
     mkdir($test_dir, 0777, TRUE);
 
@@ -279,22 +277,20 @@ final class FileTest extends UnitTestCase {
     file_put_contents($file3, "<?php\necho 'test';");
     file_put_contents($file4, "<?php\nclass Controller {}");
 
-    return [
-      'single path, no needle' => [$file1, NULL, $file1],
-      'single path, with needle in path' => [$file1, 'file1', $file1],
-      'single path, needle missing in path' => [$file2, 'nonexistent', NULL],
-      'glob pattern, first match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', NULL, $file1],
-      'glob pattern, matching path' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', 'file1', $file1],
-      'glob pattern, no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.md', NULL, NULL],
-      // Regex pattern tests.
-      'regex: match .txt extension' => [$test_dir . DIRECTORY_SEPARATOR . 'file*.txt', '/file1\.txt$/', $file1],
-      'regex: match .php extension' => [$test_dir . DIRECTORY_SEPARATOR . 'test*.php', '/test_file\.php$/', $file3],
-      'regex: match Controller in path' => [$test_dir . DIRECTORY_SEPARATOR . '*.php', '/Controller\.php$/', $file4],
-      'regex: match file starting with test' => [$test_dir . DIRECTORY_SEPARATOR . 'test*', '/test_file/', $file3],
-      'regex: case-insensitive match' => [$test_dir . DIRECTORY_SEPARATOR . 'C*.php', '/controller/i', $file4],
-      'regex: no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', '/\.php$/', NULL],
-      'regex: alternative delimiter' => [$test_dir . DIRECTORY_SEPARATOR . 'file1*', '#file1\.txt#', $file1],
-    ];
+    yield 'single path, no needle' => [$file1, NULL, $file1];
+    yield 'single path, with needle in path' => [$file1, 'file1', $file1];
+    yield 'single path, needle missing in path' => [$file2, 'nonexistent', NULL];
+    yield 'glob pattern, first match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', NULL, $file1];
+    yield 'glob pattern, matching path' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', 'file1', $file1];
+    yield 'glob pattern, no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.md', NULL, NULL];
+    // Regex pattern tests.
+    yield 'regex: match .txt extension' => [$test_dir . DIRECTORY_SEPARATOR . 'file*.txt', '/file1\.txt$/', $file1];
+    yield 'regex: match .php extension' => [$test_dir . DIRECTORY_SEPARATOR . 'test*.php', '/test_file\.php$/', $file3];
+    yield 'regex: match Controller in path' => [$test_dir . DIRECTORY_SEPARATOR . '*.php', '/Controller\.php$/', $file4];
+    yield 'regex: match file starting with test' => [$test_dir . DIRECTORY_SEPARATOR . 'test*', '/test_file/', $file3];
+    yield 'regex: case-insensitive match' => [$test_dir . DIRECTORY_SEPARATOR . 'C*.php', '/controller/i', $file4];
+    yield 'regex: no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', '/\.php$/', NULL];
+    yield 'regex: alternative delimiter' => [$test_dir . DIRECTORY_SEPARATOR . 'file1*', '#file1\.txt#', $file1];
   }
 
   public function testRmdirAndRmdirEmpty(): void {
