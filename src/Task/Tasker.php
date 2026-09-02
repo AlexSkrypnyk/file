@@ -64,7 +64,6 @@ class Tasker {
     $generator = call_user_func($this->iterators[$batch_name]);
     $tasks = $this->queues[$batch_name];
 
-    // Verify the callable returned a Generator instance.
     if (!$generator instanceof \Generator) {
       throw new \InvalidArgumentException(sprintf(
         'Iterator callable must return a Generator instance, %s given',
@@ -72,7 +71,6 @@ class Tasker {
       ));
     }
 
-    // Start the generator and process each yielded item.
     $generator->rewind();
     while ($generator->valid()) {
       $context = $generator->current();
@@ -84,7 +82,6 @@ class Tasker {
         ));
       }
 
-      // Apply all tasks sequentially, passing the full context.
       $processed_context = $context;
       foreach ($tasks as $item_callback) {
         $processed_context = $item_callback($processed_context);
@@ -97,11 +94,9 @@ class Tasker {
         }
       }
 
-      // Send the processed context back to the generator.
       $generator->send($processed_context);
     }
 
-    // Clear the batch after execution.
     $this->clear($batch_name);
 
     return $this;

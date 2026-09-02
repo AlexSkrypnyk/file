@@ -339,7 +339,6 @@ final class ReplacerTest extends UnitTestCase {
     $content = 'a b c d';
     $replacer->replace($content);
 
-    // Only first 2 replacements should be applied.
     $this->assertSame('A B c d', $content);
   }
 
@@ -353,7 +352,6 @@ final class ReplacerTest extends UnitTestCase {
     $content = 'a b c';
     $replacer->replace($content, 3);
 
-    // Override allows all 3 replacements.
     $this->assertSame('A B C', $content);
   }
 
@@ -369,7 +367,6 @@ final class ReplacerTest extends UnitTestCase {
     $content = 'a b c d e';
     $replacer->replace($content);
 
-    // All replacements should be applied.
     $this->assertSame('A B C D E', $content);
   }
 
@@ -378,7 +375,6 @@ final class ReplacerTest extends UnitTestCase {
     $after_dir = self::$fixtures . '/replacer/after';
     $temp_dir = self::$tmp . '/replacer_test';
 
-    // Copy fixture to temp.
     File::copy($before_dir, $temp_dir);
 
     $replacer = Replacer::create()->addVersionReplacements()->setMaxReplacements(0);
@@ -393,11 +389,9 @@ final class ReplacerTest extends UnitTestCase {
     $temp_dir = self::$tmp . '/replacer_ignore_test';
     $ignored_dir = $temp_dir . '/ignored';
 
-    // Create directory structure.
     File::mkdir($temp_dir);
     File::mkdir($ignored_dir);
 
-    // Create files with version strings.
     file_put_contents($temp_dir . '/root.txt', 'version 1.2.3');
     file_put_contents($ignored_dir . '/ignored.txt', 'version 4.5.6');
 
@@ -406,9 +400,7 @@ final class ReplacerTest extends UnitTestCase {
     $result = $replacer->replaceInDir($temp_dir, [$ignored_dir]);
 
     $this->assertSame($replacer, $result);
-    // Root file should be replaced.
     $this->assertSame('version __VERSION__', file_get_contents($temp_dir . '/root.txt'));
-    // Ignored directory file should NOT be replaced.
     $this->assertSame('version 4.5.6', file_get_contents($ignored_dir . '/ignored.txt'));
   }
 
@@ -418,7 +410,6 @@ final class ReplacerTest extends UnitTestCase {
       ->addReplacement(Replacement::create('r2', '/v\d+/', '__V2__'))
       ->addExclusions(['/^0\./']);
 
-    // Both rules should have the exclusion.
     $this->assertCount(1, $replacer->getReplacement('r1')?->getExclusions() ?? []);
     $this->assertCount(1, $replacer->getReplacement('r2')?->getExclusions() ?? []);
 
@@ -434,7 +425,6 @@ final class ReplacerTest extends UnitTestCase {
       ->addReplacement(Replacement::create('r2', '/v\d+/', '__V2__'))
       ->addExclusions(['/^0\./'], 'r1');
 
-    // Only r1 should have the exclusion.
     $this->assertCount(1, $replacer->getReplacement('r1')?->getExclusions() ?? []);
     $this->assertCount(0, $replacer->getReplacement('r2')?->getExclusions() ?? []);
 

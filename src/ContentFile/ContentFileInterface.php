@@ -7,8 +7,7 @@ namespace AlexSkrypnyk\File\ContentFile;
 /**
  * Interface for file objects with mutable content.
  *
- * This interface defines the contract for file objects that can hold
- * and modify content in memory, typically used for batch file processing.
+ * Implementations can hold and modify content in memory.
  */
 interface ContentFileInterface {
 

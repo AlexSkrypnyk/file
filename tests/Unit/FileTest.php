@@ -44,38 +44,30 @@ final class FileTest extends UnitTestCase {
   }
 
   public function testCwd(): void {
-    // Store the original working directory.
     $original_cwd = getcwd();
     $this->assertNotFalse($original_cwd, 'Failed to get current working directory');
 
-    // Verify that File::cwd() returns the current directory.
     $file_cwd = File::cwd();
     $this->assertSame(File::realpath($original_cwd), $file_cwd);
 
-    // Create a temporary directory to change to.
     $temp_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'cwd_test';
     mkdir($temp_dir, 0777, TRUE);
     $this->assertDirectoryExists($temp_dir);
 
-    // Change to the temporary directory.
     $change_result = chdir($temp_dir);
     $this->assertTrue($change_result, 'Failed to change directory');
 
-    // Verify that File::cwd() now returns the new directory.
     $new_file_cwd = File::cwd();
     $expected_new_cwd = File::realpath($temp_dir);
     $this->assertSame($expected_new_cwd, $new_file_cwd);
 
-    // Verify that getcwd() and File::cwd() are in sync.
     $php_cwd = getcwd();
     $this->assertNotFalse($php_cwd, 'Failed to get current working directory after chdir');
     $this->assertSame(File::realpath($php_cwd), $new_file_cwd);
 
-    // Restore the original working directory.
     $restore_result = chdir($original_cwd);
     $this->assertTrue($restore_result, 'Failed to restore original directory');
 
-    // Verify that File::cwd() returns the original directory again.
     $restored_file_cwd = File::cwd();
     $this->assertSame(File::realpath($original_cwd), $restored_file_cwd);
   }
@@ -283,7 +275,6 @@ final class FileTest extends UnitTestCase {
     yield 'glob pattern, first match' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', NULL, $file1];
     yield 'glob pattern, matching path' => [$test_dir . DIRECTORY_SEPARATOR . '*.txt', 'file1', $file1];
     yield 'glob pattern, no match' => [$test_dir . DIRECTORY_SEPARATOR . '*.md', NULL, NULL];
-    // Regex pattern tests.
     yield 'regex: match .txt extension' => [$test_dir . DIRECTORY_SEPARATOR . 'file*.txt', '/file1\.txt$/', $file1];
     yield 'regex: match .php extension' => [$test_dir . DIRECTORY_SEPARATOR . 'test*.php', '/test_file\.php$/', $file3];
     yield 'regex: match Controller in path' => [$test_dir . DIRECTORY_SEPARATOR . '*.php', '/Controller\.php$/', $file4];
@@ -302,7 +293,6 @@ final class FileTest extends UnitTestCase {
     $file = $dir . DIRECTORY_SEPARATOR . 'file.txt';
     file_put_contents($file, 'test');
 
-    // Create a symlink directory.
     $symlink_target = $dir . DIRECTORY_SEPARATOR . 'symlink_target';
     mkdir($symlink_target, 0777, TRUE);
     $symlink_dir = $dir . DIRECTORY_SEPARATOR . 'symlink_dir';
@@ -312,19 +302,16 @@ final class FileTest extends UnitTestCase {
     $this->assertDirectoryExists($subdir);
     $this->assertTrue(is_link($symlink_dir));
 
-    // Test that rmdirIfEmpty works on real directories but not on symlinks.
     File::rmdirIfEmpty($subdir);
     File::rmdirIfEmpty($subsubdir);
-    // Symlink should be skipped.
+    // File::rmdirIfEmpty() skips symlinks.
     File::rmdirIfEmpty($symlink_dir);
 
     $this->assertDirectoryDoesNotExist($subdir);
     $this->assertDirectoryExists($dir);
     $this->assertDirectoryExists($this->testTmpDir);
-    // Symlink should still exist.
     $this->assertTrue(is_link($symlink_dir));
 
-    // Clean up.
     File::rmdir($dir);
     $this->assertDirectoryDoesNotExist($dir);
   }
@@ -407,7 +394,7 @@ final class FileTest extends UnitTestCase {
     $this->assertTrue($result);
     $this->assertTrue(is_link($dest_symlink));
 
-    // Test copying directory with copy_empty_dirs = TRUE.
+    // The TRUE argument enables copy_empty_dirs.
     $result = File::copy($subdir, $dest_dir . DIRECTORY_SEPARATOR . 'subdir', 0755, TRUE);
     $this->assertTrue($result);
     $this->assertDirectoryExists($dest_dir . DIRECTORY_SEPARATOR . 'subdir');
@@ -419,7 +406,6 @@ final class FileTest extends UnitTestCase {
     $empty_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'empty_dir_test';
     mkdir($empty_dir, 0777);
 
-    // Create a directory and then remove it to test directory not existing.
     $removed_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'removed_dir';
     mkdir($removed_dir, 0777);
     rmdir($removed_dir);
@@ -429,20 +415,14 @@ final class FileTest extends UnitTestCase {
   }
 
   public function testScandirRecursiveActuallyEmptyDirectory(): void {
-    // Test case for a directory that exists but contains no files/subdirs
-    // This covers the line where we check if $paths is empty after removing
-    // . and ..
     $empty_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'truly_empty_dir';
     mkdir($empty_dir, 0777);
 
-    // Ensure directory exists but has no contents (except . and ..)
     $this->assertDirectoryExists($empty_dir);
 
-    // This should hit the new condition: if (empty($paths)) { return []; }.
     $files = File::scandir($empty_dir);
     $this->assertEmpty($files);
 
-    // Clean up.
     rmdir($empty_dir);
   }
 
@@ -450,14 +430,11 @@ final class FileTest extends UnitTestCase {
   public function testAppend(string $initial_content, string $append_content, string $expected_content): void {
     $test_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'append_test.txt';
 
-    // Create initial file.
     file_put_contents($test_file, $initial_content);
     $this->assertFileExists($test_file);
 
-    // Test append operation.
     File::append($test_file, $append_content);
 
-    // Verify final content.
     $actual_content = file_get_contents($test_file);
     $this->assertIsString($actual_content, 'Failed to read file content');
     $this->assertSame($expected_content, $actual_content);
@@ -526,7 +503,7 @@ final class FileTest extends UnitTestCase {
     $non_existent = $this->testTmpDir . DIRECTORY_SEPARATOR . 'does_not_exist.txt';
     $this->assertFileDoesNotExist($non_existent);
 
-    // Should not throw an exception.
+    // File::remove() does not throw for a missing path.
     File::remove($non_existent);
 
     $this->assertFileDoesNotExist($non_existent);

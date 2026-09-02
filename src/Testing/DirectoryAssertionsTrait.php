@@ -77,8 +77,8 @@ trait DirectoryAssertionsTrait {
   /**
    * Assert that a directory contains files with a specific word.
    *
-   * This method uses word boundaries to ensure the needle is found as a
-   * complete word, not as part of another word.
+   * The needle is matched with word boundaries, so it is found only as a
+   * complete word.
    *
    * @param string $directory
    *   The directory to search in.
@@ -100,8 +100,8 @@ trait DirectoryAssertionsTrait {
   /**
    * Assert that a directory does not contain files with a specific word.
    *
-   * This method uses word boundaries to ensure the needle is found as a
-   * complete word, not as part of another word.
+   * The needle is matched with word boundaries, so it is found only as a
+   * complete word.
    *
    * @param string $directory
    *   The directory to search in.

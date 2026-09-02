@@ -60,14 +60,12 @@ final class ContentFileTest extends UnitTestCase {
 
     $content_file = new ContentFile($file_path);
 
-    // First call loads from file.
     $first_call = $content_file->getContent();
     $this->assertSame('Original content', $first_call);
 
-    // Modify the file after first load.
     file_put_contents($file_path, 'Modified content');
 
-    // Second call should return cached content, not the modified file.
+    // The second call returns the cached content, not the modified file.
     $second_call = $content_file->getContent();
     $this->assertSame('Original content', $second_call);
   }
@@ -89,11 +87,9 @@ final class ContentFileTest extends UnitTestCase {
 
     $content_file = new ContentFile($file_path);
 
-    // Set content first.
     $content_file->setContent('Some content');
     $this->assertSame('Some content', $content_file->getContent());
 
-    // Set to NULL - should return empty string.
     $content_file->setContent(NULL);
     $this->assertSame('', $content_file->getContent());
   }
@@ -104,10 +100,8 @@ final class ContentFileTest extends UnitTestCase {
 
     $content_file = new ContentFile($file_path);
 
-    // Set content before ever calling getContent.
     $content_file->setContent('Preset content');
 
-    // getContent should return the preset content, not the file content.
     $this->assertSame('Preset content', $content_file->getContent());
   }
 
@@ -142,15 +136,12 @@ final class ContentFileTest extends UnitTestCase {
 
     $content_file = new ContentFile($file_path);
 
-    // Test setting empty string.
     $content_file->setContent('');
     $this->assertSame('', $content_file->getContent());
 
-    // Test setting back to content.
     $content_file->setContent('restored');
     $this->assertSame('restored', $content_file->getContent());
 
-    // Test setting unicode.
     $content_file->setContent('日本語テスト');
     $this->assertSame('日本語テスト', $content_file->getContent());
   }

@@ -95,12 +95,10 @@ trait BenchmarkDirectoryTrait {
    * entire temporary directory (including baseline, destination, diff).
    */
   protected function directoryCleanup(): void {
-    // Clean up patch destination if it exists.
     if (!empty($this->patchDestination) && is_dir($this->patchDestination)) {
       File::rmdir($this->patchDestination);
     }
 
-    // Clean up main tmp directory (includes all subdirectories).
     if (is_dir($this->tmpDir)) {
       File::rmdir($this->tmpDir);
     }
@@ -108,9 +106,6 @@ trait BenchmarkDirectoryTrait {
 
   /**
    * Create directory structure with files containing string patterns.
-   *
-   * Helper method that creates files in a target directory with configurable
-   * nested directory depth and optional large file sizes.
    *
    * @param string $target_dir
    *   Target directory to create files in.
@@ -129,7 +124,6 @@ trait BenchmarkDirectoryTrait {
     $file_counter = 1;
 
     for ($level = 1; $level <= $directory_depth; $level++) {
-      // Build nested path: level_1/level_2/level_3/etc.
       $nested_path = $target_dir;
       for ($i = 1; $i <= $level; $i++) {
         $nested_path .= DIRECTORY_SEPARATOR . ('level_' . $i);
@@ -137,22 +131,18 @@ trait BenchmarkDirectoryTrait {
       mkdir($nested_path, 0777, TRUE);
 
       for ($file_in_level = 1; $file_in_level <= $files_per_level && $file_counter <= $file_count; $file_in_level++) {
-        // Build OLD_* placeholders.
         $old_parts = [];
         for ($i = 1; $i <= self::OLD_COUNT; $i++) {
           $old_parts[] = 'OLD_' . $i;
         }
 
-        // Build TOKEN_* placeholders.
         $token_parts = [];
         for ($i = 1; $i <= self::TOKEN_COUNT; $i++) {
           $token_parts[] = '#; TOKEN_' . $i;
         }
 
-        // Create base content with OLD_* and TOKEN_* patterns.
         $content = sprintf('File %d with ', $file_counter) . implode(' ', $old_parts) . "\n" . implode("\n", $token_parts) . "\n";
 
-        // If file sizes are provided, pad the content to reach target size.
         if (!empty($file_sizes)) {
           $size_index = ($file_counter - 1) % count($file_sizes);
           $target_size = $file_sizes[$size_index];
@@ -217,7 +207,6 @@ trait BenchmarkDirectoryTrait {
     $files = File::scandir($this->destinationDir);
     $files_count = count($files);
 
-    // Remove 10% of files.
     $files_to_remove = (int) ceil($files_count * 0.1);
     shuffle($files);
     $files_to_remove_list = array_slice($files, 0, $files_to_remove);

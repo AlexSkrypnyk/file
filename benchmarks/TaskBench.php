@@ -30,7 +30,7 @@ class TaskBench {
   protected const TASK_COUNT = 10;
 
   /**
-   * Setup method - creates test files (NOT timed).
+   * Creates test files (not timed).
    */
   public function setUp(): void {
     $this->directoryInitializeTest();
@@ -38,7 +38,7 @@ class TaskBench {
   }
 
   /**
-   * Teardown method - cleans up test files (NOT timed).
+   * Removes test files (not timed).
    */
   public function tearDown(): void {
     $this->directoryCleanup();
@@ -46,11 +46,9 @@ class TaskBench {
   }
 
   /**
-   * Benchmark traditional approach with multiple directory scans.
+   * Benchmarks the traditional approach.
    *
-   * Tests multiple directory scans with File::replaceContentInDir() and
-   * File::removeTokenInDir() methods. This approach is simple but performs
-   * multiple directory scans (one per operation).
+   * Each operation performs its own full directory scan.
    */
   #[BeforeMethods('setUp')]
   #[AfterMethods('tearDown')]
@@ -58,7 +56,6 @@ class TaskBench {
   #[Warmup(2)]
   #[Iterations(20)]
   public function benchTraditionalApproach(): void {
-    // Perform 10 operations, each requiring a full directory scan.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
       File::replaceContentInDir($this->testDir, 'OLD_' . $task, 'NEW_' . $task);
       if ($task <= self::TOKEN_COUNT) {
@@ -68,11 +65,10 @@ class TaskBench {
   }
 
   /**
-   * Benchmark simple approach with single scan + loop.
+   * Benchmarks the simple approach.
    *
-   * Tests single directory scan followed by looping through files and
-   * performing operations. This approach scans once but performs multiple
-   * I/O operations per file.
+   * The directory is scanned once, but each file undergoes multiple I/O
+   * operations.
    */
   #[BeforeMethods('setUp')]
   #[AfterMethods('tearDown')]
@@ -80,17 +76,13 @@ class TaskBench {
   #[Warmup(2)]
   #[Iterations(20)]
   public function benchSimpleApproach(): void {
-    // Single directory scan to get all files.
     $files = File::scandir($this->testDir, File::ignoredPaths());
 
-    // Loop through files and perform all operations.
     foreach ($files as $file) {
-      // Perform 10 replacement operations.
       for ($task = 1; $task <= self::TASK_COUNT; $task++) {
         File::replaceContentInFile($file, 'OLD_' . $task, 'NEW_' . $task);
       }
 
-      // Perform 5 token removal operations.
       for ($task = 1; $task <= self::TOKEN_COUNT; $task++) {
         File::removeTokenInFile($file, '#; TOKEN_' . $task);
       }
@@ -98,11 +90,10 @@ class TaskBench {
   }
 
   /**
-   * Benchmark batched approach with queue system.
+   * Benchmarks the batched approach.
    *
-   * Tests single directory scan with queue system using ContentFile.
-   * This approach performs single directory scan and optimized I/O (single
-   * read/write per file).
+   * Operations are queued and run after a single directory scan, with a
+   * single read/write per file.
    */
   #[BeforeMethods('setUp')]
   #[AfterMethods('tearDown')]
@@ -110,7 +101,6 @@ class TaskBench {
   #[Warmup(2)]
   #[Iterations(20)]
   public function benchBatchedApproach(): void {
-    // Queue all operations using ContentFile.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
       File::addDirectoryTask(function (ContentFile $file_info) use ($task): ContentFile {
         $processed_content = File::replaceContent($file_info->getContent(), 'OLD_' . $task, 'NEW_' . $task);
@@ -126,7 +116,6 @@ class TaskBench {
       }
     }
 
-    // Execute all tasks with single directory scan and optimized I/O.
     File::runDirectoryTasks($this->testDir);
   }
 

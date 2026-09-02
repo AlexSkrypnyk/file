@@ -112,11 +112,9 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFileContainsWordBoundaries(): void {
     file_put_contents($this->testFile, 'Testing test tests tester testing');
 
-    // These should pass - these are complete words.
     $this->assertFileContainsWord($this->testFile, 'test');
     $this->assertFileContainsWord($this->testFile, 'testing');
 
-    // This should fail - only a part of a word.
     try {
       $this->assertFileContainsWord($this->testFile, 'tes');
       $this->fail('Assertion should have failed for partial word');
@@ -129,7 +127,6 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFileNotContainsWordSuccess(): void {
     file_put_contents($this->testFile, 'This is a test content');
     $this->assertFileNotContainsWord($this->testFile, 'nonexistent');
-    // Part of a word, but not a complete word - should pass.
     $this->assertFileNotContainsWord($this->testFile, 'tes');
   }
 
@@ -149,11 +146,9 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testRegexPatterns(): void {
     file_put_contents($this->testFile, 'Testing with numbers: 123 and words.');
 
-    // These should pass - valid regex patterns.
     $this->assertFileContainsString($this->testFile, '/\d+/');
     $this->assertFileNotContainsString($this->testFile, '/\d{4,}/');
 
-    // Regular string content should also work.
     $this->assertFileContainsString($this->testFile, '123');
     $this->assertFileNotContainsString($this->testFile, '456');
   }
@@ -195,7 +190,6 @@ final class FileAssertionsTraitTest extends TestCase {
 
     file_put_contents($file, 'Some content');
 
-    // Test with nonexistent expected file.
     try {
       $this->assertFileEqualsFile($nonexistent, $file);
       $this->fail('Assertion should have failed for nonexistent expected file');
@@ -204,7 +198,6 @@ final class FileAssertionsTraitTest extends TestCase {
       $this->assertStringContainsString('does not exist', $assertion_failed_error->getMessage());
     }
 
-    // Test with nonexistent actual file.
     try {
       $this->assertFileEqualsFile($file, $nonexistent);
       $this->fail('Assertion should have failed for nonexistent actual file');
@@ -247,7 +240,6 @@ final class FileAssertionsTraitTest extends TestCase {
 
     file_put_contents($file, 'Some content');
 
-    // Test with nonexistent expected file.
     try {
       $this->assertFileNotEqualsFile($nonexistent, $file);
       $this->fail('Assertion should have failed for nonexistent expected file');
@@ -256,7 +248,6 @@ final class FileAssertionsTraitTest extends TestCase {
       $this->assertStringContainsString('does not exist', $assertion_failed_error->getMessage());
     }
 
-    // Test with nonexistent actual file.
     try {
       $this->assertFileNotEqualsFile($file, $nonexistent);
       $this->fail('Assertion should have failed for nonexistent actual file');
@@ -273,7 +264,6 @@ final class FileAssertionsTraitTest extends TestCase {
     file_put_contents($file1, 'Content for file 1');
     file_put_contents($file2, 'Different content for file 2');
 
-    // Custom message for assertFileEqualsFile.
     try {
       $this->assertFileEqualsFile($file1, $file2, 'Custom message for different files');
       $this->fail('Assertion should have failed with custom message');
@@ -282,10 +272,8 @@ final class FileAssertionsTraitTest extends TestCase {
       $this->assertStringContainsString('Custom message for different files', $assertion_failed_error->getMessage());
     }
 
-    // Make files identical.
     file_put_contents($file2, 'Content for file 1');
 
-    // Custom message for assertFileNotEqualsFile.
     try {
       $this->assertFileNotEqualsFile($file1, $file2, 'Custom message for identical files');
       $this->fail('Assertion should have failed with custom message');
@@ -295,17 +283,12 @@ final class FileAssertionsTraitTest extends TestCase {
     }
   }
 
-  /**
-   * Test assertFilesExist method with data provider.
-   */
   #[DataProvider('dataProviderAssertFilesExist')]
   public function testAssertFilesExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
-    // Create specified files.
     foreach ($create_files as $file) {
       file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'content');
     }
 
-    // If no specific files to create, create all files from the test case.
     if (empty($create_files) && $should_pass) {
       foreach ($files as $file) {
         file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'test content');
@@ -314,7 +297,7 @@ final class FileAssertionsTraitTest extends TestCase {
 
     if ($should_pass) {
       $this->assertFilesExist($this->testTmpDir, $files);
-      // Add assertion to avoid risky tests for empty arrays.
+      // Register an assertion so an empty array does not mark the test risky.
       $this->addToAssertionCount(1);
     }
     else {
@@ -328,9 +311,6 @@ final class FileAssertionsTraitTest extends TestCase {
     }
   }
 
-  /**
-   * Data provider for assertFilesExist tests.
-   */
   public static function dataProviderAssertFilesExist(): \Iterator {
     yield 'single file success' => [['test1.txt'], [], TRUE, ''];
     yield 'multiple files success' => [['test1.txt', 'test2.txt', 'test3.txt'], [], TRUE, ''];
@@ -339,19 +319,15 @@ final class FileAssertionsTraitTest extends TestCase {
     yield 'nonexistent file failure' => [['existing.txt', 'nonexistent.txt'], ['existing.txt'], FALSE, 'nonexistent.txt'];
   }
 
-  /**
-   * Test assertFilesDoNotExist method with data provider.
-   */
   #[DataProvider('dataProviderAssertFilesDoNotExist')]
   public function testAssertFilesDoNotExist(array $files, array $create_files, bool $should_pass, string $expected_error): void {
-    // Create specified files.
     foreach ($create_files as $file) {
       file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'content');
     }
 
     if ($should_pass) {
       $this->assertFilesDoNotExist($this->testTmpDir, $files);
-      // Add assertion to avoid risky tests for empty arrays.
+      // Register an assertion so an empty array does not mark the test risky.
       $this->addToAssertionCount(1);
     }
     else {
@@ -365,9 +341,6 @@ final class FileAssertionsTraitTest extends TestCase {
     }
   }
 
-  /**
-   * Data provider for assertFilesDoNotExist tests.
-   */
   public static function dataProviderAssertFilesDoNotExist(): \Iterator {
     yield 'single nonexistent file success' => [['nonexistent1.txt'], [], TRUE, ''];
     yield 'multiple nonexistent files success' => [['nonexistent1.txt', 'nonexistent2.txt', 'nonexistent3.txt'], [], TRUE, ''];
@@ -376,12 +349,8 @@ final class FileAssertionsTraitTest extends TestCase {
     yield 'existing file failure' => [['existing.txt'], ['existing.txt'], FALSE, 'existing.txt'];
   }
 
-  /**
-   * Test assertFilesWildcardExists method with data provider.
-   */
   #[DataProvider('dataProviderAssertFilesWildcardExists')]
   public function testAssertFilesWildcardExists(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
-    // Create files.
     foreach ($create_files as $file) {
       $file_path = $this->testTmpDir . DIRECTORY_SEPARATOR . $file;
       $dir = dirname($file_path);
@@ -391,7 +360,6 @@ final class FileAssertionsTraitTest extends TestCase {
       file_put_contents($file_path, 'content');
     }
 
-    // Convert patterns to full paths.
     $full_patterns = is_array($patterns) ?
       array_map(fn($p): string => $this->testTmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
       $this->testTmpDir . DIRECTORY_SEPARATOR . $patterns;
@@ -415,9 +383,6 @@ final class FileAssertionsTraitTest extends TestCase {
     }
   }
 
-  /**
-   * Data provider for assertFilesWildcardExists tests.
-   */
   public static function dataProviderAssertFilesWildcardExists(): \Iterator {
     yield 'single pattern string success' => ['*.txt', ['test.txt'], TRUE, ''];
     yield 'single pattern array success' => [['*.txt'], ['test.txt'], TRUE, ''];
@@ -428,17 +393,12 @@ final class FileAssertionsTraitTest extends TestCase {
     yield 'empty patterns exception' => [[], [], 'exception', 'Empty patterns'];
   }
 
-  /**
-   * Test assertFilesWildcardDoNotExist method with data provider.
-   */
   #[DataProvider('dataProviderAssertFilesWildcardDoNotExist')]
   public function testAssertFilesWildcardDoNotExist(string|array $patterns, array $create_files, bool|string $should_pass, string $expected_error): void {
-    // Create files.
     foreach ($create_files as $file) {
       file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . $file, 'content');
     }
 
-    // Convert patterns to full paths.
     $full_patterns = is_array($patterns) ?
       array_map(fn($p): string => $this->testTmpDir . DIRECTORY_SEPARATOR . $p, $patterns) :
       $this->testTmpDir . DIRECTORY_SEPARATOR . $patterns;
@@ -462,9 +422,6 @@ final class FileAssertionsTraitTest extends TestCase {
     }
   }
 
-  /**
-   * Data provider for assertFilesWildcardDoNotExist tests.
-   */
   public static function dataProviderAssertFilesWildcardDoNotExist(): \Iterator {
     yield 'single pattern string success' => ['*.nonexistent', [], TRUE, ''];
     yield 'single pattern array success' => [['*.nonexistent'], [], TRUE, ''];
@@ -477,21 +434,16 @@ final class FileAssertionsTraitTest extends TestCase {
   public function testAssertFileContainsWordWithSlashes(): void {
     file_put_contents($this->testFile, 'This contains path/to/file and other/different content');
 
-    // Test that needles containing forward slashes work correctly.
     $this->assertFileContainsWord($this->testFile, 'path/to/file');
 
-    // Test that non-existent paths with slashes don't match.
     $this->assertFileNotContainsWord($this->testFile, 'path/to/nonexistent');
   }
 
   public function testAssertFilesExistWithCustomMessage(): void {
-    // Create test files.
     file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . 'test1.txt', 'content');
 
-    // Test successful assertion with custom message.
     $this->assertFilesExist($this->testTmpDir, ['test1.txt'], 'Custom success message');
 
-    // Test failed assertion with custom message.
     try {
       $this->assertFilesExist($this->testTmpDir, ['nonexistent.txt'], 'Custom failure message');
       $this->fail('Assertion should have failed');
@@ -502,14 +454,11 @@ final class FileAssertionsTraitTest extends TestCase {
   }
 
   public function testAssertFilesWildcardExistsWithCustomMessage(): void {
-    // Create test files.
     file_put_contents($this->testTmpDir . DIRECTORY_SEPARATOR . 'test.txt', 'content');
 
-    // Test successful assertion with custom message.
     $pattern = $this->testTmpDir . DIRECTORY_SEPARATOR . '*.txt';
     $this->assertFilesWildcardExists($pattern, 'Custom success message');
 
-    // Test failed assertion with custom message.
     $nonexistent_pattern = $this->testTmpDir . DIRECTORY_SEPARATOR . '*.nonexistent';
     try {
       $this->assertFilesWildcardExists($nonexistent_pattern, 'Custom failure message');
