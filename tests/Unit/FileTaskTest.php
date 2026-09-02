@@ -412,10 +412,19 @@ final class FileTaskTest extends UnitTestCase {
     $this->assertNotContains('photo.png', $processed_files, 'PNG image file should be excluded from processing');
 
     // Verify file content changes only happened for processed files.
-    $this->assertStringContainsString('- processed', file_get_contents($regular_file) ?: '', 'Regular file should be processed');
-    $this->assertStringContainsString('- processed', file_get_contents($doc_file) ?: '', 'Document file should be processed');
-    $this->assertStringNotContainsString('- processed', file_get_contents($image_file) ?: '', 'Image file should not be processed');
-    $this->assertStringNotContainsString('- processed', file_get_contents($png_file) ?: '', 'PNG file should not be processed');
+    $regular_content = file_get_contents($regular_file);
+    $this->assertIsString($regular_content, 'File content should be readable');
+    $doc_content = file_get_contents($doc_file);
+    $this->assertIsString($doc_content, 'File content should be readable');
+    $image_content = file_get_contents($image_file);
+    $this->assertIsString($image_content, 'File content should be readable');
+    $png_content = file_get_contents($png_file);
+    $this->assertIsString($png_content, 'File content should be readable');
+
+    $this->assertStringContainsString('- processed', $regular_content, 'Regular file should be processed');
+    $this->assertStringContainsString('- processed', $doc_content, 'Document file should be processed');
+    $this->assertStringNotContainsString('- processed', $image_content, 'Image file should not be processed');
+    $this->assertStringNotContainsString('- processed', $png_content, 'PNG file should not be processed');
   }
 
   public function testRunTaskDirectoryExcludesIgnoredDirectories(): void {
@@ -524,12 +533,23 @@ final class FileTaskTest extends UnitTestCase {
     $this->assertSame(3, $task_call_count, 'Task should be called 3 times (for txt, log, js files)');
 
     // Verify excluded files were not modified.
-    $this->assertStringContainsString(' - modified', file_get_contents($text_file) ?: '', 'Text file should be modified');
-    $this->assertStringContainsString(' - modified', file_get_contents($log_file) ?: '', 'Log file should be modified');
-    $this->assertStringContainsString(' - modified', file_get_contents($js_file) ?: '', 'JS file should be modified');
+    $text_content = file_get_contents($text_file);
+    $this->assertIsString($text_content, 'File content should be readable');
+    $log_content = file_get_contents($log_file);
+    $this->assertIsString($log_content, 'File content should be readable');
+    $js_content = file_get_contents($js_file);
+    $this->assertIsString($js_content, 'File content should be readable');
+    $jpg_content = file_get_contents($jpg_file);
+    $this->assertIsString($jpg_content, 'File content should be readable');
+    $png_content = file_get_contents($png_file);
+    $this->assertIsString($png_content, 'File content should be readable');
 
-    $this->assertStringNotContainsString(' - modified', file_get_contents($jpg_file) ?: '', 'JPG file should not be modified');
-    $this->assertStringNotContainsString(' - modified', file_get_contents($png_file) ?: '', 'PNG file should not be modified');
+    $this->assertStringContainsString(' - modified', $text_content, 'Text file should be modified');
+    $this->assertStringContainsString(' - modified', $log_content, 'Log file should be modified');
+    $this->assertStringContainsString(' - modified', $js_content, 'JS file should be modified');
+
+    $this->assertStringNotContainsString(' - modified', $jpg_content, 'JPG file should not be modified');
+    $this->assertStringNotContainsString(' - modified', $png_content, 'PNG file should not be modified');
   }
 
 }
