@@ -347,7 +347,7 @@ class File {
     if (is_link($source)) {
       // Changing dir symlink will be relevant to the current destination's file
       // directory.
-      $cur_dir = static::cwd();
+      $current_dir = static::cwd();
 
       chdir($parent);
       $ret = TRUE;
@@ -366,7 +366,7 @@ class File {
         }
       }
 
-      chdir($cur_dir);
+      chdir($current_dir);
 
       return $ret;
     }
