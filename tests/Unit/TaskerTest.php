@@ -192,7 +192,7 @@ final class TaskerTest extends UnitTestCase {
 
       $tasker->process($clear_batch_name);
 
-      $this->assertTrue($cleared_executed, "Cleared batch should work again after adding new tasks");
+      $this->assertTrue($cleared_executed, 'Cleared batch should work again after adding new tasks');
     }
   }
 

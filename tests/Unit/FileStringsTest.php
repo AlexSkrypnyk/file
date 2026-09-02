@@ -340,9 +340,9 @@ final class FileStringsTest extends UnitTestCase {
     ];
     yield 'empty file' => [
       'test.txt',
-      "",
+      '',
       'anything',
-      "",
+      '',
     ];
     yield 'excluded file' => [
       'test.png',
@@ -569,15 +569,15 @@ final class FileStringsTest extends UnitTestCase {
     ];
     yield 'empty lines, newlines preserved' => [
       "\n\n",
-      "",
+      '',
     ];
     yield 'empty lines, newlines preserved and trimmed' => [
       "\n\n\n",
-      "",
+      '',
     ];
     yield 'single line' => [
-      "line1",
-      "line1",
+      'line1',
+      'line1',
     ];
     yield 'single line with trailing newlines' => [
       "line1\n\n",
@@ -638,11 +638,11 @@ final class FileStringsTest extends UnitTestCase {
     // \r line endings
     yield 'empty lines, carriage returns preserved' => [
       "\r\r",
-      "",
+      '',
     ];
     yield 'empty lines, carriage returns preserved and trimmed' => [
       "\r\r\r",
-      "",
+      '',
     ];
     yield 'single line with trailing carriage returns' => [
       "line1\r\r",
@@ -699,11 +699,11 @@ final class FileStringsTest extends UnitTestCase {
     // \r\n line endings
     yield 'empty lines, crlf preserved' => [
       "\r\n\r\n",
-      "",
+      '',
     ];
     yield 'empty lines, crlf preserved and trimmed' => [
       "\r\n\r\n\r\n",
-      "",
+      '',
     ];
     yield 'single line with trailing crlf' => [
       "line1\r\n\r\n",
