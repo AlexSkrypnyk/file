@@ -57,7 +57,7 @@ class TaskBench {
     // Perform 10 operations, each requiring a full directory scan.
     for ($task = 1; $task <= self::TASK_COUNT; $task++) {
       File::replaceContentInDir($this->testDir, 'OLD_' . $task, 'NEW_' . $task);
-      if ($task <= 5) {
+      if ($task <= self::TOKEN_COUNT) {
         File::removeTokenInDir($this->testDir, '#; TOKEN_' . $task);
       }
     }
@@ -88,7 +88,7 @@ class TaskBench {
       }
 
       // Perform 5 token removal operations.
-      for ($task = 1; $task <= 5; $task++) {
+      for ($task = 1; $task <= self::TOKEN_COUNT; $task++) {
         File::removeTokenInFile($file, '#; TOKEN_' . $task);
       }
     }
@@ -115,7 +115,7 @@ class TaskBench {
         $file_info->setContent($processed_content);
         return $file_info;
       });
-      if ($task <= 5) {
+      if ($task <= self::TOKEN_COUNT) {
         File::addDirectoryTask(function (ContentFile $file_info) use ($task): ContentFile {
           $processed_content = File::removeToken($file_info->getContent(), '#; TOKEN_' . $task);
           $file_info->setContent($processed_content);
