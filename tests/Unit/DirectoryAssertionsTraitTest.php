@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
-use PHPUnit\Framework\AssertionFailedError;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Testing\DirectoryAssertionsTrait;
+use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
