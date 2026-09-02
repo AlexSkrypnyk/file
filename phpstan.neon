@@ -14,8 +14,6 @@ parameters:
   excludePaths:
     - vendor/*
 
-  treatPhpDocTypesAsCertain: false
-
   ignoreErrors:
     -
       # Since tests and data providers do not have to have parameter docblocks,
@@ -25,6 +23,6 @@ parameters:
       reportUnmatched: false
 
     -
-      # Ignoring PHPBench attribute errors as PHPStan doesn't recognize them.
+      # PHPStan does not resolve PHPBench attribute classes.
       message: '#Attribute class PHPBench\\Attributes\\.*does not exist\.#'
       reportUnmatched: false

@@ -32,9 +32,7 @@ class Tasker {
    *   Name of the batch queue.
    */
   public function addTask(callable $callback, string $batch_name): void {
-    if (!isset($this->queues[$batch_name])) {
-      $this->queues[$batch_name] = [];
-    }
+    $this->queues[$batch_name] ??= [];
     $this->queues[$batch_name][] = $callback;
   }
 

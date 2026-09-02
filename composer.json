@@ -21,15 +21,15 @@
         "symfony/filesystem": "^7.2"
     },
     "require-dev": {
-        "alexskrypnyk/phpunit-helpers": "^0.15.0",
-        "dealerdirect/phpcodesniffer-composer-installer": "^1",
+        "alexskrypnyk/phpunit-helpers": "^0.16.0",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.2.1",
         "drevops/phpcs-standard": "^0.7",
-        "drupal/coder": "^9.0",
-        "ergebnis/composer-normalize": "^2.42",
+        "drupal/coder": "^9.0.1",
+        "ergebnis/composer-normalize": "^2.52.0",
         "phpbench/phpbench": "^1.4",
-        "phpstan/phpstan": "^2",
-        "phpunit/phpunit": "^11",
-        "rector/rector": "^2"
+        "phpstan/phpstan": "^2.2.8",
+        "phpunit/phpunit": "^11.5.56",
+        "rector/rector": "^2.6.3"
     },
     "suggest": {
         "phpunit/phpunit": "Required for using FileAssertionsTrait and DirectoryAssertionsTrait (^11)"
@@ -53,6 +53,15 @@
             "ergebnis/composer-normalize": true
         },
         "discard-changes": true,
+        "policy": {
+            "advisories": {
+                "block": false,
+                "audit": "fail"
+            },
+            "abandoned": {
+                "audit": "report"
+            }
+        },
         "sort-packages": true
     },
     "scripts": {

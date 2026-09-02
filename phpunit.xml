@@ -12,8 +12,7 @@
          displayDetailsOnTestsThatTriggerErrors="true"
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerDeprecations="true"
-         displayDetailsOnPhpunitDeprecations="true"
-         defaultTestSuite="default">
+         displayDetailsOnPhpunitDeprecations="true">
     <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
@@ -24,19 +23,17 @@
             ignoreIndirectDeprecations="true">
         <include>
             <directory>src</directory>
-            <directory>tests/Traits</directory>
-            <file>File.php</file>
         </include>
         <exclude>
-            <directory>tests/Unit</directory>
+            <directory>tests</directory>
         </exclude>
     </source>
     <coverage pathCoverage="false"
-              includeUncoveredFiles="true"
               ignoreDeprecatedCodeUnits="true"
               disableCodeCoverageIgnore="false">
         <report>
             <html outputDirectory=".logs/.coverage-html" lowUpperBound="50" highLowerBound="90"/>
+            <text outputFile=".logs/coverage.txt"/>
             <cobertura outputFile=".logs/cobertura.xml"/>
         </report>
     </coverage>

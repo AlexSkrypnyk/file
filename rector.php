@@ -26,7 +26,6 @@ use Rector\Naming\Rector\Foreach_\RenameForeachValueVariableToMatchExprVariableR
 use Rector\Naming\Rector\Foreach_\RenameForeachValueVariableToMatchMethodCallReturnTypeRector;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
 use Rector\Php80\Rector\Switch_\ChangeSwitchToMatchRector;
-use Rector\PHPUnit\Set\PHPUnitSetList;
 use Rector\TypeDeclaration\Rector\StmtsAwareInterface\DeclareStrictTypesRector;
 
 return RectorConfig::configure()
@@ -46,9 +45,7 @@ return RectorConfig::configure()
     earlyReturn: TRUE,
     phpunitCodeQuality: TRUE,
   )
-  ->withSets([
-    PHPUnitSetList::COMPOSER_BASED,
-  ])
+  ->withComposerBased(phpunit: TRUE)
   ->withRules([
     DeclareStrictTypesRector::class,
   ])
@@ -65,6 +62,8 @@ return RectorConfig::configure()
     RemoveAlwaysTrueIfConditionRector::class,
     RenameForeachValueVariableToMatchExprVariableRector::class,
     RenameForeachValueVariableToMatchMethodCallReturnTypeRector::class,
+    // Renames method arguments to camelCase, which conflicts with the
+    // snake_case convention used for arguments in this project.
     RenameParamToMatchTypeRector::class,
     RenameVariableToMatchMethodCallReturnTypeRector::class,
     RenameVariableToMatchNewTypeRector::class,
