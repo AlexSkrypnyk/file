@@ -136,7 +136,7 @@ final class TaskerTest extends UnitTestCase {
     foreach ($setup_batches as $batch_name) {
       $tasker->addTask(fn($context) => $context, $batch_name);
       $tasker->setIterator(function () {
-        // Empty generator - yield nothing.
+        // Empty generator that yields nothing.
         // @phpstan-ignore-next-line
         if (FALSE) {
           yield;
@@ -169,7 +169,7 @@ final class TaskerTest extends UnitTestCase {
       $this->assertCount(0, $expected_remaining_batches, 'All batches should be cleared successfully');
     }
 
-    // Verify cleared batches don't execute (if we cleared specific batch)
+    // Cleared batches do not execute when a specific batch was cleared.
     if ($clear_batch_name !== NULL) {
       $cleared_executed = FALSE;
 
