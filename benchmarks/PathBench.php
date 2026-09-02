@@ -25,6 +25,10 @@ use PhpBench\Attributes\Warmup;
  * The second group covers the methods that resolve their arguments
  * through it, so a change in resolution cost is visible where callers
  * actually pay it.
+ *
+ * Subjects that write file contents are excluded. Their deviation on a
+ * shared runner exceeds the configured retry threshold, so phpbench
+ * re-runs them until the job is killed.
  */
 class PathBench {
 
@@ -91,14 +95,9 @@ class PathBench {
   protected string $emptyDir = '';
 
   /**
-   * Path to an existing file used as a copy source.
+   * Path to the file the symlink points at.
    */
-  protected string $sourceFile = '';
-
-  /**
-   * Path the copy source is written to.
-   */
-  protected string $destinationFile = '';
+  protected string $symlinkTarget = '';
 
   /**
    * Creates the paths used by the benchmarks (not timed).
@@ -112,19 +111,17 @@ class PathBench {
     }
     $this->deepPath = DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments) . DIRECTORY_SEPARATOR . 'file.txt';
 
-    $this->sourceFile = $this->testDir . DIRECTORY_SEPARATOR . 'target.txt';
-    file_put_contents($this->sourceFile, 'content');
+    $this->symlinkTarget = $this->testDir . DIRECTORY_SEPARATOR . 'target.txt';
+    file_put_contents($this->symlinkTarget, 'content');
 
     $this->symlinkPath = $this->testDir . DIRECTORY_SEPARATOR . 'symlink.txt';
-    symlink($this->sourceFile, $this->symlinkPath);
+    symlink($this->symlinkTarget, $this->symlinkPath);
 
     $this->temporaryPath = $this->tmpDir . DIRECTORY_SEPARATOR . 'file.txt';
     $this->streamUrl = 'file://' . $this->testDir . '/out/nested';
 
     $this->emptyDir = $this->tmpDir . DIRECTORY_SEPARATOR . 'empty';
     mkdir($this->emptyDir, 0777, TRUE);
-
-    $this->destinationFile = $this->tmpDir . DIRECTORY_SEPARATOR . 'copy' . DIRECTORY_SEPARATOR . 'target.txt';
   }
 
   /**
@@ -294,21 +291,6 @@ class PathBench {
   #[Iterations(10)]
   public function benchScandir(): void {
     File::scandir($this->testDir);
-  }
-
-  /**
-   * Benchmarks a single file copy.
-   *
-   * The revolution count is lower than for the read-only subjects because
-   * each revolution writes to disk.
-   */
-  #[BeforeMethods('setUp')]
-  #[AfterMethods('tearDown')]
-  #[Revs(100)]
-  #[Warmup(2)]
-  #[Iterations(10)]
-  public function benchCopy(): void {
-    File::copy($this->sourceFile, $this->destinationFile);
   }
 
   /**
