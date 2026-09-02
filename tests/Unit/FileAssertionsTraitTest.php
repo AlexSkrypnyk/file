@@ -397,13 +397,9 @@ final class FileAssertionsTraitTest extends TestCase {
       $this->testTmpDir . DIRECTORY_SEPARATOR . $patterns;
 
     if ($should_pass === 'exception') {
-      try {
-        $this->assertFilesWildcardExists($patterns);
-        $this->fail('Should throw InvalidArgumentException');
-      }
-      catch (\InvalidArgumentException $invalid_argument_exception) {
-        $this->assertStringContainsString($expected_error, $invalid_argument_exception->getMessage());
-      }
+      $this->expectException(\InvalidArgumentException::class);
+      $this->expectExceptionMessage($expected_error);
+      $this->assertFilesWildcardExists($patterns);
     }
     elseif ($should_pass) {
       $this->assertFilesWildcardExists($full_patterns);
@@ -448,13 +444,9 @@ final class FileAssertionsTraitTest extends TestCase {
       $this->testTmpDir . DIRECTORY_SEPARATOR . $patterns;
 
     if ($should_pass === 'exception') {
-      try {
-        $this->assertFilesWildcardDoNotExist($patterns);
-        $this->fail('Should throw InvalidArgumentException');
-      }
-      catch (\InvalidArgumentException $invalid_argument_exception) {
-        $this->assertStringContainsString($expected_error, $invalid_argument_exception->getMessage());
-      }
+      $this->expectException(\InvalidArgumentException::class);
+      $this->expectExceptionMessage($expected_error);
+      $this->assertFilesWildcardDoNotExist($patterns);
     }
     elseif ($should_pass) {
       $this->assertFilesWildcardDoNotExist($full_patterns);
