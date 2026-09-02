@@ -313,8 +313,7 @@ final class FileAssertionsTraitTest extends TestCase {
     if ($should_pass) {
       $this->assertFilesExist($this->testTmpDir, $files);
       // Add assertion to avoid risky tests for empty arrays.
-      // @phpstan-ignore-next-line
-      $this->assertTrue(TRUE);
+      $this->addToAssertionCount(1);
     }
     else {
       try {
@@ -351,8 +350,7 @@ final class FileAssertionsTraitTest extends TestCase {
     if ($should_pass) {
       $this->assertFilesDoNotExist($this->testTmpDir, $files);
       // Add assertion to avoid risky tests for empty arrays.
-      // @phpstan-ignore-next-line
-      $this->assertTrue(TRUE);
+      $this->addToAssertionCount(1);
     }
     else {
       try {
