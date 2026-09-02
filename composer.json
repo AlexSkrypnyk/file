@@ -29,7 +29,7 @@
         "phpbench/phpbench": "^1.7.0",
         "phpstan/phpstan": "^2.2.12",
         "phpunit/phpunit": "^11.5.56",
-        "rector/rector": "^2.6.5"
+        "rector/rector": "^2.6.6"
     },
     "suggest": {
         "phpunit/phpunit": "Required for using FileAssertionsTrait and DirectoryAssertionsTrait (^11)"
