@@ -1020,19 +1020,19 @@ class File {
    *   If not provided, removes all '#;' tokens.
    */
   public static function removeTokenInDir(string $directory, ?string $token = NULL): void {
-    $token_start = '#;';
+    $token_begin = '#;';
     $token_end = '#;';
     $with_content = FALSE;
 
     if (!is_null($token)) {
-      $token_start = '#;< ' . $token;
+      $token_begin = '#;< ' . $token;
       $token_end = '#;> ' . $token;
       $with_content = TRUE;
     }
 
     $files = static::scandir($directory, static::ignoredPaths());
     foreach ($files as $filename) {
-      static::removeTokenInFile($filename, $token_start, $token_end, $with_content);
+      static::removeTokenInFile($filename, $token_begin, $token_end, $with_content);
     }
   }
 
