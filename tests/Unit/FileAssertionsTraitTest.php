@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace AlexSkrypnyk\File\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\AssertionFailedError;
 use AlexSkrypnyk\File\File;
 use AlexSkrypnyk\File\Testing\FileAssertionsTrait;
+use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(FileAssertionsTrait::class)]
