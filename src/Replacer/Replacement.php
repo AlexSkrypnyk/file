@@ -124,8 +124,8 @@ class Replacement implements ReplacementInterface {
         ) ?? $content;
     }
     elseif (!$this->isExcluded($this->matcher)) {
-      // Plain string replacement doesn't support exclusions per-match.
-      // Check if the needle itself should be excluded.
+      // Plain string replacement has no per-match exclusions, so the needle
+      // itself is checked for exclusion.
       $content = str_replace($this->matcher, $this->replacement, $content);
     }
 

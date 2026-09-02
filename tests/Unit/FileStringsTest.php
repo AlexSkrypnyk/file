@@ -114,7 +114,6 @@ final class FileStringsTest extends UnitTestCase {
 
     File::removeTokenInDir(self::$sut, $token);
 
-    // Compare directories by checking all files have identical content.
     $expected_files = File::scandir(self::$fixtures);
     $actual_files = File::scandir(self::$sut);
     $this->assertCount(count($expected_files), $actual_files, 'Directory should have the same number of files.');
@@ -358,7 +357,6 @@ final class FileStringsTest extends UnitTestCase {
       '###',
       "line1\nline3\n",
     ];
-    // Regex pattern tests.
     yield 'remove lines starting with FOO (regex)' => [
       'test.txt',
       "FOO line1\nline2\nFOOBAR line3\nline4\n",
@@ -614,7 +612,7 @@ final class FileStringsTest extends UnitTestCase {
       "line1\nline2\n",
       "line1\nline2\n",
     ];
-    // \r line endings
+    // \r line endings.
     yield 'empty lines, carriage returns preserved' => [
       "\r\r",
       '',
@@ -675,7 +673,7 @@ final class FileStringsTest extends UnitTestCase {
       "line1\rline2\r",
       "line1\rline2\r",
     ];
-    // \r\n line endings
+    // \r\n line endings.
     yield 'empty lines, crlf preserved' => [
       "\r\n\r\n",
       '',
@@ -751,7 +749,6 @@ final class FileStringsTest extends UnitTestCase {
     $file = self::$sut . DIRECTORY_SEPARATOR . 'collapse_nochange.txt';
     file_put_contents($file, "line1\nline2\n");
 
-    // Get original mtime.
     clearstatcache();
     $mtime_before = filemtime($file);
 
@@ -759,7 +756,6 @@ final class FileStringsTest extends UnitTestCase {
 
     File::collapseEmptyLinesInFile($file);
 
-    // File should not be modified since content didn't change.
     clearstatcache();
     $mtime_after = filemtime($file);
 
@@ -774,7 +770,7 @@ final class FileStringsTest extends UnitTestCase {
 
     File::collapseEmptyLinesInFile($file);
 
-    // Excluded file should not be modified.
+    // The excluded file is not modified.
     $this->assertSame($content, file_get_contents($file));
   }
 
@@ -807,7 +803,7 @@ final class FileStringsTest extends UnitTestCase {
     File::collapseEmptyLinesInDir(self::$sut);
 
     $this->assertSame("line1\n\nline2\n", file_get_contents($file1));
-    // Image file should not be modified.
+    // The image file is not modified.
     $this->assertSame($image_content, file_get_contents($file2));
   }
 
@@ -837,7 +833,7 @@ final class FileStringsTest extends UnitTestCase {
     yield 'simple token removal' => ["line1\nTOKEN\nline3", 'TOKEN', 'TOKEN', FALSE, "line1\nline3"];
     yield 'token at end of content' => ["line1\nline2\nTOKEN", 'TOKEN', 'TOKEN', FALSE, "line1\nline2"];
     yield 'token at beginning' => ["TOKEN\nline2\nline3", 'TOKEN', 'TOKEN', FALSE, "line2\nline3"];
-    // Token removal with content (different begin/end tokens)
+    // Token removal with content (different begin/end tokens).
     yield 'simple token with content removal' => ["START\ncontent inside\nEND\nafter", 'START', 'END', TRUE, 'after'];
     yield 'nested content within token' => ["before\nSTART\nline1\nline2\nline3\nEND\nafter", 'START', 'END', TRUE, "before\nafter"];
     yield 'multiple token pairs with content' => ["before\nSTART\ncontent1\nEND\nmiddle\nSTART\ncontent2\nEND\nafter", 'START', 'END', TRUE, "before\nmiddle\nafter"];
@@ -857,7 +853,7 @@ final class FileStringsTest extends UnitTestCase {
   }
 
   public function testRemoveTokenComplexScenarios(): void {
-    // Test consecutive tokens (requires multiple operations).
+    // Consecutive tokens require multiple removal operations.
     $content = "line1\nTOKEN1\nTOKEN2\nline4";
     $result = File::removeToken($content, 'TOKEN1', 'TOKEN1', FALSE);
     $result = File::removeToken($result, 'TOKEN2', 'TOKEN2', FALSE);
@@ -868,7 +864,6 @@ final class FileStringsTest extends UnitTestCase {
   public function testRemoveTokenInFile(string $filename, string $content, string $token_begin, string $token_end, bool $with_content, bool $expect_exception, array $assertions): void {
     $file_path = self::$workspace . DIRECTORY_SEPARATOR . $filename;
 
-    // Create file only if content is provided.
     if ($content !== '') {
       file_put_contents($file_path, $content);
     }
@@ -880,7 +875,6 @@ final class FileStringsTest extends UnitTestCase {
     File::removeTokenInFile($file_path, $token_begin, $token_end, $with_content);
 
     if (!$expect_exception) {
-      // Process assertions.
       foreach ($assertions as $assertion) {
         match ($assertion['type']) {
           'file_does_not_exist' => $this->assertFileDoesNotExist($file_path),
@@ -1048,58 +1042,48 @@ EOT;
   }
 
   public function testReplacerInstanceFreshWithoutSetting(): void {
-    // Ensure no Replacer is set.
     File::resetReplacer();
 
-    // First replacement should not affect subsequent calls.
     $content1 = File::replaceContent('Hello, world!', 'world', 'universe');
     $this->assertSame('Hello, universe!', $content1);
 
-    // Second replacement with different needle should work independently.
     // If Replacer was reused, the previous replacement would still be active.
     $content2 = File::replaceContent('Hello, world!', 'Hello', 'Greetings');
     $this->assertSame('Greetings, world!', $content2);
 
-    // Verify 'world' was NOT replaced (proving fresh Replacer was used).
+    // The unreplaced 'world' proves a fresh Replacer was used.
     $this->assertStringContainsString('world', $content2);
   }
 
   public function testReplacerInstanceSharedWhenSet(): void {
-    // Ensure clean state.
     File::resetReplacer();
 
-    // Create and set a custom Replacer with a replacement.
     $replacer = Replacer::create()
       ->addReplacement(Replacement::create('custom', 'foo', 'bar'));
     File::setReplacer($replacer);
 
-    // The set Replacer should be used.
     $content1 = File::replaceContent('foo baz', 'baz', 'qux');
-    // Both 'foo' (from set Replacer) and 'baz' (from call) should be replaced.
+    // Both 'foo' (set Replacer) and 'baz' (call argument) are replaced.
     $this->assertSame('bar qux', $content1);
 
-    // Subsequent call should still have 'foo' replacement from set Replacer.
+    // The set Replacer persists, so 'foo' is still replaced.
     $content2 = File::replaceContent('foo test', 'test', 'example');
     $this->assertSame('bar example', $content2);
 
-    // Clean up.
     File::resetReplacer();
   }
 
   public function testReplacerReset(): void {
-    // Set a custom Replacer.
     $replacer = Replacer::create()
       ->addReplacement(Replacement::create('custom', 'foo', 'bar'));
     File::setReplacer($replacer);
 
-    // Verify the Replacer is active.
     $content1 = File::replaceContent('foo test', 'test', 'example');
     $this->assertSame('bar example', $content1);
 
-    // Reset the Replacer.
     File::resetReplacer();
 
-    // Now 'foo' should NOT be replaced (fresh Replacer without the rule).
+    // The fresh Replacer lacks the 'foo' rule, so 'foo' is not replaced.
     $content2 = File::replaceContent('foo test', 'test', 'example');
     $this->assertSame('foo example', $content2);
   }

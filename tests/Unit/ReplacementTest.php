@@ -234,7 +234,6 @@ final class ReplacementTest extends UnitTestCase {
     $this->assertSame($replacement, $result);
     $this->assertCount(0, $replacement->getExclusions());
 
-    // After clearing, all matches should be replaced.
     $content = '1.0.0 0.1.0 1.2.3';
     $replacement->apply($content);
 
@@ -272,38 +271,32 @@ final class ReplacementTest extends UnitTestCase {
     $content = 'foo bar';
     $replacement->apply($content);
 
-    // Closure applies to entire content, exclusion is ignored.
     $this->assertSame('FOO BAR', $content);
   }
 
   public function testPlainStringWithExclusionNotExcluded(): void {
-    // Plain string replacement with exclusion that doesn't match the needle.
     $replacement = Replacement::create('test', 'foo', 'bar')
       ->addExclusion('baz');
 
     $content = 'foo test foo';
     $result = $replacement->apply($content);
 
-    // 'foo' is not excluded, so it should be replaced.
     $this->assertTrue($result);
     $this->assertSame('bar test bar', $content);
   }
 
   public function testPlainStringWithExclusionExcluded(): void {
-    // Plain string replacement with exclusion that matches the needle.
     $replacement = Replacement::create('test', 'foo', 'bar')
       ->addExclusion('foo');
 
     $content = 'foo test foo';
     $result = $replacement->apply($content);
 
-    // 'foo' is excluded, so no replacement should happen.
     $this->assertFalse($result);
     $this->assertSame('foo test foo', $content);
   }
 
   public function testPlainStringWithRegexExclusion(): void {
-    // Plain string replacement with regex exclusion pattern.
     $replacement = Replacement::create('test', 'foo', 'bar')
       ->addExclusion('/^fo/');
 
@@ -316,14 +309,12 @@ final class ReplacementTest extends UnitTestCase {
   }
 
   public function testPlainStringWithCallbackExclusion(): void {
-    // Plain string replacement with callback exclusion.
     $replacement = Replacement::create('test', 'foo', 'bar')
       ->addExclusion(fn(string $match): bool => $match === 'foo');
 
     $content = 'foo test foo';
     $result = $replacement->apply($content);
 
-    // 'foo' is excluded by callback, so no replacement.
     $this->assertFalse($result);
     $this->assertSame('foo test foo', $content);
   }

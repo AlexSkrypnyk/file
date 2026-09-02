@@ -43,7 +43,7 @@ class File {
   /**
    * Replacement for PHP's `realpath` resolves non-existing paths.
    *
-   * The main deference is that it does not return FALSE on non-existing
+   * The main difference is that it does not return FALSE on non-existing
    * paths.
    *
    * @param string $path
@@ -55,11 +55,10 @@ class File {
    * @see https://stackoverflow.com/a/29372360/712666
    */
   public static function realpath(string $path): string {
-    // Whether $path is unix or not.
     $is_unix_path = $path === '' || $path[0] !== '/';
     $unc = str_starts_with($path, '\\\\');
 
-    // Attempt to detect if path is relative in which case, add cwd.
+    // Detect a relative path and prepend the current working directory.
     if (!str_contains($path, ':') && $is_unix_path && !$unc) {
       $path = static::cwd() . DIRECTORY_SEPARATOR . $path;
       if ($path[0] === '/') {
@@ -89,7 +88,6 @@ class File {
     $path = $is_unix_path ? $path : '/' . $path;
     $path = $unc ? '\\\\' . $path : $path;
 
-    // Resolve any symlinks.
     if (function_exists('readlink') && file_exists($path) && is_link($path) > 0) {
       $path = readlink($path);
 
@@ -194,7 +192,6 @@ class File {
       static::dir($directory);
     }
     catch (FileException) {
-      // If path exists and is a file, throw exception immediately.
       if (static::exists($directory) && is_file($directory)) {
         throw new FileException(sprintf('Cannot create directory "%s": path exists and is a file.', $directory));
       }
@@ -350,8 +347,8 @@ class File {
 
     // Note that symlink target must exist.
     if (is_link($source)) {
-      // Changing dir symlink will be relevant to the current destination's file
-      // directory.
+      // Change directory so the symlink is created relative to the
+      // destination file's directory.
       $current_dir = static::cwd();
 
       chdir($parent);
@@ -462,8 +459,6 @@ class File {
 
     $paths = array_diff($files, ['.', '..']);
 
-    // If no files/directories remain after removing `.` and `..`, return
-    // empty array.
     if (empty($paths)) {
       return [];
     }
@@ -650,7 +645,6 @@ class File {
    *   String to replace with (ignored when $needle is ReplacementInterface).
    */
   public static function replaceContentInDir(string $directory, string|ReplacementInterface $needle, string $replacement = ''): void {
-    // Create Replacement from string needle if needed.
     if (is_string($needle)) {
       $needle = Replacement::create('inline', $needle, $replacement);
     }
@@ -680,7 +674,6 @@ class File {
       return;
     }
 
-    // Create Replacement from string needle if needed.
     if (is_string($needle)) {
       $needle = Replacement::create('inline', $needle, $replacement);
     }
@@ -809,7 +802,6 @@ class File {
       }
     }
     catch (FileException $file_exception) {
-      // Re-throw with file context.
       throw new FileException(sprintf('Error processing file %s: %s', $file, $file_exception->getMessage()), $file_exception->getCode(), $file_exception);
     }
   }
@@ -832,7 +824,6 @@ class File {
       return $content;
     }
 
-    // Create Replacement from string needle if needed.
     if (is_string($needle)) {
       $needle = Replacement::create('inline', $needle, $replacement);
     }
@@ -858,7 +849,7 @@ class File {
       return $content;
     }
 
-    // Detect dominant line ending - simplified logic.
+    // Detect the dominant line ending.
     $crlf_count = substr_count($content, "\r\n");
     $lf_count = substr_count($content, "\n") - $crlf_count;
     $cr_count = substr_count($content, "\r") - $crlf_count;
@@ -871,31 +862,24 @@ class File {
       $line_ending = "\r";
     }
 
-    // Normalize line endings temporarily to \n.
     $normalized = str_replace(["\r\n", "\r"], "\n", $content);
 
-    // Check for whitespace-only lines and replace with empty lines.
     $had_whitespace_lines = (bool) preg_match('/^[ \t]+$/m', $normalized);
     $normalized = preg_replace('/^[ \t]+$/m', '', $normalized) ?? $content;
 
-    // Handle content that's only newlines.
     if (preg_match('/^\n*$/', $normalized)) {
       return '';
     }
 
-    // Remove leading newlines.
     $normalized = ltrim($normalized, "\n");
 
-    // Collapse consecutive newlines - unified logic.
     $use_single_collapse = ($line_ending === "\r\n" && !$had_whitespace_lines);
     $pattern = $use_single_collapse ? "/\n{2,}/" : "/\n{3,}/";
     $replacement = $use_single_collapse ? "\n" : "\n\n";
     $normalized = preg_replace($pattern, $replacement, $normalized) ?? $content;
 
-    // Collapse trailing multiple newlines to single newline.
     $normalized = preg_replace("/\n{2,}$/", "\n", $normalized) ?? $content;
 
-    // Convert back to original line ending.
     return $line_ending !== "\n" ? str_replace("\n", $line_ending, $normalized) : $normalized;
   }
 
@@ -974,7 +958,6 @@ class File {
       // @codeCoverageIgnoreEnd
     }
 
-    // Preserve original line endings.
     $line_ending = static::detectLineEnding($content);
 
     foreach ($lines as $line) {
@@ -992,7 +975,6 @@ class File {
       }
 
       if ($with_content && $within_token) {
-        // Skip content as contents of the token.
         continue;
       }
 
@@ -1185,7 +1167,6 @@ class File {
    *   The Replacer instance.
    */
   public static function getReplacer(): Replacer {
-    // If user has set a Replacer, use it. Otherwise, create a fresh one.
     return static::$replacer ?? Replacer::create();
   }
 

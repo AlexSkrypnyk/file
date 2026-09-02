@@ -52,7 +52,7 @@ class Replacer implements ReplacerInterface {
     $this->addReplacement(Replacement::create('hash_at', '/@[a-fA-F0-9]{39,40}/', '@' . Replacement::HASH));
     // composer.json and package.json versions.
     $this->addReplacement(Replacement::create('json_version', '/": "(?:\^|~|>=|<=)?\d+(?:\.\d+){0,2}(?:(?:-|@)[\w.-]+)?"/', '": "' . Replacement::VERSION . '"'));
-    // Docker images with digests (must come before regular docker pattern).
+    // Docker images with digests (must be added before 'docker_tag').
     $this->addReplacement(Replacement::create('docker_digest', '/([\w.-]+\/[\w.-]+:)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?@sha256:[a-f0-9]{64}/', '${1}' . Replacement::VERSION));
     // Docker image tags.
     $this->addReplacement(Replacement::create('docker_tag', '/([\w.-]+\/[\w.-]+:)(?:v)?\d+(?:\.\d+){0,2}(?:-[\w.-]+)?/', '${1}' . Replacement::VERSION));
@@ -135,8 +135,6 @@ class Replacer implements ReplacerInterface {
         $replaced++;
       }
 
-      // Early exit after reaching max replacements to prevent excessive
-      // replacements and optimize performance.
       if ($max > 0 && $replaced >= $max) {
         break;
       }
@@ -179,19 +177,16 @@ class Replacer implements ReplacerInterface {
    * {@inheritdoc}
    */
   public function addExclusions(array $matchers, ?string $name = NULL): static {
-    // Validate name if provided.
     if ($name !== NULL && !$this->hasReplacement($name)) {
       throw new \InvalidArgumentException(
         sprintf('Replacement "%s" does not exist.', $name)
       );
     }
 
-    // Determine target replacements.
     $targets = $name !== NULL
       ? [$this->replacements[$name]]
       : $this->replacements;
 
-    // Empty matchers = clear exclusions.
     if ($matchers === []) {
       foreach ($targets as $replacement) {
         $replacement->clearExclusions();
@@ -200,7 +195,6 @@ class Replacer implements ReplacerInterface {
       return $this;
     }
 
-    // Add exclusions to targets.
     foreach ($targets as $replacement) {
       foreach ($matchers as $matcher) {
         $replacement->addExclusion($matcher);

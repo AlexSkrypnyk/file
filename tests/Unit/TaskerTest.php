@@ -21,7 +21,6 @@ final class TaskerTest extends UnitTestCase {
     $tasker = new Tasker();
     $processed_items = [];
 
-    // Add two tasks that modify generic context objects.
     $tasker->addTask(function ($context) use (&$processed_items) {
       $processed_items[] = 'task1:' . $context->name;
       $context->value .= '_task1';
@@ -36,7 +35,6 @@ final class TaskerTest extends UnitTestCase {
 
     $final_results = [];
     $tasker->setIterator(function () use (&$final_results) {
-      // Create generic test contexts.
       $test_data = [
         ['name' => 'item1', 'value' => 'content1'],
         ['name' => 'item2', 'value' => 'content2'],
@@ -55,10 +53,8 @@ final class TaskerTest extends UnitTestCase {
 
     $tasker->process('test_batch');
 
-    // Verify both tasks executed for each item.
     $this->assertCount(4, $processed_items, 'Should have 2 tasks × 2 items = 4 executions');
 
-    // Verify context was processed by both tasks.
     $this->assertCount(2, $final_results, 'Should have processed 2 items');
     foreach ($final_results as $value) {
       $this->assertStringContainsString('_task1_task2', (string) $value, 'Context should be processed by both tasks');
@@ -116,11 +112,9 @@ final class TaskerTest extends UnitTestCase {
     $tasker->process('test_batch');
     $this->assertSame(2, $first_execution_count, 'First execution should process all items');
 
-    // Try to process again - should not execute since queue was cleared.
     $tasker->process('test_batch');
     $this->assertSame(2, $first_execution_count, 'Second execution should not happen as queue was cleared');
 
-    // Add new task and verify it works.
     $tasker->addTask(function ($context) use (&$second_execution_count) {
       $second_execution_count++;
       return $context;
@@ -152,7 +146,6 @@ final class TaskerTest extends UnitTestCase {
 
     $tasker->clear($clear_batch_name);
 
-    // Test which batches remain by checking if they can still process.
     foreach ($expected_remaining_batches as $expected_batch) {
       $executed = FALSE;
 

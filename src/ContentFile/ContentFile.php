@@ -7,9 +7,8 @@ namespace AlexSkrypnyk\File\ContentFile;
 /**
  * File object with mutable content for batch processing.
  *
- * Extends SplFileInfo to provide file metadata while adding the ability
- * to hold and modify content in memory. Used for batch file processing
- * where content needs to be read, modified, and written back.
+ * Holds file content in memory alongside the SplFileInfo metadata so the
+ * content can be read, modified, and written back.
  */
 class ContentFile extends \SplFileInfo implements ContentFileInterface {
 

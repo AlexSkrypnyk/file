@@ -50,8 +50,8 @@ trait FileAssertionsTrait {
   /**
    * Assert that a file contains a specific word.
    *
-   * This method uses word boundaries to ensure the needle is found as a
-   * complete word, not as part of another word.
+   * The needle is matched with word boundaries, so it is found only as a
+   * complete word.
    *
    * @param string $file
    *   The file to search in.
@@ -70,8 +70,8 @@ trait FileAssertionsTrait {
   /**
    * Assert that a file does not contain a specific word.
    *
-   * This method uses word boundaries to ensure the needle is found as a
-   * complete word, not as part of another word.
+   * The needle is matched with word boundaries, so it is found only as a
+   * complete word.
    *
    * @param string $file
    *   The file to search in.
@@ -98,7 +98,6 @@ trait FileAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertFileEqualsFile(string $expected, string $actual, ?string $message = NULL): void {
-    // Check that both files exist.
     if (!file_exists($expected)) {
       $this->fail($message ?: sprintf('Expected file "%s" does not exist.', $expected));
     }
@@ -106,7 +105,6 @@ trait FileAssertionsTrait {
       $this->fail($message ?: sprintf('Actual file "%s" does not exist.', $actual));
     }
 
-    // Check file contents.
     $this->assertFileEquals($expected, $actual, $message ?: sprintf('File contents of "%s" and "%s" do not match.', $expected, $actual));
 
     $this->addToAssertionCount(1);
@@ -123,7 +121,6 @@ trait FileAssertionsTrait {
    *   Optional custom failure message.
    */
   public function assertFileNotEqualsFile(string $expected, string $actual, ?string $message = NULL): void {
-    // Check that both files exist.
     if (!file_exists($expected)) {
       $this->fail($message ?: sprintf('Expected file "%s" does not exist.', $expected));
     }
@@ -131,7 +128,6 @@ trait FileAssertionsTrait {
       $this->fail($message ?: sprintf('Actual file "%s" does not exist.', $actual));
     }
 
-    // Check if the contents are different.
     $expected_contents = file_get_contents($expected);
     $actual_contents = file_get_contents($actual);
 

@@ -25,17 +25,17 @@ class Strings {
 
     $delimiter = $string[0];
 
-    // Common regex delimiters.
+    // Only common regex delimiters are accepted.
     if (!in_array($delimiter, ['/', '#', '~', '@', '%'], TRUE)) {
       return FALSE;
     }
 
-    // Must end with the delimiter (optionally followed by modifiers).
+    // The string must end with the delimiter, then optional modifiers.
     if (!preg_match('/^' . preg_quote($delimiter, '/') . '.+' . preg_quote($delimiter, '/') . '[imsxADSUXJu]*$/', $string)) {
       return FALSE;
     }
 
-    // Validate it's actually a working regex.
+    // Validate that the string is a working regex.
     return @preg_match($string, '') !== FALSE;
   }
 
