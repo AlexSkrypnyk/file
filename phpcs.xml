@@ -31,4 +31,18 @@
         <exclude-pattern>*.TestCase\.php</exclude-pattern>
         <exclude-pattern>*.test</exclude-pattern>
     </rule>
+
+    <!-- Allow missing class doc comments in tests. -->
+    <rule ref="Drupal.Commenting.ClassComment.Missing">
+        <exclude-pattern>*.Test\.php</exclude-pattern>
+        <exclude-pattern>*.TestCase\.php</exclude-pattern>
+        <exclude-pattern>*.test</exclude-pattern>
+    </rule>
+
+    <!-- Allow missing member variable doc comments in tests. -->
+    <rule ref="Drupal.Commenting.VariableComment.Missing">
+        <exclude-pattern>*.Test\.php</exclude-pattern>
+        <exclude-pattern>*.TestCase\.php</exclude-pattern>
+        <exclude-pattern>*.test</exclude-pattern>
+    </rule>
 </ruleset>
