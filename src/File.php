@@ -199,8 +199,8 @@ class File {
         static::dir($directory);
       }
       // @codeCoverageIgnoreStart
-      catch (\Exception $e) {
-        throw new FileException(sprintf('Unable to create directory "%s": %s', $directory, $e->getMessage()), $e->getCode(), $e);
+      catch (\Exception $exception) {
+        throw new FileException(sprintf('Unable to create directory "%s": %s', $directory, $exception->getMessage()), $exception->getCode(), $exception);
       }
       // @codeCoverageIgnoreEnd
     }
