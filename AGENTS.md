@@ -62,7 +62,8 @@ composer lint-fix
 ./vendor/bin/rector --dry-run # Check Rector suggestions
 ```
 
-Run `composer lint` until it passes; CI fails on any violation.
+Run `composer lint` until it passes. CI fails on any violation unless the
+`CI_LINT_IGNORE_FAILURE` repository variable is set to `1`.
 
 ### Testing
 
