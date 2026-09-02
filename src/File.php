@@ -305,20 +305,19 @@ class File {
         continue;
       }
 
-      if (!empty($needle)) {
-        foreach ($files as $file) {
-          if (Strings::isRegex($needle)) {
-            if (preg_match($needle, $file)) {
-              return $file;
-            }
-          }
-          elseif (str_contains($file, $needle)) {
+      if (empty($needle)) {
+        return reset($files);
+      }
+
+      foreach ($files as $file) {
+        if (Strings::isRegex($needle)) {
+          if (preg_match($needle, $file)) {
             return $file;
           }
         }
-      }
-      else {
-        return reset($files);
+        elseif (str_contains($file, $needle)) {
+          return $file;
+        }
       }
     }
 
@@ -345,7 +344,7 @@ class File {
     $parent = dirname($dest);
     $parent = static::mkdir($parent, $permissions);
 
-    // Note that symlink target must exist.
+    // The symlink target must exist.
     if (is_link($source)) {
       // Change directory so the symlink is created relative to the
       // destination file's directory.
@@ -539,6 +538,9 @@ class File {
    *   File path to append to.
    * @param string $content
    *   Content to append to the file.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When file does not exist or is not readable.
    */
   public static function append(string $file, string $content = ''): void {
     if (!static::exists($file) || !is_readable($file)) {
@@ -1002,6 +1004,9 @@ class File {
 
   /**
    * Get list of paths to ignore.
+   *
+   * @param array<int, string> $paths
+   *   Additional paths to merge into the default list.
    *
    * @return array<int, string>
    *   Array of paths to ignore.
