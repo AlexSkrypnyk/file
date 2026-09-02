@@ -1145,9 +1145,7 @@ class File {
   protected static function getTasker(): Tasker {
     static $tasker = NULL;
 
-    if ($tasker === NULL) {
-      $tasker = new Tasker();
-    }
+    $tasker ??= new Tasker();
 
     return $tasker;
   }
