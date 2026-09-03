@@ -9,6 +9,7 @@ parameters:
   paths:
     - benchmarks
     - src
+    - tests/Functional
     - tests/Unit
 
   excludePaths:

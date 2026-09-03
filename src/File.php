@@ -46,6 +46,10 @@ class File {
    * The main difference is that it does not return FALSE on non-existing
    * paths.
    *
+   * A path carrying a stream wrapper scheme, such as `vfs://run/out`, keeps
+   * its scheme and only the part after it is normalised. Symlinks are not
+   * resolved for such a path.
+   *
    * @param string $path
    *   Path that needs to be resolved.
    *
@@ -55,20 +59,30 @@ class File {
    * @see https://stackoverflow.com/a/29372360/712666
    */
   public static function realpath(string $path): string {
-    $is_unix_path = $path === '' || $path[0] !== '/';
+    $scheme = '';
+
+    // A scheme is at least two characters long, so a Windows drive letter is
+    // not mistaken for one.
+    if (preg_match('#^[a-zA-Z][a-zA-Z0-9+.-]+://#', $path, $matches) === 1) {
+      $scheme = $matches[0];
+      $path = substr($path, strlen($scheme));
+    }
+
+    // A stream URL is separated by a forward slash on every platform.
+    $separator = $scheme === '' ? DIRECTORY_SEPARATOR : '/';
+
+    $has_leading_slash = $path !== '' && $path[0] === '/';
     $unc = str_starts_with($path, '\\\\');
 
     // Detect a relative path and prepend the current working directory.
-    if (!str_contains($path, ':') && $is_unix_path && !$unc) {
+    if ($scheme === '' && !str_contains($path, ':') && !$has_leading_slash && !$unc) {
       $path = static::cwd() . DIRECTORY_SEPARATOR . $path;
-      if ($path[0] === '/') {
-        $is_unix_path = FALSE;
-      }
+      $has_leading_slash = $path[0] === '/';
     }
 
     // Resolve path parts (single dot, double dot and double delimiters).
-    $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
-    $parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), static fn(string $part): bool => $part !== '');
+    $path = str_replace(['/', '\\'], $separator, $path);
+    $parts = array_filter(explode($separator, $path), static fn(string $part): bool => $part !== '');
 
     $absolutes = [];
     foreach ($parts as $part) {
@@ -83,10 +97,17 @@ class File {
       }
     }
 
-    $path = implode(DIRECTORY_SEPARATOR, $absolutes);
+    $path = implode($separator, $absolutes);
     // Put initial separator that could have been lost.
-    $path = $is_unix_path ? $path : '/' . $path;
+    $path = $has_leading_slash ? '/' . $path : $path;
     $path = $unc ? '\\\\' . $path : $path;
+    $path = $scheme . $path;
+
+    // readlink() does not accept a stream URL, and the temporary directory
+    // prefix never matches one.
+    if ($scheme !== '') {
+      return $path;
+    }
 
     if (function_exists('readlink') && file_exists($path) && is_link($path) > 0) {
       $path = readlink($path);

@@ -26,9 +26,10 @@ use PhpBench\Attributes\Warmup;
  * through it, so a change in resolution cost is visible where callers
  * actually pay it.
  *
- * Subjects that write file contents are excluded. Their deviation on a
- * shared runner exceeds the configured retry threshold, so phpbench
- * re-runs them until the job is killed.
+ * Subjects that write to the filesystem are excluded. Their deviation on
+ * a shared runner swamps the resolution cost being measured, and can
+ * exceed the configured retry threshold, which makes phpbench re-run
+ * them until the job is killed.
  */
 class PathBench {
 
@@ -291,21 +292,6 @@ class PathBench {
   #[Iterations(10)]
   public function benchScandir(): void {
     File::scandir($this->testDir);
-  }
-
-  /**
-   * Benchmarks creating a temporary directory.
-   *
-   * The revolution count is lower than for the read-only subjects because
-   * each revolution creates a directory.
-   */
-  #[BeforeMethods('setUp')]
-  #[AfterMethods('tearDown')]
-  #[Revs(100)]
-  #[Warmup(2)]
-  #[Iterations(10)]
-  public function benchTmpdir(): void {
-    File::tmpdir($this->testDir);
   }
 
 }

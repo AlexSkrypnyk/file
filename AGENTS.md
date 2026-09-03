@@ -158,6 +158,8 @@ composer install
 ### PHPUnit Structure
 
 - `tests/Unit/` - unit tests
+- `tests/Functional/` - tests that exercise the library through a registered
+  stream wrapper
 - `tests/Fixtures/` - fixture trees the tests copy and operate on
 
 ### Writing Tests

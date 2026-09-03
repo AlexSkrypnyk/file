@@ -113,6 +113,44 @@ final class FileTest extends UnitTestCase {
 
     // Symlink resolution.
     yield [$symlink_path, $symlink_target];
+
+    // Stream wrapper URLs keep their scheme separator.
+    yield ['vfs://run/out/nested', 'vfs://run/out/nested'];
+    yield ['vfs://', 'vfs://'];
+    yield ['file:///var/www/file.txt', 'file:///var/www/file.txt'];
+    yield ['php://memory', 'php://memory'];
+    yield ['s3://bucket/key', 's3://bucket/key'];
+    yield ['compress.zlib://var/log/file.gz', 'compress.zlib://var/log/file.gz'];
+
+    // Normalisation applies to the path after the scheme.
+    yield ['vfs://run//out', 'vfs://run/out'];
+    yield ['vfs://run/./out', 'vfs://run/out'];
+    yield ['vfs://run/out/../other', 'vfs://run/other'];
+    yield ['vfs://run/../..', 'vfs://'];
+
+    // A Windows drive letter is not a stream wrapper scheme.
+    yield ['C://foo', 'C:' . DIRECTORY_SEPARATOR . 'foo'];
+  }
+
+  public function testMkdirStreamWrapperUrl(): void {
+    $original_cwd = getcwd();
+    $this->assertNotFalse($original_cwd, 'Failed to get current working directory');
+
+    $sandbox = $this->testTmpDir . DIRECTORY_SEPARATOR . 'stream_wrapper';
+    mkdir($sandbox, 0777, TRUE);
+    $this->assertTrue(chdir($sandbox), 'Failed to change directory');
+
+    try {
+      $url = 'file://' . File::realpath($sandbox) . '/out/nested';
+
+      $this->assertSame($url, File::absolute($url));
+      $this->assertSame($url, File::mkdir($url));
+      $this->assertDirectoryExists($sandbox . DIRECTORY_SEPARATOR . 'out' . DIRECTORY_SEPARATOR . 'nested');
+      $this->assertDirectoryDoesNotExist($sandbox . DIRECTORY_SEPARATOR . 'file:');
+    }
+    finally {
+      chdir($original_cwd);
+    }
   }
 
   #[DataProvider('dataProviderAbsolute')]
@@ -130,6 +168,11 @@ final class FileTest extends UnitTestCase {
     yield ['file.txt', '/base/path', '/base/path/file.txt'];
     // Handling nested relative paths.
     yield ['../file.txt', '/base/path/subdir', '/base/path/file.txt'];
+    // Stream wrapper URL is already absolute.
+    yield ['vfs://run/out', NULL, 'vfs://run/out'];
+    yield ['vfs://run/out', '/base/path', 'vfs://run/out'];
+    // Relative path resolved from a stream wrapper base.
+    yield ['file.txt', 'vfs://run', 'vfs://run/file.txt'];
   }
 
   #[DataProvider('dataProviderDir')]
