@@ -6,7 +6,7 @@ code in this repository.
 
 ## Project Overview
 
-A PHP 8.2+ library of file and directory manipulation utilities, consumed by
+A PHP 8.3+ library of file and directory manipulation utilities, consumed by
 other projects via `composer require alexskrypnyk/file`. It also ships PHPUnit
 assertion traits so consuming projects can assert on file and directory state in
 their own tests.
@@ -127,9 +127,9 @@ composer install
   - Config: `phpstan.neon`
   - Ignores: untyped iterables, PHPBench attributes
 
-3. **Rector** - PHP 8.2 modernization + code quality
+3. **Rector** - PHP 8.3 modernization + code quality
   - Config: `rector.php`
-  - PHP set: 8.2
+  - PHP set: derived from the `composer.json` PHP requirement
   - Prepared sets: dead code, code quality, coding style, type declarations,
     naming, instanceof, early return, PHPUnit code quality
   - Composer-based PHPUnit set, plus `DeclareStrictTypesRector`
@@ -178,7 +178,7 @@ directories.
 
 GitHub Actions workflows test across:
 
-- PHP versions: 8.2, 8.3, 8.4, 8.5
+- PHP versions: 8.3, 8.4, 8.5
 - Dependency sets: `normal` and `lowest`
 - Lint, coverage threshold and Codecov upload run on the 8.4 / `normal` leg only
 

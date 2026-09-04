@@ -4,7 +4,7 @@ Thank you for considering a contribution to this project. This guide covers sett
 
 ## Local setup
 
-Requires PHP 8.2 or newer and Composer.
+Requires PHP 8.3 or newer and Composer.
 
 ```bash
 composer install
