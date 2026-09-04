@@ -12,17 +12,17 @@ interface ReplacementInterface {
   /**
    * Default replacement placeholder for version strings.
    */
-  public const VERSION = '__VERSION__';
+  public const string VERSION = '__VERSION__';
 
   /**
    * Replacement placeholder for hash strings.
    */
-  public const HASH = '__HASH__';
+  public const string HASH = '__HASH__';
 
   /**
    * Replacement placeholder for integrity hashes (SRI).
    */
-  public const INTEGRITY = '__INTEGRITY__';
+  public const string INTEGRITY = '__INTEGRITY__';
 
   /**
    * Create a new replacement.

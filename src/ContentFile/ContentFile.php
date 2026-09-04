@@ -25,6 +25,7 @@ class ContentFile extends \SplFileInfo implements ContentFileInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getContent(): string {
     if (!$this->contentLoaded && $this->content === NULL) {
       $real_path = $this->getRealPath();
@@ -38,6 +39,7 @@ class ContentFile extends \SplFileInfo implements ContentFileInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function setContent(?string $content): void {
     $this->content = $content;
     $this->contentLoaded = TRUE;

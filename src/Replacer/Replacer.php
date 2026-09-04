@@ -32,6 +32,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public static function create(): static {
     return new static();
   }
@@ -39,6 +40,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function addVersionReplacements(): static {
     // SRI integrity hashes.
     $this->addReplacement(Replacement::create('integrity', '/sha512\-[A-Za-z0-9+\/]{86}={0,2}/', Replacement::INTEGRITY));
@@ -71,6 +73,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function addReplacement(ReplacementInterface $replacement): static {
     $this->replacements[$replacement->getName()] = $replacement;
 
@@ -80,6 +83,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function removeReplacement(string $name): static {
     unset($this->replacements[$name]);
 
@@ -89,6 +93,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function hasReplacement(string $name): bool {
     return isset($this->replacements[$name]);
   }
@@ -96,6 +101,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getReplacement(string $name): ?ReplacementInterface {
     return $this->replacements[$name] ?? NULL;
   }
@@ -103,6 +109,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getReplacements(): array {
     return $this->replacements;
   }
@@ -110,6 +117,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function setMaxReplacements(int $max): static {
     $this->maxReplacements = $max;
 
@@ -119,6 +127,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getMaxReplacements(): int {
     return $this->maxReplacements;
   }
@@ -126,6 +135,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function replace(string &$content, ?int $max_replacements = NULL): bool {
     $max = $max_replacements ?? $this->maxReplacements;
     $replaced = 0;
@@ -146,6 +156,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function replaceInDir(string $directory, array $ignore_paths = []): static {
     $files = File::scandir($directory, $ignore_paths);
 
@@ -176,6 +187,7 @@ class Replacer implements ReplacerInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function addExclusions(array $matchers, ?string $name = NULL): static {
     if ($name !== NULL && !$this->hasReplacement($name)) {
       throw new \InvalidArgumentException(

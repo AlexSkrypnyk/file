@@ -45,6 +45,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public static function create(string $name, string|\Closure $matcher, string $replacement = self::VERSION): static {
     return new static($name, $matcher, $replacement);
   }
@@ -52,6 +53,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getName(): string {
     return $this->name;
   }
@@ -59,6 +61,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getMatcher(): string|\Closure {
     return $this->matcher;
   }
@@ -66,6 +69,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getReplacement(): string {
     return $this->replacement;
   }
@@ -73,6 +77,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function isCallback(): bool {
     return $this->matcher instanceof \Closure;
   }
@@ -80,6 +85,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function apply(string &$content): bool {
     // Closures handle their own logic (no exclusion support).
     if ($this->matcher instanceof \Closure) {
@@ -135,6 +141,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function addExclusion(string|\Closure $exclusion): static {
     $this->exclusions[] = $exclusion;
 
@@ -144,6 +151,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function getExclusions(): array {
     return $this->exclusions;
   }
@@ -151,6 +159,7 @@ class Replacement implements ReplacementInterface {
   /**
    * {@inheritdoc}
    */
+  #[\Override]
   public function clearExclusions(): static {
     $this->exclusions = [];
 
