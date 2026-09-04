@@ -26,6 +26,7 @@ use Rector\Naming\Rector\Foreach_\RenameForeachValueVariableToMatchExprVariableR
 use Rector\Naming\Rector\Foreach_\RenameForeachValueVariableToMatchMethodCallReturnTypeRector;
 use Rector\Php74\Rector\Closure\ClosureToArrowFunctionRector;
 use Rector\Php80\Rector\Switch_\ChangeSwitchToMatchRector;
+use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
 use Rector\TypeDeclaration\Rector\StmtsAwareInterface\DeclareStrictTypesRector;
 
 return RectorConfig::configure()
@@ -34,7 +35,7 @@ return RectorConfig::configure()
     __DIR__ . '/src',
     __DIR__ . '/tests',
   ])
-  ->withPhpSets(php82: TRUE)
+  ->withPhpSets()
   ->withPreparedSets(
     deadCode: TRUE,
     codeQuality: TRUE,
@@ -48,6 +49,11 @@ return RectorConfig::configure()
   ->withComposerBased(phpunit: TRUE)
   ->withRules([
     DeclareStrictTypesRector::class,
+  ])
+  // Every override in this library implements an interface rather than
+  // extending a class.
+  ->withConfiguredRule(AddOverrideAttributeToOverriddenMethodsRector::class, [
+    AddOverrideAttributeToOverriddenMethodsRector::ADD_TO_INTERFACE_METHODS => TRUE,
   ])
   ->withSkip([
     // Rules added by Rector's rule sets.
