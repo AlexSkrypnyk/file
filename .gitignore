@@ -19,4 +19,4 @@
 
 # Benchmark results are measured per run, never committed.
 /.phpbench
-/.benchmark-base
+/.benchmark

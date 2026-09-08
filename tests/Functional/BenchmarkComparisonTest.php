@@ -24,7 +24,7 @@ final class BenchmarkComparisonTest extends TestCase {
   protected string $root;
 
   /**
-   * Directory holding the base and head projects built for a single test.
+   * Directory holding the checkouts built for a single test.
    */
   protected string $workspace;
 
@@ -42,44 +42,63 @@ final class BenchmarkComparisonTest extends TestCase {
   }
 
   public function testDetectsRegressionBeyondThreshold(): void {
-    $base = $this->createProject('base', 1000);
-    $head = $this->createProject('head', 5000);
+    $base = $this->createCheckout('base', 1000);
+    $head = $this->createCheckout('head', 5000);
 
-    [$exit_code, $output] = $this->compare($base, $head, 50);
+    [$exit_code, $output] = $this->compare(['--base=' . $base, '--head=' . $head, '--threshold=50']);
 
-    $this->assertNotSame(0, $exit_code, 'Comparison must fail on a regression. Output: ' . $output);
+    $this->assertNotSame(0, $exit_code, 'A regression must fail the run. Output: ' . $output);
     $this->assertNotSame(self::EXIT_USAGE, $exit_code, 'A regression must not be reported as a usage error. Output: ' . $output);
     $this->assertStringContainsString('benchSleep', $output);
   }
 
   public function testAcceptsUnchangedPerformance(): void {
-    $base = $this->createProject('base', 1000);
-    $head = $this->createProject('head', 1000);
+    $base = $this->createCheckout('base', 1000);
+    $head = $this->createCheckout('head', 1000);
 
-    [$exit_code, $output] = $this->compare($base, $head, 50);
+    [$exit_code, $output] = $this->compare(['--base=' . $base, '--head=' . $head, '--threshold=50']);
 
-    $this->assertSame(0, $exit_code, 'Comparison must pass when timings are unchanged. Output: ' . $output);
+    $this->assertSame(0, $exit_code, 'Unchanged timings must pass. Output: ' . $output);
   }
 
   public function testAcceptsImprovement(): void {
-    $base = $this->createProject('base', 5000);
-    $head = $this->createProject('head', 1000);
+    $base = $this->createCheckout('base', 5000);
+    $head = $this->createCheckout('head', 1000);
 
-    [$exit_code, $output] = $this->compare($base, $head, 50);
+    [$exit_code, $output] = $this->compare(['--base=' . $base, '--head=' . $head, '--threshold=50']);
 
-    $this->assertSame(0, $exit_code, 'Comparison must pass when the head is faster. Output: ' . $output);
+    $this->assertSame(0, $exit_code, 'A faster head must pass. Output: ' . $output);
+  }
+
+  public function testReportsSingleCheckoutWhenBaseOmitted(): void {
+    $head = $this->createCheckout('head', 1000);
+
+    [$exit_code, $output] = $this->compare(['--head=' . $head]);
+
+    $this->assertSame(0, $exit_code, 'A single checkout must be reported without a comparison. Output: ' . $output);
+    $this->assertStringContainsString('benchSleep', $output);
+  }
+
+  public function testWarnsWhenCheckoutPathsDifferInLength(): void {
+    $base = $this->createCheckout('base', 1000);
+    $head = $this->createCheckout('head-of-a-different-length', 1000);
+
+    [$exit_code, $output] = $this->compare(['--base=' . $base, '--head=' . $head, '--threshold=50']);
+
+    $this->assertSame(0, $exit_code, 'A path length mismatch must warn rather than fail. Output: ' . $output);
+    $this->assertStringContainsString('length', $output, 'The run must warn that the two paths differ in length.');
   }
 
   public function testRejectsMissingBaseDirectory(): void {
-    $head = $this->createProject('head', 1000);
+    $head = $this->createCheckout('head', 1000);
 
-    [$exit_code, $output] = $this->compare($this->workspace . '/absent', $head, 50);
+    [$exit_code, $output] = $this->compare(['--base=' . $this->workspace . '/absent', '--head=' . $head]);
 
-    $this->assertSame(self::EXIT_USAGE, $exit_code, 'A missing base directory must be reported as a usage error. Output: ' . $output);
+    $this->assertSame(self::EXIT_USAGE, $exit_code, 'A missing base directory must be a usage error. Output: ' . $output);
   }
 
   /**
-   * Builds a self-contained PHPBench project whose only subject sleeps.
+   * Builds a self-contained PHPBench checkout whose only subject sleeps.
    *
    * @param string $name
    *   Directory name created under the workspace.
@@ -87,9 +106,9 @@ final class BenchmarkComparisonTest extends TestCase {
    *   Microseconds each revolution sleeps for.
    *
    * @return string
-   *   Absolute path to the created project.
+   *   Absolute path to the created checkout.
    */
-  protected function createProject(string $name, int $sleep): string {
+  protected function createCheckout(string $name, int $sleep): string {
     $dir = $this->workspace . '/' . $name;
     $this->assertTrue(mkdir($dir . '/benchmarks', 0777, TRUE));
 
@@ -119,13 +138,16 @@ final class BenchmarkComparisonTest extends TestCase {
   }
 
   /**
-   * Runs the comparison script over two prepared projects.
+   * Runs the comparison script.
+   *
+   * @param array<int, string> $flags
+   *   Flags passed to the script.
    *
    * @return array{0: int, 1: string}
    *   The exit code and the combined output.
    */
-  protected function compare(string $base, string $head, int $threshold): array {
-    $command = sprintf('%s --base=%s --head=%s --threshold=%d 2>&1', escapeshellarg($this->root . '/.github/scripts/benchmark-compare.sh'), escapeshellarg($base), escapeshellarg($head), $threshold);
+  protected function compare(array $flags): array {
+    $command = sprintf('%s %s 2>&1', escapeshellarg($this->root . '/.github/scripts/benchmark-compare.sh'), implode(' ', array_map(escapeshellarg(...), $flags)));
 
     $output = [];
     $exit_code = 0;
