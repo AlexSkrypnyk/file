@@ -37,11 +37,16 @@ Run a single file or a single test method with PHPUnit directly:
 
 ## Benchmarking
 
-`composer benchmark` runs PHPBench against the stored baseline in `.phpbench/storage/`. CI fails a run that regresses beyond ±5%.
+`composer benchmark` runs PHPBench once and reports the timings. There is no stored baseline: a comparison measures both revisions on the machine it runs on, because the spread between two hosts is several times larger than the change most benchmarks are meant to detect.
+
+`composer benchmark-compare` measures a second checkout and asserts that no subject got slower by more than the threshold, which defaults to 15%. Check the revision to compare with out at the same directory depth as this one, and give it the same toolchain, or subjects that resolve against the working directory will report the difference between the two paths:
 
 ```bash
 composer benchmark
-composer benchmark-baseline
+
+git clone --no-hardlinks . ../base && git -C ../base checkout main
+cp -R vendor ../base/vendor
+composer benchmark-compare -- --base=../base --threshold=15
 ```
 
 Reports are written to `.logs/performance-report.*` as JSON, CSV and HTML.

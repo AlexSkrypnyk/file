@@ -87,14 +87,14 @@ composer test-coverage
 ### Benchmarking
 
 ```bash
-# Run benchmarks against the stored baseline (used by CI)
+# Run the suite once and report the timings
 composer benchmark
 
-# Create or update the baseline
-composer benchmark-baseline
+# Measure a second checkout and assert against it (used by CI)
+composer benchmark-compare -- --base=../base --threshold=15
 
 # Run a single benchmark class
-./vendor/bin/phpbench run benchmarks/TaskBench.php --ref=baseline
+./vendor/bin/phpbench run benchmarks/TaskBench.php
 
 # Run with detailed output
 ./vendor/bin/phpbench run --report=aggregate
@@ -185,10 +185,7 @@ GitHub Actions workflows test across:
 Key workflows:
 
 - `.github/workflows/test-php.yml` - PHP testing
-- `.github/workflows/benchmark-php.yml` - PHPBench, comparing against the
-  baseline in `.phpbench/storage/` with a ±5% threshold. The baseline is
-  committed on pushes to `main`; regressions beyond the threshold fail the run.
-  Benchmarks run without xdebug or pcov so timings are not distorted.
+- `.github/workflows/benchmark-php.yml` - PHPBench. The workflow checks out the head and base revisions as sibling directories, measures both with one toolchain on one runner, and fails when a subject gets slower by more than 15%. Nothing is stored between runs, so there is no baseline to refresh. Benchmarks run without xdebug or pcov so timings are not distorted.
 
 
 ## Updating from the template
