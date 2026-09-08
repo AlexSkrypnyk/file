@@ -66,8 +66,8 @@
         "sort-packages": true
     },
     "scripts": {
-        "benchmark": "mkdir -p .logs >/dev/null && phpbench run --ref=baseline --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console",
-        "benchmark-baseline": "mkdir -p .logs .phpbench >/dev/null && phpbench run --store --tag=baseline --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console",
+        "benchmark": "mkdir -p .logs >/dev/null && phpbench run --report=aggregate --dump-file .logs/performance-report.json --output html --output csv --output console",
+        "benchmark-compare": "mkdir -p .logs >/dev/null && .github/scripts/benchmark-compare.sh",
         "lint": [
             "phpcs",
             "phpstan",

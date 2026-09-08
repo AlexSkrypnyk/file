@@ -87,14 +87,14 @@ composer test-coverage
 ### Benchmarking
 
 ```bash
-# Run benchmarks against the stored baseline (used by CI)
+# Run the suite once and report the timings
 composer benchmark
 
-# Create or update the baseline
-composer benchmark-baseline
+# Measure two checkouts and assert the head against the base (used by CI)
+composer benchmark-compare -- --base=.artifacts/bench/base --head=.artifacts/bench/head
 
 # Run a single benchmark class
-./vendor/bin/phpbench run benchmarks/TaskBench.php --ref=baseline
+./vendor/bin/phpbench run benchmarks/TaskBench.php
 
 # Run with detailed output
 ./vendor/bin/phpbench run --report=aggregate
@@ -185,10 +185,7 @@ GitHub Actions workflows test across:
 Key workflows:
 
 - `.github/workflows/test-php.yml` - PHP testing
-- `.github/workflows/benchmark-php.yml` - PHPBench, comparing against the
-  baseline in `.phpbench/storage/` with a ±5% threshold. The baseline is
-  committed on pushes to `main`; regressions beyond the threshold fail the run.
-  Benchmarks run without xdebug or pcov so timings are not distorted.
+- `.github/workflows/benchmark-php.yml` - PHPBench. On a pull request it checks out the base and head revisions into `base/` and `head/`, measures both with one toolchain on one runner, and fails when a subject gets slower by more than 15%. On a push to `main` it measures the merged revision alone and replaces the table on the `Performance benchmarks` issue. Nothing is stored between runs, so there is no baseline to refresh. Benchmarks run without xdebug or pcov so timings are not distorted.
 
 
 ## Updating from the template
