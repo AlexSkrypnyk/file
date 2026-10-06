@@ -28,8 +28,8 @@
         "ergebnis/composer-normalize": "^2.54.0",
         "mikey179/vfsstream": "^1.6.12",
         "phpbench/phpbench": "^1.7.0",
-        "phpstan/phpstan": "^2.2.16",
-        "phpunit/phpunit": "^11.5.56",
+        "phpstan/phpstan": "^2.3.0",
+        "phpunit/phpunit": "^11.5.57",
         "rector/rector": "^2.6.7"
     },
     "suggest": {
