@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   test-php:
-    name: PHP ${{ matrix.php-versions }}, Deps ${{ matrix.deps }}
+    name: PHP ${{ matrix.php-versions }}, Deps ${{ matrix.deps }}${{ matrix.symfony && format(', Symfony {0}', matrix.symfony) || '' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -33,6 +33,13 @@ jobs:
       matrix:
         php-versions: ['8.3', '8.4', '8.5']
         deps: ['normal', 'lowest']
+        # An empty default makes the include below a separate job instead of
+        # extending the 8.4 / lowest combination.
+        symfony: ['']
+        include:
+          - php-versions: '8.4'
+            deps: 'lowest'
+            symfony: '8'
 
     steps:
       - name: Checkout code
@@ -56,7 +63,7 @@ jobs:
       - name: Install dependencies
         run: |
           if [[ "${{ matrix.deps }}" == "lowest" ]]; then
-            composer update --prefer-lowest --prefer-stable ${{ matrix.php-versions == '8.5' && '--ignore-platform-reqs' || '' }}
+            composer update --prefer-lowest --prefer-stable ${{ matrix.symfony && format('--with symfony/filesystem:^{0}', matrix.symfony) || '' }} ${{ matrix.php-versions == '8.5' && '--ignore-platform-reqs' || '' }}
           else
             composer install ${{ matrix.php-versions == '8.5' && '--ignore-platform-reqs' || '' }}
           fi
@@ -103,7 +110,7 @@ jobs:
       - name: Upload coverage report as an artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: ${{github.job}}-code-coverage-report-${{ matrix.php-versions }}-${{ matrix.deps }}
+          name: ${{github.job}}-code-coverage-report-${{ matrix.php-versions }}-${{ matrix.deps }}${{ matrix.symfony && format('-symfony{0}', matrix.symfony) || '' }}
           path: .logs
           include-hidden-files: true
           if-no-files-found: error

@@ -180,6 +180,8 @@ GitHub Actions workflows test across:
 
 - PHP versions: 8.3, 8.4, 8.5
 - Dependency sets: `normal` and `lowest`
+- Symfony: 7.4 on PHP 8.3 and on `lowest`, 8.x on PHP 8.4+ `normal`, plus
+  1 PHP 8.4 / `lowest` leg pinned to `symfony/filesystem` 8.x
 - Lint, coverage threshold and Codecov upload run on the 8.4 / `normal` leg only
 
 Key workflows:
