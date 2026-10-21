@@ -43,7 +43,7 @@
 
 ## Installation
 
-Requires PHP 8.3 or newer.
+Requires PHP 8.3 or newer. Supports `symfony/filesystem` 7.4 and 8.x. Symfony 8 requires PHP 8.4 or newer.
 
 ```bash
 composer require alexskrypnyk/file
