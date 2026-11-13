@@ -361,7 +361,10 @@ class File {
    *   TRUE if copying was successful, FALSE otherwise.
    */
   public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
-    return static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source);
+    $symlinks = [];
+    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks);
+
+    return static::createSymlinks($symlinks) && $ret;
   }
 
   /**
@@ -377,46 +380,29 @@ class File {
    *   Whether to copy empty directories.
    * @param string $root
    *   Source path the copy started from.
+   * @param array<int, array{string, string}> $symlinks
+   *   Symlinks to create once the tree is copied, as pairs of target and
+   *   destination path.
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
    */
-  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root): bool {
-    $filesystem = new Filesystem();
-    $parent = dirname($dest);
-    $parent = static::mkdir($parent, $permissions);
+  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root, array &$symlinks): bool {
+    static::mkdir(dirname($dest), $permissions);
 
-    // The symlink target must exist.
     if (is_link($source)) {
-      // Change directory so the symlink is created relative to the
-      // destination file's directory.
-      $current_dir = static::cwd();
+      $target = is_readable($dest) ? FALSE : static::readSymlinkTarget($source, $root);
 
-      chdir($parent);
-      $ret = TRUE;
-
-      if (!is_readable(basename($dest))) {
-        $link = static::readSymlinkTarget($source, $root);
-        if ($link) {
-          try {
-            $filesystem->symlink($link, basename($dest));
-          }
-          // @codeCoverageIgnoreStart
-          catch (\Exception) {
-            $ret = FALSE;
-          }
-          // @codeCoverageIgnoreEnd
-        }
+      if ($target) {
+        $symlinks[] = [$target, $dest];
       }
 
-      chdir($current_dir);
-
-      return $ret;
+      return TRUE;
     }
 
     if (is_file($source)) {
       try {
-        $filesystem->copy($source, $dest, TRUE);
+        (new Filesystem())->copy($source, $dest, TRUE);
         return TRUE;
       }
       // @codeCoverageIgnoreStart
@@ -438,12 +424,53 @@ class File {
       if ($entry === '..') {
         continue;
       }
-      static::copyPath(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE, $root);
+      static::copyPath(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE, $root, $symlinks);
     }
 
     $dir && $dir->close();
 
     return TRUE;
+  }
+
+  /**
+   * Create symlinks, retrying those whose target does not exist yet.
+   *
+   * PHP on Windows refuses to create a symlink to a missing target, so a
+   * symlink to another symlink succeeds only on a later pass.
+   *
+   * @param array<int, array{string, string}> $symlinks
+   *   Pairs of symlink target and symlink path.
+   *
+   * @return bool
+   *   TRUE if every symlink was created, FALSE otherwise.
+   */
+  protected static function createSymlinks(array $symlinks): bool {
+    $filesystem = new Filesystem();
+    $current_dir = static::cwd();
+
+    do {
+      $pending = [];
+
+      foreach ($symlinks as [$target, $link]) {
+        // A relative target resolves against the current directory, so it
+        // must be the directory of the symlink.
+        chdir(dirname($link));
+
+        try {
+          $filesystem->symlink($target, basename($link));
+        }
+        catch (\Exception) {
+          $pending[] = [$target, $link];
+        }
+      }
+
+      $created = count($pending) < count($symlinks);
+      $symlinks = $pending;
+    } while ($pending !== [] && $created);
+
+    chdir($current_dir);
+
+    return $pending === [];
   }
 
   /**

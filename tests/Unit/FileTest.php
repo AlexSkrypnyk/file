@@ -446,7 +446,7 @@ final class FileTest extends UnitTestCase {
   }
 
   #[DataProvider('dataProviderCopyRelativeSymlink')]
-  public function testCopyRelativeSymlink(string $link, string $target, string $expected_file): void {
+  public function testCopyRelativeSymlink(array $links, string $link, string $expected_path): void {
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
 
@@ -456,35 +456,35 @@ final class FileTest extends UnitTestCase {
       'hooks/update/script.sh' => 'script',
     ]);
 
-    $link = self::nativePath($link);
-    $target = self::nativePath($target);
-    $source_link = $source_dir . DIRECTORY_SEPARATOR . $link;
-    File::mkdir(dirname($source_link));
-    symlink($target, $source_link);
+    foreach ($links as $path => $target) {
+      $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath($path), self::nativePath($target));
+    }
 
     $this->assertTrue(File::copy($source_dir, $dest_dir));
     File::remove($source_dir);
 
-    $dest_link = $dest_dir . DIRECTORY_SEPARATOR . $link;
+    $dest_link = $dest_dir . DIRECTORY_SEPARATOR . self::nativePath($link);
     $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
 
     $resolved = realpath($dest_link);
     $this->assertIsString($resolved, 'Copied symlink resolves after the source is removed.');
-    $this->assertSame(realpath($dest_dir . DIRECTORY_SEPARATOR . self::nativePath($expected_file)), $resolved);
+    $this->assertSame(realpath($dest_dir . DIRECTORY_SEPARATOR . self::nativePath($expected_path)), $resolved);
 
     // readlink() returns the resolved target on Windows.
-    if (DIRECTORY_SEPARATOR === '/') {
-      $this->assertSame($target, readlink($dest_link));
+    if (DIRECTORY_SEPARATOR === '/' && isset($links[$link])) {
+      $this->assertSame($links[$link], readlink($dest_link));
     }
   }
 
   public static function dataProviderCopyRelativeSymlink(): \Iterator {
-    yield 'file symlink to a sibling directory' => ['hooks/1.provision.sh', '../library/provision.sh', 'library/provision.sh'];
-    yield 'file symlink in the same directory' => ['hooks/alias.sh', 'run.sh', 'hooks/run.sh'];
-    yield 'file symlink from a nested directory' => ['hooks/a/b/link.sh', '../../../library/provision.sh', 'library/provision.sh'];
-    yield 'directory symlink to a sibling directory' => ['hooks/deploy', 'update', 'hooks/update'];
-    yield 'directory symlink to its own directory' => ['hooks/self', '.', 'hooks'];
-    yield 'directory symlink to the parent directory' => ['hooks/update/parent', '..', 'hooks'];
+    yield 'file symlink to a sibling directory' => [['hooks/1.provision.sh' => '../library/provision.sh'], 'hooks/1.provision.sh', 'library/provision.sh'];
+    yield 'file symlink in the same directory' => [['hooks/alias.sh' => 'run.sh'], 'hooks/alias.sh', 'hooks/run.sh'];
+    yield 'file symlink from a nested directory' => [['hooks/a/b/link.sh' => '../../../library/provision.sh'], 'hooks/a/b/link.sh', 'library/provision.sh'];
+    yield 'file symlink to a symlink copied later' => [['hooks/b.sh' => 'run.sh', 'hooks/a.sh' => 'b.sh'], 'hooks/a.sh', 'hooks/run.sh'];
+    yield 'directory symlink to a sibling directory' => [['hooks/deploy' => 'update'], 'hooks/deploy', 'hooks/update'];
+    yield 'directory symlink to its own directory' => [['hooks/self' => '.'], 'hooks/self', 'hooks'];
+    yield 'directory symlink to the parent directory' => [['hooks/update/parent' => '..'], 'hooks/update/parent', 'hooks'];
+    yield 'file symlink through a directory symlink' => [['hooks/deploy' => 'update', 'hooks/update/run.sh' => '../run.sh'], 'hooks/deploy/run.sh', 'hooks/run.sh'];
   }
 
   public function testCopySymlinkOutsideTree(): void {
@@ -501,7 +501,28 @@ final class FileTest extends UnitTestCase {
 
     $dest_link = $dest_dir . DIRECTORY_SEPARATOR . 'link.txt';
     $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
-    $this->assertSame(realpath($outside_file), realpath($dest_link));
+    $this->assertSame('outside', file_get_contents($dest_link));
+  }
+
+  public function testCopySymlinkFailure(): void {
+    // Windows ignores directory permissions, and root bypasses them.
+    if (DIRECTORY_SEPARATOR === '\\' || (function_exists('posix_geteuid') && posix_geteuid() === 0)) {
+      $this->markTestSkipped('Directory permissions do not prevent symlink creation.');
+    }
+
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, ['file.txt' => 'file']);
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . 'link.txt', 'file.txt');
+    mkdir($dest_dir);
+    chmod($dest_dir, 0555);
+
+    $result = File::copy($source_dir . DIRECTORY_SEPARATOR . 'link.txt', $dest_dir . DIRECTORY_SEPARATOR . 'link.txt');
+    chmod($dest_dir, 0755);
+
+    $this->assertFalse($result);
+    $this->assertFalse(is_link($dest_dir . DIRECTORY_SEPARATOR . 'link.txt'));
   }
 
   #[DataProvider('dataProviderRelativeSymlinkTarget')]
@@ -534,6 +555,29 @@ final class FileTest extends UnitTestCase {
     foreach ($files as $path => $content) {
       File::dump($dir . DIRECTORY_SEPARATOR . self::nativePath($path), $content);
     }
+  }
+
+  /**
+   * Create a symlink from within its own directory.
+   *
+   * PHP on Windows resolves a relative target against the current directory
+   * and refuses to create a symlink to a missing target.
+   *
+   * @param string $link
+   *   Symlink path.
+   * @param string $target
+   *   Symlink target.
+   */
+  protected function createSymlink(string $link, string $target): void {
+    $current_dir = getcwd();
+    $this->assertIsString($current_dir, 'Failed to get current working directory');
+
+    File::mkdir(dirname($link));
+    chdir(dirname($link));
+    $created = symlink($target, basename($link));
+    chdir($current_dir);
+
+    $this->assertTrue($created, sprintf('Created symlink %s -> %s', $link, $target));
   }
 
   /**
