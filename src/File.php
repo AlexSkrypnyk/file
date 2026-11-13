@@ -498,14 +498,24 @@ class File {
    *   Symlink target, or FALSE if it cannot be read.
    */
   protected static function readSymlinkTarget(string $link, string $root): string|false {
-    $target = readlink($link);
-
-    // A symlink copied on its own has no tree to stay inside.
-    if ($target === FALSE || DIRECTORY_SEPARATOR !== '\\' || $link === $root) {
-      return $target;
+    if (DIRECTORY_SEPARATOR !== '\\') {
+      return readlink($link);
     }
 
     // @codeCoverageIgnoreStart
+    $target = @readlink($link);
+
+    // readlink() fails for a file symlink that points to a directory, which
+    // realpath() still resolves.
+    if ($target === FALSE) {
+      $target = realpath($link);
+    }
+
+    // A symlink copied on its own has no tree to stay inside.
+    if ($target === FALSE || $link === $root) {
+      return $target;
+    }
+
     return static::relativeSymlinkTarget($target, dirname($link), $root);
     // @codeCoverageIgnoreEnd
   }

@@ -506,6 +506,31 @@ final class FileTest extends UnitTestCase {
     $this->assertSame('outside', file_get_contents($dest_link));
   }
 
+  public function testCopyFileSymlinkToDirectory(): void {
+    // Only Windows has file symlinks to directories, and readlink() fails on
+    // them. Archive extractors create one when the target is not extracted
+    // yet.
+    if (DIRECTORY_SEPARATOR !== '\\') {
+      $this->markTestSkipped('Windows only.');
+    }
+
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, ['hooks/update/script.sh' => 'script']);
+    exec(sprintf('cmd /c mklink %s update', escapeshellarg($source_dir . '\\hooks\\deploy')), $output, $exit_code);
+    $this->assertSame(0, $exit_code, implode(PHP_EOL, $output));
+    $this->assertFalse(is_dir($source_dir . '\\hooks\\deploy'), 'Source symlink is a file symlink.');
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+    File::remove($source_dir);
+
+    $dest_link = $dest_dir . '\\hooks\\deploy';
+    $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
+    $this->assertDirectoryExists($dest_link);
+    $this->assertSame('script', file_get_contents($dest_link . '\\script.sh'));
+  }
+
   public function testCopySymlinksToRelativeDestination(): void {
     $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', [
       'library/provision.sh' => 'provision',
