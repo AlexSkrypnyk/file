@@ -520,7 +520,7 @@ final class FileTest extends UnitTestCase {
     $this->createFiles($source_dir, ['hooks/update/script.sh' => 'script']);
     exec(sprintf('cmd /c mklink %s update', escapeshellarg($source_dir . '\\hooks\\deploy')), $output, $exit_code);
     $this->assertSame(0, $exit_code, implode(PHP_EOL, $output));
-    $this->assertFalse(is_dir($source_dir . '\\hooks\\deploy'), 'Source symlink is a file symlink.');
+    $this->assertDirectoryDoesNotExist($source_dir . '\\hooks\\deploy', 'Source symlink is a file symlink.');
 
     $this->assertTrue(File::copy($source_dir, $dest_dir));
     File::remove($source_dir);
