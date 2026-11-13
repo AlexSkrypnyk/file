@@ -365,6 +365,8 @@ class File {
    *   symlink copied before its target is created after it. Pass the queue
    *   to createSymlinks() once every path is copied.
    *
+   * @param-out ($symlinks is null ? null : array<int, array{string, string}>) $symlinks
+   *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
    */
