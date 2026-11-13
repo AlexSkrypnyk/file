@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace AlexSkrypnyk\File\Tests\Functional;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Tests the benchmark comparison used by CI to gate performance changes.
+ *
+ * The comparison script runs as a bash executable, which Windows cannot
+ * launch directly, so the class is skipped on any OS starting with "WIN".
  */
 #[CoversNothing]
+#[RequiresOperatingSystem('^(?!WIN)')]
 final class BenchmarkComparisonTest extends TestCase {
 
   /**

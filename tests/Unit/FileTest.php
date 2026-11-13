@@ -99,7 +99,7 @@ final class FileTest extends UnitTestCase {
     }
 
     // Absolute paths remain unchanged.
-    yield ['/var/www/file.txt', '/var/www/file.txt'];
+    yield ['/var/www/file.txt', self::rooted('/var/www/file.txt')];
 
     // Relative path resolved from current working directory.
     yield ['file.txt', $cwd . DIRECTORY_SEPARATOR . 'file.txt'];
@@ -141,7 +141,8 @@ final class FileTest extends UnitTestCase {
     $this->assertTrue(chdir($sandbox), 'Failed to change directory');
 
     try {
-      $url = 'file://' . File::realpath($sandbox) . '/out/nested';
+      // A URL path uses forward slashes on every platform.
+      $url = 'file://' . str_replace('\\', '/', File::realpath($sandbox)) . '/out/nested';
 
       $this->assertSame($url, File::absolute($url));
       $this->assertSame($url, File::mkdir($url));
@@ -160,14 +161,14 @@ final class FileTest extends UnitTestCase {
 
   public static function dataProviderAbsolute(): \Iterator {
     // Absolute path remains unchanged.
-    yield ['/var/www/file.txt', NULL, '/var/www/file.txt'];
-    yield ['/var/www/file.txt', '/base/path', '/var/www/file.txt'];
+    yield ['/var/www/file.txt', NULL, self::rooted('/var/www/file.txt')];
+    yield ['/var/www/file.txt', '/base/path', self::rooted('/var/www/file.txt')];
     // Relative path resolved from current working directory.
     yield ['file.txt', NULL, File::cwd() . DIRECTORY_SEPARATOR . 'file.txt'];
     // Relative path resolved from provided base path.
-    yield ['file.txt', '/base/path', '/base/path/file.txt'];
+    yield ['file.txt', '/base/path', self::rooted('/base/path/file.txt')];
     // Handling nested relative paths.
-    yield ['../file.txt', '/base/path/subdir', '/base/path/file.txt'];
+    yield ['../file.txt', '/base/path/subdir', self::rooted('/base/path/file.txt')];
     // Stream wrapper URL is already absolute.
     yield ['vfs://run/out', NULL, 'vfs://run/out'];
     yield ['vfs://run/out', '/base/path', 'vfs://run/out'];
@@ -584,6 +585,16 @@ final class FileTest extends UnitTestCase {
     yield 'nested directory with files' => ['nested_directory', 'nested_dir'];
     yield 'file with special chars' => ['file', 'special-file_name.txt'];
     yield 'hidden file' => ['file', '.hidden_file'];
+  }
+
+  /**
+   * Convert a rooted POSIX path to the form File::realpath() returns.
+   *
+   * The root keeps its forward slash and the remaining separators become
+   * DIRECTORY_SEPARATOR.
+   */
+  protected static function rooted(string $path): string {
+    return '/' . str_replace('/', DIRECTORY_SEPARATOR, ltrim($path, '/'));
   }
 
 }
