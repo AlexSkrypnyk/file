@@ -396,7 +396,8 @@ class File {
       // Symlinks are created from within their directory, so a relative
       // destination is resolved while the working directory is unchanged.
       if ($target !== FALSE) {
-        $symlinks[] = [$target, (new Filesystem())->isAbsolutePath($dest) ? $dest : static::cwd() . DIRECTORY_SEPARATOR . $dest];
+        $link = (new Filesystem())->isAbsolutePath($dest) ? $dest : static::cwd() . DIRECTORY_SEPARATOR . $dest;
+        $symlinks[] = [$target, $link];
       }
 
       return TRUE;
