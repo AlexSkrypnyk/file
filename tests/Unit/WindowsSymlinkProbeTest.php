@@ -80,9 +80,15 @@ final class WindowsSymlinkProbeTest extends TestCase {
   }
 
   /**
+   * Describe paths.
+   *
+   * @param string $dir
+   *   Directory.
    * @param array<int, string> $names
+   *   Names.
    *
    * @return array<int, string>
+   *   Lines.
    */
   protected function describe(string $dir, array $names): array {
     $out = [];
