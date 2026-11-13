@@ -26,7 +26,6 @@ final class FileStringsTest extends UnitTestCase {
     $dir = self::$sut . DIRECTORY_SEPARATOR;
 
     $this->assertTrue(is_file($dir . 'file.txt'));
-    $this->assertSame(0755, fileperms($dir . 'file.txt') & 0777);
     $this->assertDirectoryExists($dir . 'dir');
     $this->assertTrue(is_file($dir . 'dir/file_in_dir.txt'));
     $this->assertDirectoryExists($dir . 'dir/subdir');
@@ -41,13 +40,18 @@ final class FileStringsTest extends UnitTestCase {
 
     $this->assertTrue(is_link($dir . 'subdir_link_root'));
     $this->assertTrue(is_link($dir . 'subdir_link_root/file_link_from_subdir.txt'));
-    $this->assertSame(0755, fileperms($dir . 'subdir_link_root/file_link_from_subdir.txt') & 0777);
     $this->assertTrue(is_file($dir . 'subdir_link_root/file_in_subdir.txt'));
 
     $this->assertTrue(is_link($dir . 'dir/subdir_link'));
     $this->assertDirectoryExists($dir . 'dir/subdir_link');
 
     $this->assertDirectoryDoesNotExist($dir . 'emptydir');
+
+    // Windows has no POSIX permission bits to compare.
+    if (PHP_OS_FAMILY !== 'Windows') {
+      $this->assertSame(0755, fileperms($dir . 'file.txt') & 0777);
+      $this->assertSame(0755, fileperms($dir . 'subdir_link_root/file_link_from_subdir.txt') & 0777);
+    }
   }
 
   #[DataProvider('dataProviderContainsInFile')]
@@ -87,8 +91,10 @@ final class FileStringsTest extends UnitTestCase {
     $actual = File::findContainingInDir(self::$sut, $string, $excluded);
 
     $this->assertCount(count($expected), $actual);
+    // Paths found on Windows mix both separators.
+    $sut = str_replace('\\', '/', self::$sut) . '/';
     foreach ($actual as $path) {
-      $path = str_replace(self::$sut . DIRECTORY_SEPARATOR, '', $path);
+      $path = str_replace($sut, '', str_replace('\\', '/', $path));
       $this->assertContains($path, $expected);
     }
   }
