@@ -25,6 +25,11 @@ class File {
   protected static ?Replacer $replacer = NULL;
 
   /**
+   * How copy() recreates symlinks on Windows.
+   */
+  protected static WindowsSymlinkMode $windowsSymlinkMode = WindowsSymlinkMode::Absolute;
+
+  /**
    * Get current working directory with absolute path.
    *
    * @return string
@@ -358,8 +363,9 @@ class File {
    *   Whether to copy empty directories.
    * @param string|null $root
    *   Root of the tree $source belongs to, for copying a tree 1 path at a
-   *   time into a destination with the same layout. A symlink target inside
-   *   the root stays relative. Defaults to $source.
+   *   time into a destination with the same layout. In
+   *   WindowsSymlinkMode::Relative, a symlink target inside the root stays
+   *   relative. Defaults to $source.
    * @param array<int, array{string, string}>|null $symlinks
    *   Queue that receives the symlinks instead of creating them, so a
    *   symlink copied before its target is created after it. Pass the queue
@@ -504,8 +510,8 @@ class File {
    * Read the target to recreate a copied symlink with.
    *
    * On Windows, readlink() returns the resolved absolute target instead of
-   * the stored one, so a target inside the copied tree is made relative to
-   * the link again.
+   * the stored one. In WindowsSymlinkMode::Relative, a target inside the
+   * copied tree is made relative to the link again.
    *
    * @param string $link
    *   Symlink path.
@@ -530,7 +536,7 @@ class File {
     }
 
     // A symlink copied on its own has no tree to stay inside.
-    if ($target === FALSE || $link === $root) {
+    if ($target === FALSE || $link === $root || static::$windowsSymlinkMode !== WindowsSymlinkMode::Relative) {
       return $target;
     }
 
@@ -1369,6 +1375,33 @@ class File {
    */
   public static function resetReplacer(): void {
     static::$replacer = NULL;
+  }
+
+  /**
+   * Set how copy() recreates symlinks on Windows.
+   *
+   * @param \AlexSkrypnyk\File\WindowsSymlinkMode $mode
+   *   The symlink mode.
+   */
+  public static function setWindowsSymlinkMode(WindowsSymlinkMode $mode): void {
+    static::$windowsSymlinkMode = $mode;
+  }
+
+  /**
+   * Get how copy() recreates symlinks on Windows.
+   *
+   * @return \AlexSkrypnyk\File\WindowsSymlinkMode
+   *   The symlink mode.
+   */
+  public static function getWindowsSymlinkMode(): WindowsSymlinkMode {
+    return static::$windowsSymlinkMode;
+  }
+
+  /**
+   * Reset how copy() recreates symlinks on Windows to the default.
+   */
+  public static function resetWindowsSymlinkMode(): void {
+    static::$windowsSymlinkMode = WindowsSymlinkMode::Absolute;
   }
 
 }

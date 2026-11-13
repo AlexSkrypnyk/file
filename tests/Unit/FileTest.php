@@ -6,6 +6,7 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\File;
+use AlexSkrypnyk\File\WindowsSymlinkMode;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
@@ -38,6 +39,8 @@ final class FileTest extends UnitTestCase {
 
   #[\Override]
   protected function tearDown(): void {
+    File::resetWindowsSymlinkMode();
+
     if (is_dir($this->testTmpDir)) {
       File::remove($this->testTmpDir);
     }
@@ -447,6 +450,8 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderCopyRelativeSymlink')]
   public function testCopyRelativeSymlink(array $links, string $link, string $expected_path): void {
+    File::setWindowsSymlinkMode(WindowsSymlinkMode::Relative);
+
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
 
@@ -507,6 +512,8 @@ final class FileTest extends UnitTestCase {
   }
 
   public function testCopyPathsWithQueuedSymlinks(): void {
+    File::setWindowsSymlinkMode(WindowsSymlinkMode::Relative);
+
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
 
@@ -548,6 +555,8 @@ final class FileTest extends UnitTestCase {
       $this->markTestSkipped('Windows only.');
     }
 
+    File::setWindowsSymlinkMode(WindowsSymlinkMode::Relative);
+
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
 
@@ -563,6 +572,35 @@ final class FileTest extends UnitTestCase {
     $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
     $this->assertDirectoryExists($dest_link);
     $this->assertSame('script', file_get_contents($dest_link . '\\script.sh'));
+  }
+
+  public function testCopyAbsoluteWindowsSymlink(): void {
+    if (DIRECTORY_SEPARATOR !== '\\') {
+      $this->markTestSkipped('Windows only.');
+    }
+
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, ['library/provision.sh' => 'provision']);
+    $this->createSymlink($source_dir . '\\hooks\\1.provision.sh', '..\\library\\provision.sh');
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+
+    // The copied symlink reads the source file, not the copied one.
+    File::dump($source_dir . '\\library\\provision.sh', 'changed');
+    $this->assertSame('changed', file_get_contents($dest_dir . '\\hooks\\1.provision.sh'));
+    $this->assertSame('provision', file_get_contents($dest_dir . '\\library\\provision.sh'));
+  }
+
+  public function testWindowsSymlinkMode(): void {
+    $this->assertSame(WindowsSymlinkMode::Absolute, File::getWindowsSymlinkMode());
+
+    File::setWindowsSymlinkMode(WindowsSymlinkMode::Relative);
+    $this->assertSame(WindowsSymlinkMode::Relative, File::getWindowsSymlinkMode());
+
+    File::resetWindowsSymlinkMode();
+    $this->assertSame(WindowsSymlinkMode::Absolute, File::getWindowsSymlinkMode());
   }
 
   public function testCopySymlinksToRelativeDestination(): void {
