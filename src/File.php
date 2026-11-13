@@ -483,12 +483,15 @@ class File {
       return [];
     }
 
+    $ignore_paths = array_map(static fn(mixed $ignore_path): string => static::toForwardSlashes((string) $ignore_path), $ignore_paths);
+
     foreach ($paths as $path) {
       $path = $directory . '/' . $path;
+      $match_path = static::toForwardSlashes($path);
 
       foreach ($ignore_paths as $ignore_path) {
         // Exclude based on sub-path match.
-        if (str_contains($path, (string) $ignore_path)) {
+        if (str_contains($match_path, $ignore_path)) {
           continue(2);
         }
       }
@@ -505,6 +508,22 @@ class File {
     }
 
     return $discovered;
+  }
+
+  /**
+   * Replace Windows directory separators with forward slashes.
+   *
+   * Paths built on Windows can mix both separators. Other platforms return
+   * the path unchanged, since a backslash is a valid filename character there.
+   *
+   * @param string $path
+   *   Path to convert.
+   *
+   * @return string
+   *   Path with forward slashes on Windows, or the path unchanged elsewhere.
+   */
+  protected static function toForwardSlashes(string $path): string {
+    return DIRECTORY_SEPARATOR === '\\' ? str_replace('\\', '/', $path) : $path;
   }
 
   /**
