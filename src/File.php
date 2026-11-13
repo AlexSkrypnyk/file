@@ -393,8 +393,10 @@ class File {
     if (is_link($source)) {
       $target = is_readable($dest) ? FALSE : static::readSymlinkTarget($source, $root);
 
-      if ($target) {
-        $symlinks[] = [$target, $dest];
+      // Symlinks are created from within their directory, so a relative
+      // destination is resolved while the working directory is unchanged.
+      if ($target !== FALSE) {
+        $symlinks[] = [$target, (new Filesystem())->isAbsolutePath($dest) ? $dest : static::cwd() . DIRECTORY_SEPARATOR . $dest];
       }
 
       return TRUE;
@@ -439,7 +441,7 @@ class File {
    * symlink to another symlink succeeds only on a later pass.
    *
    * @param array<int, array{string, string}> $symlinks
-   *   Pairs of symlink target and symlink path.
+   *   Pairs of symlink target and absolute symlink path.
    *
    * @return bool
    *   TRUE if every symlink was created, FALSE otherwise.
@@ -448,27 +450,34 @@ class File {
     $filesystem = new Filesystem();
     $current_dir = static::cwd();
 
-    do {
-      $pending = [];
+    try {
+      do {
+        $pending = [];
 
-      foreach ($symlinks as [$target, $link]) {
-        // A relative target resolves against the current directory, so it
-        // must be the directory of the symlink.
-        chdir(dirname($link));
+        foreach ($symlinks as [$target, $link]) {
+          try {
+            // A relative target resolves against the current directory, so
+            // it must be the directory of the symlink.
+            if (!@chdir(dirname($link))) {
+              // @codeCoverageIgnoreStart
+              throw new FileException(sprintf('Unable to change directory to "%s".', dirname($link)));
+              // @codeCoverageIgnoreEnd
+            }
 
-        try {
-          $filesystem->symlink($target, basename($link));
+            $filesystem->symlink($target, basename($link));
+          }
+          catch (\Exception) {
+            $pending[] = [$target, $link];
+          }
         }
-        catch (\Exception) {
-          $pending[] = [$target, $link];
-        }
-      }
 
-      $created = count($pending) < count($symlinks);
-      $symlinks = $pending;
-    } while ($pending !== [] && $created);
-
-    chdir($current_dir);
+        $created = count($pending) < count($symlinks);
+        $symlinks = $pending;
+      } while ($pending !== [] && $created);
+    }
+    finally {
+      chdir($current_dir);
+    }
 
     return $pending === [];
   }
@@ -525,7 +534,17 @@ class File {
       return $target;
     }
 
-    return rtrim((new Filesystem())->makePathRelative($target, $link_dir), '/');
+    $target_parts = explode('/', trim(static::toForwardSlashes($target), '/'));
+    $link_parts = explode('/', trim($link_dir, '/'));
+
+    $common = 0;
+    while ($common < count($target_parts) && $common < count($link_parts) && strcasecmp($target_parts[$common], $link_parts[$common]) === 0) {
+      $common++;
+    }
+
+    $parts = array_merge(array_fill(0, count($link_parts) - $common, '..'), array_slice($target_parts, $common));
+
+    return $parts === [] ? '.' : implode('/', $parts);
   }
 
   /**

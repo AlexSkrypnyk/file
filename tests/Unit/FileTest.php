@@ -453,6 +453,7 @@ final class FileTest extends UnitTestCase {
     $this->createFiles($source_dir, [
       'library/provision.sh' => 'provision',
       'hooks/run.sh' => 'run',
+      'hooks/0' => 'zero',
       'hooks/update/script.sh' => 'script',
     ]);
 
@@ -479,6 +480,7 @@ final class FileTest extends UnitTestCase {
   public static function dataProviderCopyRelativeSymlink(): \Iterator {
     yield 'file symlink to a sibling directory' => [['hooks/1.provision.sh' => '../library/provision.sh'], 'hooks/1.provision.sh', 'library/provision.sh'];
     yield 'file symlink in the same directory' => [['hooks/alias.sh' => 'run.sh'], 'hooks/alias.sh', 'hooks/run.sh'];
+    yield 'file symlink to a file named 0' => [['hooks/zero.sh' => '0'], 'hooks/zero.sh', 'hooks/0'];
     yield 'file symlink from a nested directory' => [['hooks/a/b/link.sh' => '../../../library/provision.sh'], 'hooks/a/b/link.sh', 'library/provision.sh'];
     yield 'file symlink to a symlink copied later' => [['hooks/b.sh' => 'run.sh', 'hooks/a.sh' => 'b.sh'], 'hooks/a.sh', 'hooks/run.sh'];
     yield 'directory symlink to a sibling directory' => [['hooks/deploy' => 'update'], 'hooks/deploy', 'hooks/update'];
@@ -502,6 +504,28 @@ final class FileTest extends UnitTestCase {
     $dest_link = $dest_dir . DIRECTORY_SEPARATOR . 'link.txt';
     $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
     $this->assertSame('outside', file_get_contents($dest_link));
+  }
+
+  public function testCopySymlinksToRelativeDestination(): void {
+    $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', [
+      'library/provision.sh' => 'provision',
+      'hooks/run.sh' => 'run',
+    ]);
+    $this->createSymlink($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('source/hooks/1.provision.sh'), self::nativePath('../library/provision.sh'));
+    $this->createSymlink($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('source/library/run.sh'), self::nativePath('../hooks/run.sh'));
+
+    $current_dir = getcwd();
+    $this->assertIsString($current_dir, 'Failed to get current working directory');
+    chdir($this->testTmpDir);
+
+    $result = File::copy('source', 'destination');
+    $cwd_after_copy = getcwd();
+    chdir($current_dir);
+
+    $this->assertTrue($result);
+    $this->assertSame(realpath($this->testTmpDir), realpath((string) $cwd_after_copy), 'Working directory is restored.');
+    $this->assertSame('provision', file_get_contents($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('destination/hooks/1.provision.sh')));
+    $this->assertSame('run', file_get_contents($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('destination/library/run.sh')));
   }
 
   public function testCopySymlinkFailure(): void {
@@ -538,6 +562,7 @@ final class FileTest extends UnitTestCase {
     yield 'root directory' => ['/x/src', '/x/src/hooks', '/x/src', '..'];
     yield 'root with a trailing slash' => ['/x/src/hooks/run.sh', '/x/src/hooks', '/x/src/', 'run.sh'];
     yield 'root in a different case' => ['/x/src/hooks/run.sh', '/x/src/hooks', '/X/SRC', 'run.sh'];
+    yield 'shared directory in a different case' => ['/x/SRC/library/provision.sh', '/x/src/hooks', '/x/src', '../library/provision.sh'];
     yield 'file outside the root' => ['/x/other/run.sh', '/x/src/hooks', '/x/src', '/x/other/run.sh'];
     yield 'root parent directory' => ['/x', '/x/src/hooks', '/x/src', '/x'];
     yield 'directory sharing the root prefix' => ['/x/src2/run.sh', '/x/src/hooks', '/x/src', '/x/src2/run.sh'];
