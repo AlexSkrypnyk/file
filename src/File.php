@@ -356,15 +356,29 @@ class File {
    *   Permissions to set on created directories.
    * @param bool $copy_empty_dirs
    *   Whether to copy empty directories.
+   * @param string|null $root
+   *   Root of the tree $source belongs to, for copying a tree 1 path at a
+   *   time into a destination with the same layout. A symlink target inside
+   *   the root stays relative. Defaults to $source.
+   * @param array<int, array{string, string}>|null $symlinks
+   *   Queue that receives the symlinks instead of creating them, so a
+   *   symlink copied before its target is created after it. Pass the queue
+   *   to createSymlinks() once every path is copied.
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
    */
-  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
-    $symlinks = [];
-    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks);
+  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE, ?string $root = NULL, ?array &$symlinks = NULL): bool {
+    $queue = [];
+    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $root ?? $source, $queue);
 
-    return static::createSymlinks($symlinks) && $ret;
+    if ($symlinks !== NULL) {
+      array_push($symlinks, ...$queue);
+
+      return $ret;
+    }
+
+    return static::createSymlinks($queue) && $ret;
   }
 
   /**
@@ -442,12 +456,13 @@ class File {
    * symlink to another symlink succeeds only on a later pass.
    *
    * @param array<int, array{string, string}> $symlinks
-   *   Pairs of symlink target and absolute symlink path.
+   *   Pairs of symlink target and absolute symlink path, as queued by
+   *   copy().
    *
    * @return bool
    *   TRUE if every symlink was created, FALSE otherwise.
    */
-  protected static function createSymlinks(array $symlinks): bool {
+  public static function createSymlinks(array $symlinks): bool {
     $filesystem = new Filesystem();
     $current_dir = static::cwd();
 

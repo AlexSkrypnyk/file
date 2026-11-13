@@ -506,6 +506,40 @@ final class FileTest extends UnitTestCase {
     $this->assertSame('outside', file_get_contents($dest_link));
   }
 
+  public function testCopyPathsWithQueuedSymlinks(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, [
+      'library/provision.sh' => 'provision',
+      'hooks/update/script.sh' => 'script',
+    ]);
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh'), self::nativePath('../library/provision.sh'));
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/deploy'), 'update');
+
+    // Symlinks come before their targets.
+    $symlinks = [];
+    foreach (['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update/script.sh', 'library/provision.sh'] as $path) {
+      $path = self::nativePath($path);
+      $this->assertTrue(File::copy($source_dir . DIRECTORY_SEPARATOR . $path, $dest_dir . DIRECTORY_SEPARATOR . $path, root: $source_dir, symlinks: $symlinks));
+    }
+
+    $this->assertCount(2, $symlinks);
+    $this->assertFalse(is_link($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh')), 'Queued symlink is not created yet.');
+
+    $this->assertTrue(File::createSymlinks($symlinks));
+    File::remove($source_dir);
+
+    $this->assertSame('provision', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh')));
+    $this->assertSame('script', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/deploy/script.sh')));
+
+    // readlink() returns the resolved target on Windows.
+    if (DIRECTORY_SEPARATOR === '/') {
+      $this->assertSame('../library/provision.sh', readlink($dest_dir . '/hooks/1.provision.sh'));
+      $this->assertSame('update', readlink($dest_dir . '/hooks/deploy'));
+    }
+  }
+
   public function testCopyFileSymlinkToDirectory(): void {
     // Only Windows has file symlinks to directories, and readlink() fails on
     // them. Archive extractors create one when the target is not extracted

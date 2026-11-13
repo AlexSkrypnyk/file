@@ -67,6 +67,14 @@ try {
   // Copy a directory recursively.
   File::copy('/path/to/source', '/path/to/destination');
 
+  // Copy a tree 1 path at a time. Relative symlinks stay relative, and each
+  // symlink is created after every path is copied.
+  $symlinks = [];
+  foreach (['hooks/run.sh', 'library/provision.sh'] as $path) {
+    File::copy('/path/to/source/' . $path, '/path/to/destination/' . $path, root: '/path/to/source', symlinks: $symlinks);
+  }
+  File::createSymlinks($symlinks);
+
   // Check if a file contains a string.
   if (File::contains('/path/to/file.txt', 'search term')) {
     // Do something.
@@ -107,6 +115,7 @@ catch (FileException $exception) {
 | `contains()`                 | Check if file contains a specific string or matches a pattern.                     |
 | `copy()`                     | Copy file or directory.                                                            |
 | `copyIfExists()`             | Copy file or directory if it exists.                                               |
+| `createSymlinks()`           | Create the symlinks that `copy()` queued.                                          |
 | `cwd()`                      | Get current working directory with absolute path.                                  |
 | `dir()`                      | Get absolute path for existing directory.                                          |
 | `dirIsEmpty()`               | Check if directory is empty.                                                       |
