@@ -361,32 +361,47 @@ class File {
    *   Permissions to set on created directories.
    * @param bool $copy_empty_dirs
    *   Whether to copy empty directories.
-   * @param string|null $root
-   *   Root of the tree $source belongs to, for copying a tree 1 path at a
-   *   time into a destination with the same layout. In
-   *   WindowsSymlinkMode::Relative, a symlink target inside the root stays
-   *   relative. Defaults to $source.
-   * @param array<int, array{string, string}>|null $symlinks
-   *   Queue that receives the symlinks instead of creating them, so a
-   *   symlink copied before its target is created after it. Pass the queue
-   *   to createSymlinks() once every path is copied.
-   *
-   * @param-out ($symlinks is null ? null : array<int, array{string, string}>) $symlinks
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
    */
-  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE, ?string $root = NULL, ?array &$symlinks = NULL): bool {
-    $queue = [];
-    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $root ?? $source, $queue);
+  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
+    $symlinks = [];
+    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks);
 
-    if ($symlinks !== NULL) {
-      array_push($symlinks, ...$queue);
+    return static::createSymlinks($symlinks) && $ret;
+  }
 
-      return $ret;
+  /**
+   * Copy selected paths of a directory, keeping their relative locations.
+   *
+   * Symlinks are created after every path is copied, and the source
+   * directory is the tree that WindowsSymlinkMode::Relative keeps targets
+   * inside.
+   *
+   * @param string $source
+   *   Source directory path.
+   * @param string $dest
+   *   Destination directory path.
+   * @param array<int, string> $paths
+   *   Paths relative to $source.
+   * @param int $permissions
+   *   Permissions to set on created directories.
+   * @param bool $copy_empty_dirs
+   *   Whether to copy empty directories.
+   *
+   * @return bool
+   *   TRUE if every path was copied, FALSE otherwise.
+   */
+  public static function copyPaths(string $source, string $dest, array $paths, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
+    $symlinks = [];
+    $ret = TRUE;
+
+    foreach ($paths as $path) {
+      $ret = static::copyPath($source . DIRECTORY_SEPARATOR . $path, $dest . DIRECTORY_SEPARATOR . $path, $permissions, $copy_empty_dirs, $source, $symlinks) && $ret;
     }
 
-    return static::createSymlinks($queue) && $ret;
+    return static::createSymlinks($symlinks) && $ret;
   }
 
   /**
@@ -401,7 +416,7 @@ class File {
    * @param bool $copy_empty_dirs
    *   Whether to copy empty directories.
    * @param string $root
-   *   Source path the copy started from.
+   *   Root of the copied tree.
    * @param array<int, array{string, string}> $symlinks
    *   Symlinks to create once the tree is copied, as pairs of target and
    *   destination path.
@@ -464,13 +479,12 @@ class File {
    * symlink to another symlink succeeds only on a later pass.
    *
    * @param array<int, array{string, string}> $symlinks
-   *   Pairs of symlink target and absolute symlink path, as queued by
-   *   copy().
+   *   Pairs of symlink target and absolute symlink path.
    *
    * @return bool
    *   TRUE if every symlink was created, FALSE otherwise.
    */
-  public static function createSymlinks(array $symlinks): bool {
+  protected static function createSymlinks(array $symlinks): bool {
     $filesystem = new Filesystem();
     $current_dir = static::cwd();
 
@@ -516,7 +530,7 @@ class File {
    * @param string $link
    *   Symlink path.
    * @param string $root
-   *   Source path the copy started from.
+   *   Root of the copied tree.
    *
    * @return string|false
    *   Symlink target, or FALSE if it cannot be read.

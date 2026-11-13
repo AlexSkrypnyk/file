@@ -511,7 +511,8 @@ final class FileTest extends UnitTestCase {
     $this->assertSame('outside', file_get_contents($dest_link));
   }
 
-  public function testCopyPathsWithQueuedSymlinks(): void {
+  #[DataProvider('dataProviderCopyPaths')]
+  public function testCopyPaths(array $paths): void {
     File::setWindowsSymlinkMode(WindowsSymlinkMode::Relative);
 
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
@@ -520,23 +521,15 @@ final class FileTest extends UnitTestCase {
     $this->createFiles($source_dir, [
       'library/provision.sh' => 'provision',
       'hooks/update/script.sh' => 'script',
+      'hooks/skipped.sh' => 'skipped',
     ]);
     $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh'), self::nativePath('../library/provision.sh'));
     $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/deploy'), 'update');
 
-    // Symlinks come before their targets.
-    $symlinks = [];
-    foreach (['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update/script.sh', 'library/provision.sh'] as $path) {
-      $path = self::nativePath($path);
-      $this->assertTrue(File::copy($source_dir . DIRECTORY_SEPARATOR . $path, $dest_dir . DIRECTORY_SEPARATOR . $path, root: $source_dir, symlinks: $symlinks));
-    }
-
-    $this->assertCount(2, $symlinks);
-    $this->assertFalse(is_link($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh')), 'Queued symlink is not created yet.');
-
-    $this->assertTrue(File::createSymlinks($symlinks));
+    $this->assertTrue(File::copyPaths($source_dir, $dest_dir, array_map(self::nativePath(...), $paths)));
     File::remove($source_dir);
 
+    $this->assertFileDoesNotExist($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/skipped.sh'));
     $this->assertSame('provision', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh')));
     $this->assertSame('script', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/deploy/script.sh')));
 
@@ -545,6 +538,17 @@ final class FileTest extends UnitTestCase {
       $this->assertSame('../library/provision.sh', readlink($dest_dir . '/hooks/1.provision.sh'));
       $this->assertSame('update', readlink($dest_dir . '/hooks/deploy'));
     }
+  }
+
+  public static function dataProviderCopyPaths(): \Iterator {
+    yield 'symlinks before their targets' => [['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update/script.sh', 'library/provision.sh']];
+    yield 'symlinks after their targets' => [['library/provision.sh', 'hooks/update/script.sh', 'hooks/deploy', 'hooks/1.provision.sh']];
+    yield 'directory containing the symlink target' => [['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update', 'library']];
+  }
+
+  public function testCopyPathsEmpty(): void {
+    $this->assertTrue(File::copyPaths($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', []));
+    $this->assertDirectoryDoesNotExist($this->testTmpDir . DIRECTORY_SEPARATOR . 'destination');
   }
 
   public function testCopyFileSymlinkToDirectory(): void {

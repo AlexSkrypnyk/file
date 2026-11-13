@@ -108,7 +108,7 @@ catch (FileException $exception) {
 | `contains()`                 | Check if file contains a specific string or matches a pattern.                     |
 | `copy()`                     | Copy file or directory.                                                            |
 | `copyIfExists()`             | Copy file or directory if it exists.                                               |
-| `createSymlinks()`           | Create the symlinks that `copy()` queued.                                          |
+| `copyPaths()`                | Copy selected paths of a directory, keeping their relative locations.              |
 | `cwd()`                      | Get current working directory with absolute path.                                  |
 | `dir()`                      | Get absolute path for existing directory.                                          |
 | `dirIsEmpty()`               | Check if directory is empty.                                                       |
@@ -161,14 +161,10 @@ File::copy('/path/to/source', '/path/to/destination');
 
 `File::getWindowsSymlinkMode()` returns the current mode, and `File::resetWindowsSymlinkMode()` restores the default.
 
-To copy a tree 1 path at a time, pass the tree's `root` and a shared `symlinks` queue to each `copy()` call. Then call `createSymlinks()`, which creates each queued symlink after its target exists:
+To copy only some paths of a directory, pass them to `copyPaths()` in 1 call. It creates every symlink after the last path is copied, so a symlink and its target can come in any order:
 
 ```php
-$symlinks = [];
-foreach (['hooks/run.sh', 'library/provision.sh'] as $path) {
-  File::copy('/path/to/source/' . $path, '/path/to/destination/' . $path, root: '/path/to/source', symlinks: $symlinks);
-}
-File::createSymlinks($symlinks);
+File::copyPaths('/path/to/source', '/path/to/destination', ['hooks/run.sh', 'library/provision.sh']);
 ```
 
 ### Batch Operations
