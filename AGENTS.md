@@ -179,7 +179,7 @@ directories.
 GitHub Actions workflows test across:
 
 - Operating systems: Linux (`ubuntu-latest`) and Windows (`windows-latest`);
-  job names start with the OS
+  job names end with the OS
 - PHP versions: 8.3, 8.4, 8.5
 - Dependency sets: `normal` and `lowest`
 - Symfony: 7.4 on PHP 8.3 and on `lowest`, 8.x on PHP 8.4+ `normal`, plus

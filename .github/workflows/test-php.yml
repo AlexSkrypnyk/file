@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   test-php:
-    name: ${{ matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}, PHP ${{ matrix.php-versions }}, Deps ${{ matrix.deps }}${{ matrix.symfony && format(', Symfony {0}', matrix.symfony) || '' }}
+    name: PHP ${{ matrix.php-versions }}, Deps ${{ matrix.deps }}${{ matrix.symfony && format(', Symfony {0}', matrix.symfony) || '' }}, ${{ matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}
     runs-on: ${{ matrix.os }}
 
     permissions:
