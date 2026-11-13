@@ -445,6 +445,106 @@ final class FileTest extends UnitTestCase {
     $this->assertFileExists($dest_dir . DIRECTORY_SEPARATOR . 'subdir' . DIRECTORY_SEPARATOR . 'subfile.txt');
   }
 
+  #[DataProvider('dataProviderCopyRelativeSymlink')]
+  public function testCopyRelativeSymlink(string $link, string $target, string $expected_file): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, [
+      'library/provision.sh' => 'provision',
+      'hooks/run.sh' => 'run',
+      'hooks/update/script.sh' => 'script',
+    ]);
+
+    $link = self::nativePath($link);
+    $target = self::nativePath($target);
+    $source_link = $source_dir . DIRECTORY_SEPARATOR . $link;
+    File::mkdir(dirname($source_link));
+    symlink($target, $source_link);
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+    File::remove($source_dir);
+
+    $dest_link = $dest_dir . DIRECTORY_SEPARATOR . $link;
+    $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
+
+    $resolved = realpath($dest_link);
+    $this->assertIsString($resolved, 'Copied symlink resolves after the source is removed.');
+    $this->assertSame(realpath($dest_dir . DIRECTORY_SEPARATOR . self::nativePath($expected_file)), $resolved);
+
+    // readlink() returns the resolved target on Windows.
+    if (DIRECTORY_SEPARATOR === '/') {
+      $this->assertSame($target, readlink($dest_link));
+    }
+  }
+
+  public static function dataProviderCopyRelativeSymlink(): \Iterator {
+    yield 'file symlink to a sibling directory' => ['hooks/1.provision.sh', '../library/provision.sh', 'library/provision.sh'];
+    yield 'file symlink in the same directory' => ['hooks/alias.sh', 'run.sh', 'hooks/run.sh'];
+    yield 'file symlink from a nested directory' => ['hooks/a/b/link.sh', '../../../library/provision.sh', 'library/provision.sh'];
+    yield 'directory symlink to a sibling directory' => ['hooks/deploy', 'update', 'hooks/update'];
+    yield 'directory symlink to its own directory' => ['hooks/self', '.', 'hooks'];
+    yield 'directory symlink to the parent directory' => ['hooks/update/parent', '..', 'hooks'];
+  }
+
+  public function testCopySymlinkOutsideTree(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+    $outside_file = $this->testTmpDir . DIRECTORY_SEPARATOR . 'outside' . DIRECTORY_SEPARATOR . 'target.txt';
+
+    $this->createFiles($source_dir, ['file.txt' => 'file']);
+    File::dump($outside_file, 'outside');
+    symlink($outside_file, $source_dir . DIRECTORY_SEPARATOR . 'link.txt');
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+    File::remove($source_dir);
+
+    $dest_link = $dest_dir . DIRECTORY_SEPARATOR . 'link.txt';
+    $this->assertTrue(is_link($dest_link), 'Copied symlink is a symlink.');
+    $this->assertSame(realpath($outside_file), realpath($dest_link));
+  }
+
+  #[DataProvider('dataProviderRelativeSymlinkTarget')]
+  public function testRelativeSymlinkTarget(string $target, string $link_dir, string $root, string $expected): void {
+    $this->assertSame($expected, self::callProtectedMethod(File::class, 'relativeSymlinkTarget', [$target, $link_dir, $root]));
+  }
+
+  public static function dataProviderRelativeSymlinkTarget(): \Iterator {
+    yield 'file in a sibling directory' => ['/x/src/library/provision.sh', '/x/src/hooks', '/x/src', '../library/provision.sh'];
+    yield 'file in the same directory' => ['/x/src/hooks/run.sh', '/x/src/hooks', '/x/src', 'run.sh'];
+    yield 'file in a nested directory' => ['/x/src/hooks/a/b/run.sh', '/x/src/hooks', '/x/src', 'a/b/run.sh'];
+    yield 'directory the symlink is in' => ['/x/src/hooks', '/x/src/hooks', '/x/src', '.'];
+    yield 'root directory' => ['/x/src', '/x/src/hooks', '/x/src', '..'];
+    yield 'root with a trailing slash' => ['/x/src/hooks/run.sh', '/x/src/hooks', '/x/src/', 'run.sh'];
+    yield 'root in a different case' => ['/x/src/hooks/run.sh', '/x/src/hooks', '/X/SRC', 'run.sh'];
+    yield 'file outside the root' => ['/x/other/run.sh', '/x/src/hooks', '/x/src', '/x/other/run.sh'];
+    yield 'root parent directory' => ['/x', '/x/src/hooks', '/x/src', '/x'];
+    yield 'directory sharing the root prefix' => ['/x/src2/run.sh', '/x/src/hooks', '/x/src', '/x/src2/run.sh'];
+  }
+
+  /**
+   * Create files with content under a directory.
+   *
+   * @param string $dir
+   *   Directory to create the files in.
+   * @param array<string, string> $files
+   *   File content keyed by path relative to $dir.
+   */
+  protected function createFiles(string $dir, array $files): void {
+    foreach ($files as $path => $content) {
+      File::dump($dir . DIRECTORY_SEPARATOR . self::nativePath($path), $content);
+    }
+  }
+
+  /**
+   * Convert forward slashes to the platform directory separator.
+   *
+   * Windows does not resolve a relative symlink target with forward slashes.
+   */
+  protected static function nativePath(string $path): string {
+    return str_replace('/', DIRECTORY_SEPARATOR, $path);
+  }
+
   public function testScandirRecursiveEmptyDirectory(): void {
     // Create directory and make it unreadable to simulate empty scandir.
     $empty_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'empty_dir_test';

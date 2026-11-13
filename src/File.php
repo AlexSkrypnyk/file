@@ -361,6 +361,27 @@ class File {
    *   TRUE if copying was successful, FALSE otherwise.
    */
   public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
+    return static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source);
+  }
+
+  /**
+   * Copy file or directory that belongs to a copied tree.
+   *
+   * @param string $source
+   *   Source file or directory path.
+   * @param string $dest
+   *   Destination file or directory path.
+   * @param int $permissions
+   *   Permissions to set on created directories.
+   * @param bool $copy_empty_dirs
+   *   Whether to copy empty directories.
+   * @param string $root
+   *   Source path the copy started from.
+   *
+   * @return bool
+   *   TRUE if copying was successful, FALSE otherwise.
+   */
+  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root): bool {
     $filesystem = new Filesystem();
     $parent = dirname($dest);
     $parent = static::mkdir($parent, $permissions);
@@ -375,7 +396,7 @@ class File {
       $ret = TRUE;
 
       if (!is_readable(basename($dest))) {
-        $link = readlink($source);
+        $link = static::readSymlinkTarget($source, $root);
         if ($link) {
           try {
             $filesystem->symlink($link, basename($dest));
@@ -417,12 +438,67 @@ class File {
       if ($entry === '..') {
         continue;
       }
-      static::copy(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE);
+      static::copyPath(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE, $root);
     }
 
     $dir && $dir->close();
 
     return TRUE;
+  }
+
+  /**
+   * Read the target to recreate a copied symlink with.
+   *
+   * On Windows, readlink() returns the resolved absolute target instead of
+   * the stored one, so a target inside the copied tree is made relative to
+   * the link again.
+   *
+   * @param string $link
+   *   Symlink path.
+   * @param string $root
+   *   Source path the copy started from.
+   *
+   * @return string|false
+   *   Symlink target, or FALSE if it cannot be read.
+   */
+  protected static function readSymlinkTarget(string $link, string $root): string|false {
+    $target = readlink($link);
+
+    // A symlink copied on its own has no tree to stay inside.
+    if ($target === FALSE || DIRECTORY_SEPARATOR !== '\\' || $link === $root) {
+      return $target;
+    }
+
+    // @codeCoverageIgnoreStart
+    return static::relativeSymlinkTarget($target, dirname($link), $root);
+    // @codeCoverageIgnoreEnd
+  }
+
+  /**
+   * Convert a resolved symlink target inside a tree to a relative target.
+   *
+   * Paths are compared case-insensitively, as on Windows.
+   *
+   * @param string $target
+   *   Resolved absolute symlink target.
+   * @param string $link_dir
+   *   Directory holding the symlink.
+   * @param string $root
+   *   Root directory of the tree.
+   *
+   * @return string
+   *   Target relative to $link_dir if it is inside $root, or $target
+   *   unchanged otherwise.
+   */
+  protected static function relativeSymlinkTarget(string $target, string $link_dir, string $root): string {
+    $root = rtrim(static::toForwardSlashes(realpath($root) ?: $root), '/') . '/';
+    $link_dir = static::toForwardSlashes(realpath($link_dir) ?: $link_dir);
+
+    if (!str_starts_with(strtolower(static::toForwardSlashes($target) . '/'), strtolower($root))) {
+      return $target;
+    }
+
+    return rtrim((new Filesystem())->makePathRelative($target, $link_dir), '/');
   }
 
   /**
