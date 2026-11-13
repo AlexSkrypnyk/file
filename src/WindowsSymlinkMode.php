@@ -13,14 +13,10 @@ namespace AlexSkrypnyk\File;
  */
 enum WindowsSymlinkMode: string {
 
-  /**
-   * Point each copied symlink at the resolved target in the source tree.
-   */
+  // Point each copied symlink at the resolved target in the source tree.
   case Absolute = 'absolute';
 
-  /**
-   * Make a target inside the copied tree relative to the copied symlink.
-   */
+  // Make a target inside the copied tree relative to the copied symlink.
   case Relative = 'relative';
 
 }
