@@ -397,7 +397,7 @@ class File {
   public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE, ?callable $filter = NULL): bool {
     $symlinks = [];
     $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks, $filter, '');
-    static::createSymlinks($symlinks, $dest);
+    static::createSymlinks($symlinks);
 
     return $ret;
   }
@@ -497,24 +497,20 @@ class File {
    *
    * PHP on Windows refuses to create a symlink to a missing target, so a
    * symlink to another symlink succeeds only on a later pass, and a symlink
-   * to a target that was not copied needs a placeholder.
+   * to a target that was not copied is created with mklink.
    *
    * @param array<int, array{string, string, bool}> $symlinks
    *   Symlinks as the target, the absolute symlink path and whether the
    *   source target is a directory.
-   * @param string $dest
-   *   Destination the copy writes to. Placeholders are created only inside
-   *   it.
    *
    * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When a symlink cannot be created.
    */
-  protected static function createSymlinks(array $symlinks, string $dest): void {
+  protected static function createSymlinks(array $symlinks): void {
     if ($symlinks === []) {
       return;
     }
 
-    $dest = realpath(static::absolutePath($dest)) ?: static::absolutePath($dest);
     $current_dir = static::cwd();
     $failed = [];
 
@@ -529,12 +525,12 @@ class File {
         }
 
         // A pass that creates nothing leaves only missing targets. The first
-        // one gets a placeholder, which can unblock a symlink that points to
+        // one is created dangling, which can unblock a symlink that points to
         // it on the next pass.
         if ($pending !== [] && count($pending) === count($symlinks)) {
           [$target, $link, $is_dir] = array_shift($pending);
 
-          if (!static::createSymlinkWithPlaceholder($target, $link, $is_dir, $dest)) {
+          if (!static::createDanglingSymlink($target, $link, $is_dir)) {
             $failed[] = sprintf('"%s" -> "%s"', $link, $target);
           }
         }
@@ -584,12 +580,12 @@ class File {
   }
 
   /**
-   * Create a symlink to a missing target by standing in a placeholder.
+   * Create a symlink to a target that does not exist.
    *
-   * The placeholder has the type of the source target, so Windows creates a
-   * directory symlink for a directory. The placeholder and any directories
-   * created for it are removed afterwards, which leaves the symlink
-   * dangling.
+   * PHP on Windows checks the target before it creates a symlink, so the
+   * symlink is created with mklink, which takes the symlink type from
+   * $is_dir and leaves the target location untouched. Other platforms create
+   * dangling symlinks through PHP, so a failure there is final.
    *
    * @param string $target
    *   Symlink target.
@@ -597,59 +593,38 @@ class File {
    *   Absolute symlink path.
    * @param bool $is_dir
    *   Whether the source target is a directory.
-   * @param string $dest
-   *   Resolved destination directory the placeholder must stay inside.
    *
    * @return bool
    *   TRUE if the symlink was created, FALSE otherwise.
    */
-  protected static function createSymlinkWithPlaceholder(string $target, string $link, bool $is_dir, string $dest): bool {
-    $link_dir = realpath(dirname($link)) ?: dirname($link);
-    $placeholder = static::realpath((new Filesystem())->isAbsolutePath($target) ? $target : $link_dir . DIRECTORY_SEPARATOR . $target);
-
-    if (file_exists($placeholder) || is_link($placeholder) || !static::isPathInside($placeholder, $dest)) {
-      return FALSE;
-    }
-
-    // The topmost missing directory is removed with the placeholder.
-    $created_dir = NULL;
-    for ($dir = dirname($placeholder); !is_dir($dir) && static::isPathInside($dir, $dest); $dir = dirname($dir)) {
-      $created_dir = $dir;
-    }
-
-    $ret = FALSE;
-
-    try {
-      $made = $is_dir ? @mkdir($placeholder, 0777, TRUE) : (static::mkdirQuietly(dirname($placeholder)) && @touch($placeholder));
-      $ret = $made && static::createSymlink($target, $link);
-    }
-    finally {
-      if ($is_dir) {
-        @rmdir($placeholder);
-      }
-      else {
-        @unlink($placeholder);
-      }
-
-      if ($created_dir !== NULL) {
-        (new Filesystem())->remove($created_dir);
-      }
-    }
-
-    return $ret;
+  protected static function createDanglingSymlink(string $target, string $link, bool $is_dir): bool {
+    return DIRECTORY_SEPARATOR === '\\' && static::createWindowsSymlink($target, $link, $is_dir);
   }
 
   /**
-   * Create a directory without raising a warning.
+   * Create a symlink with the Windows mklink command.
    *
-   * @param string $dir
-   *   Directory path.
+   * @param string $target
+   *   Symlink target.
+   * @param string $link
+   *   Absolute symlink path.
+   * @param bool $is_dir
+   *   Whether to create a directory symlink.
    *
    * @return bool
-   *   TRUE if the directory exists afterwards, FALSE otherwise.
+   *   TRUE if the symlink was created, FALSE otherwise.
+   *
+   * @codeCoverageIgnore
    */
-  protected static function mkdirQuietly(string $dir): bool {
-    return is_dir($dir) || @mkdir($dir, 0777, TRUE);
+  protected static function createWindowsSymlink(string $target, string $link, bool $is_dir): bool {
+    if (!function_exists('exec')) {
+      return FALSE;
+    }
+
+    // A relative Windows symlink target resolves only with backslashes.
+    exec(sprintf('mklink %s%s %s 2>&1', $is_dir ? '/D ' : '', escapeshellarg($link), escapeshellarg(str_replace('/', '\\', $target))), $output, $exit_code);
+
+    return $exit_code === 0;
   }
 
   /**
@@ -784,12 +759,74 @@ class File {
     $path = (new Filesystem())->isAbsolutePath($target) ? $target : $link_dir . DIRECTORY_SEPARATOR . $target;
 
     if (in_array(basename($path), ['.', '..'], TRUE)) {
-      return realpath($path) ?: static::realpath($path);
+      return realpath($path) ?: static::resolveMissingPath($path);
     }
 
-    $dir = realpath(dirname($path));
+    $dir = realpath(dirname($path)) ?: static::resolveMissingPath(dirname($path));
 
-    return $dir === FALSE ? static::realpath($path) : $dir . DIRECTORY_SEPARATOR . basename($path);
+    return rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . basename($path);
+  }
+
+  /**
+   * Resolve a path whose last directories do not exist.
+   *
+   * The deepest existing ancestor resolves through symlinks, and the missing
+   * segments are appended as written.
+   *
+   * @param string $path
+   *   Absolute path.
+   *
+   * @return string
+   *   Resolved path.
+   */
+  protected static function resolveMissingPath(string $path): string {
+    $path = static::normalizePath($path);
+    $missing = [];
+
+    while (!file_exists($path) && dirname($path) !== $path) {
+      array_unshift($missing, basename($path));
+      $path = dirname($path);
+    }
+
+    $resolved = realpath($path) ?: $path;
+
+    return $missing === [] ? $resolved : rtrim($resolved, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $missing);
+  }
+
+  /**
+   * Resolve "." and ".." segments and repeated separators in a path.
+   *
+   * Only Windows treats a backslash as a separator, since a backslash is a
+   * valid filename character elsewhere.
+   *
+   * @param string $path
+   *   Path to normalize.
+   *
+   * @return string
+   *   Normalized path, joined with the platform directory separator.
+   */
+  protected static function normalizePath(string $path): string {
+    $separators = DIRECTORY_SEPARATOR === '\\' ? '/\\\\' : '/';
+    preg_match('#^(?:[a-zA-Z]:)?[' . $separators . ']?#', $path, $matches);
+    $prefix = $matches[0] ?? '';
+    $parts = [];
+
+    foreach (preg_split('#[' . $separators . ']+#', substr($path, strlen($prefix)), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $part) {
+      if ($part === '.') {
+        continue;
+      }
+
+      if ($part === '..') {
+        array_pop($parts);
+        continue;
+      }
+
+      $parts[] = $part;
+    }
+
+    $prefix = DIRECTORY_SEPARATOR === '\\' ? str_replace('/', '\\', $prefix) : $prefix;
+
+    return $prefix . implode(DIRECTORY_SEPARATOR, $parts);
   }
 
   /**

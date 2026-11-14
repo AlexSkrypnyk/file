@@ -165,7 +165,7 @@ To copy only part of a directory, pass a filter to `copy()`. The filter receives
 File::copy('/path/to/source', '/path/to/destination', filter: fn(string $path, bool $is_dir): bool => !in_array($path, ['.git', 'vendor'], TRUE));
 ```
 
-A filtered copy still treats the source as the tree for the relative mode. A symlink whose target is filtered out, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. On Windows, PHP can only create a symlink to a target that exists, so `File` places a temporary placeholder at the target. It does that only inside the destination, so on Windows a dangling symlink to a target outside the destination can't be copied. When `copy()` can't read or create a symlink, it throws a `FileException` that names the symlink.
+A filtered copy still treats the source as the tree for the relative mode. A symlink whose target is filtered out, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. On Windows, PHP can only create a symlink to a target that exists, so `File` creates a dangling symlink with the `mklink` command. When `copy()` can't read or create a symlink, it throws a `FileException` that names the symlink.
 
 ### Batch Operations
 

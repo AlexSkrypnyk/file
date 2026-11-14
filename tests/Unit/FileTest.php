@@ -734,13 +734,6 @@ final class FileTest extends UnitTestCase {
       File::remove($target_path);
     }
 
-    // PHP on Windows needs a placeholder to create a symlink to a missing
-    // target, and placeholders stay inside the destination.
-    if ($dangling && $outside && DIRECTORY_SEPARATOR === '\\') {
-      $this->expectException(FileException::class);
-      $this->expectExceptionMessage('Unable to create symlinks: ');
-    }
-
     $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: self::pathsFilter($this->listTree($tree))));
 
     // A dangling copy proves it stays inside the destination by reading a
@@ -853,7 +846,7 @@ final class FileTest extends UnitTestCase {
     $copied_target = $dest . DIRECTORY_SEPARATOR . self::nativePath('a/target');
     $copied_link = $dest . DIRECTORY_SEPARATOR . self::nativePath('a/b/link');
     $this->assertFileDoesNotExist($copied_target);
-    $this->assertSame([], array_values(array_diff((array) scandir(dirname($copied_target)), ['.', '..', 'b'])), 'No placeholder is left behind.');
+    $this->assertSame([], array_values(array_diff((array) scandir(dirname($copied_target)), ['.', '..', 'b'])), 'Nothing is created at the target.');
 
     // PHP on Windows does not report a dangling relative symlink as a link,
     // so restoring the target shows where the symlink points.
@@ -939,44 +932,43 @@ final class FileTest extends UnitTestCase {
     File::setSymlinkMode('absolute');
   }
 
-  #[DataProvider('dataProviderCreateSymlinkWithPlaceholder')]
-  public function testCreateSymlinkWithPlaceholder(string $target, bool $is_dir, array $existing, bool $read_only_link_dir, bool $expected): void {
-    if ($read_only_link_dir && (DIRECTORY_SEPARATOR === '\\' || (function_exists('posix_geteuid') && posix_geteuid() === 0))) {
-      $this->markTestSkipped('Directory permissions do not prevent symlink creation.');
-    }
-
-    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
-    $this->createFiles($dest_dir, $existing);
-    File::mkdir($dest_dir . DIRECTORY_SEPARATOR . 'hooks');
-    $link = realpath($dest_dir . DIRECTORY_SEPARATOR . 'hooks') . DIRECTORY_SEPARATOR . 'link';
-    $before = File::scandir($dest_dir, [], TRUE);
-
-    if ($read_only_link_dir) {
-      chmod(dirname($link), 0555);
-    }
-
-    $current_dir = getcwd();
-    $result = self::callProtectedMethod(File::class, 'createSymlinkWithPlaceholder', [self::nativePath($target), $link, $is_dir, (string) realpath($dest_dir)]);
-    chdir((string) $current_dir);
-
-    if ($read_only_link_dir) {
-      chmod(dirname($link), 0755);
-    }
-
-    // PHP on Windows does not report a dangling relative symlink as a link,
-    // so the directory entry shows whether it exists.
-    $this->assertSame($expected, $result);
-    $this->assertSame($expected, in_array('link', (array) scandir(dirname($link)), TRUE));
-    $this->assertSame($before, array_values(array_filter(File::scandir($dest_dir, [], TRUE), fn(string $path): bool => basename($path) !== 'link')), 'Placeholder and its directories are removed.');
+  #[DataProvider('dataProviderNormalizePath')]
+  public function testNormalizePath(string $path, string $expected): void {
+    $this->assertSame(self::nativePath($expected), self::callProtectedMethod(File::class, 'normalizePath', [$path]));
   }
 
-  public static function dataProviderCreateSymlinkWithPlaceholder(): \Iterator {
-    yield 'file target in an existing directory' => ['../library/provision.sh', FALSE, ['library/other.sh' => 'other'], FALSE, TRUE];
-    yield 'file target in missing directories' => ['../library/a/b/provision.sh', FALSE, [], FALSE, TRUE];
-    yield 'directory target in missing directories' => ['../library/a/update', TRUE, [], FALSE, TRUE];
-    yield 'target that exists' => ['../library/provision.sh', FALSE, ['library/provision.sh' => 'provision'], FALSE, FALSE];
-    yield 'target outside the destination' => ['../../outside.sh', FALSE, [], FALSE, FALSE];
-    yield 'symlink directory that is read-only' => ['../library/provision.sh', FALSE, [], TRUE, FALSE];
+  public static function dataProviderNormalizePath(): \Iterator {
+    yield 'parent segment' => ['/x/a/../b', '/x/b'];
+    yield 'current segment and repeated separators' => ['/x/./a//b/', '/x/a/b'];
+    yield 'parent segment above the root' => ['/x/../../b', '/b'];
+    yield 'root' => ['/', '/'];
+    // A backslash separates segments only on Windows.
+    yield 'backslash in a name' => ['/x/miss\\ing/file', DIRECTORY_SEPARATOR === '\\' ? '/x/miss/ing/file' : '/x/miss\\ing/file'];
+  }
+
+  public function testResolveMissingPath(): void {
+    File::mkdir($this->testTmpDir . DIRECTORY_SEPARATOR . 'existing');
+    $path = $this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('existing/missing/../gone/file.txt');
+
+    // The existing ancestor resolves through symlinks, such as /var on macOS.
+    $expected = realpath($this->testTmpDir . DIRECTORY_SEPARATOR . 'existing') . DIRECTORY_SEPARATOR . self::nativePath('gone/file.txt');
+    $this->assertSame($expected, self::callProtectedMethod(File::class, 'resolveMissingPath', [$path]));
+  }
+
+  public function testCopyDanglingSymlinkWithBackslash(): void {
+    if (DIRECTORY_SEPARATOR === '\\') {
+      $this->markTestSkipped('A backslash is a directory separator on Windows.');
+    }
+
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
+
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+    File::mkdir($source_dir . '/a');
+    symlink('miss\\ing/file.txt', $source_dir . '/a/link');
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+    $this->assertSame('miss\\ing/file.txt', readlink($dest_dir . '/a/link'));
   }
 
   /**
