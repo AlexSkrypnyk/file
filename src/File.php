@@ -1185,7 +1185,8 @@ class File {
       }
 
       if (is_dir($path) && !is_link($path)) {
-        static::removeWindowsDanglingSymlinks(array_map(static fn(string $entry): string => $path . DIRECTORY_SEPARATOR . $entry, array_values(array_diff(scandir($path) ?: [], ['.', '..']))));
+        $entries = array_values(array_diff(scandir($path) ?: [], ['.', '..']));
+        static::removeWindowsDanglingSymlinks(array_map(static fn(string $entry): string => $path . DIRECTORY_SEPARATOR . $entry, $entries));
       }
     }
   }
