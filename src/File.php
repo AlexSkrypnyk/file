@@ -396,26 +396,93 @@ class File {
    *   Permissions to set on created directories.
    * @param bool $copy_empty_dirs
    *   Whether to copy empty directories.
-   * @param callable|null $filter
+   * @param callable|array<int, string>|null $filter
    *   Callback that selects the entries of a directory to copy, as
    *   fn(string $path, bool $is_dir): bool. It receives each entry's path
    *   relative to $source with "/" separators, and whether the entry is a
    *   directory. A symlink is not a directory, since it is copied as a
    *   symlink. Returning FALSE skips the entry, and for a directory the
-   *   whole subtree.
+   *   whole subtree. An array that is not a callable lists the paths to copy
+   *   relative to $source, with "/" separators, or either separator on
+   *   Windows. A listed directory is copied with its whole subtree.
+   * @param string|null $symlink_mode
+   *   File::SYMLINK_MODE_NATIVE or File::SYMLINK_MODE_RELATIVE for this copy
+   *   only, or NULL for the mode set with setSymlinkMode().
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
    *
    * @throws \AlexSkrypnyk\File\Exception\FileException
-   *   When a symlink cannot be created.
+   *   When a symlink cannot be created, the symlink mode is unknown, or a
+   *   filter path is not a string.
    */
-  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE, ?callable $filter = NULL): bool {
+  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE, callable|array|null $filter = NULL, ?string $symlink_mode = NULL): bool {
+    if ($symlink_mode !== NULL) {
+      static::validateSymlinkMode($symlink_mode);
+    }
+
+    // The tree root is passed down only in the relative mode, so the global
+    // mode is read once and never changed.
+    $root = ($symlink_mode ?? static::$symlinkMode) === self::SYMLINK_MODE_RELATIVE ? $source : NULL;
+
     $symlinks = [];
-    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks, $filter, '');
+    // An array that is not a callable, such as [$object, 'method'], is a list
+    // of paths.
+    $filter = is_array($filter) && !is_callable($filter) ? static::pathsFilter($filter) : $filter;
+
+    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $root, $symlinks, $filter, '');
     static::createSymlinks($symlinks);
 
     return $ret;
+  }
+
+  /**
+   * Build a copy() filter that selects a list of paths.
+   *
+   * The filter accepts each listed path, the directories above it and
+   * everything inside a listed directory.
+   *
+   * @param array<mixed> $paths
+   *   Paths relative to the copied tree, with "/" separators, or either
+   *   separator on Windows.
+   *
+   * @return \Closure
+   *   Filter for copy().
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When a path is not a string.
+   */
+  protected static function pathsFilter(array $paths): \Closure {
+    $selected = [];
+    $parents = [];
+
+    foreach ($paths as $path) {
+      if (!is_string($path)) {
+        throw new FileException(sprintf('The copy() filter path list holds a %s instead of a path.', get_debug_type($path)));
+      }
+
+      // The walk passes paths without empty or "." segments.
+      $path = implode('/', array_diff(explode('/', static::toForwardSlashes($path)), ['', '.']));
+      $selected[$path] = TRUE;
+
+      for ($dir = dirname($path); $dir !== '.' && !isset($parents[$dir]); $dir = dirname($dir)) {
+        $parents[$dir] = TRUE;
+      }
+    }
+
+    return static function (string $path, bool $is_dir) use ($selected, $parents): bool {
+      if (isset($selected[$path]) || ($is_dir && isset($parents[$path]))) {
+        return TRUE;
+      }
+
+      for ($dir = dirname($path); $dir !== '.'; $dir = dirname($dir)) {
+        if (isset($selected[$dir])) {
+          return TRUE;
+        }
+      }
+
+      return FALSE;
+    };
   }
 
   /**
@@ -429,16 +496,17 @@ class File {
    *   Permissions to set on created directories.
    * @param bool $copy_empty_dirs
    *   Whether to copy empty directories.
-   * @param string $root
-   *   Root of the copied tree.
+   * @param string|null $root
+   *   Root of the copied tree in File::SYMLINK_MODE_RELATIVE, or NULL for
+   *   File::SYMLINK_MODE_NATIVE.
    * @param array<int, array{string, string, bool}> $symlinks
    *   Symlinks to create once the tree is copied, as the target, the
    *   destination path and whether the source target is a directory.
    * @param callable|null $filter
    *   Callback that selects the entries to copy, as described for copy().
    * @param string $path
-   *   Path of $source relative to $root with "/" separators, or an empty
-   *   string for $root itself.
+   *   Path of $source relative to the copied tree with "/" separators, or an
+   *   empty string for the tree itself.
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
@@ -446,7 +514,7 @@ class File {
    * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When the target of a symlink cannot be read.
    */
-  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root, array &$symlinks, ?callable $filter, string $path): bool {
+  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, ?string $root, array &$symlinks, ?callable $filter, string $path): bool {
     static::mkdir(dirname($dest), $permissions);
 
     if (static::isSymlink($source)) {
@@ -913,20 +981,21 @@ class File {
   /**
    * Read the target to recreate a copied symlink with.
    *
-   * In File::SYMLINK_MODE_RELATIVE, the target is read relative to the
-   * copied tree. Otherwise it is the target the platform reads.
+   * With a root, the target is read relative to the copied tree, as in
+   * File::SYMLINK_MODE_RELATIVE. Without one, it is the target the platform
+   * reads.
    *
    * @param string $link
    *   Symlink path.
-   * @param string $root
-   *   Root of the copied tree.
+   * @param string|null $root
+   *   Root of the copied tree, or NULL for File::SYMLINK_MODE_NATIVE.
    *
    * @return string|false
    *   Symlink target, or FALSE if it cannot be read.
    */
-  protected static function readSymlinkTarget(string $link, string $root): string|false {
+  protected static function readSymlinkTarget(string $link, ?string $root): string|false {
     // A symlink copied on its own has no tree to stay inside.
-    return static::readSymlink($link, $link !== $root && static::$symlinkMode === self::SYMLINK_MODE_RELATIVE ? $root : NULL);
+    return static::readSymlink($link, $link !== $root ? $root : NULL);
   }
 
   /**
@@ -1981,11 +2050,23 @@ class File {
    *   When the mode is not one of the symlink mode constants.
    */
   public static function setSymlinkMode(string $mode): void {
+    static::validateSymlinkMode($mode);
+    static::$symlinkMode = $mode;
+  }
+
+  /**
+   * Check that a symlink mode is 1 of the symlink mode constants.
+   *
+   * @param string $mode
+   *   Symlink mode.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When the mode is not 1 of the symlink mode constants.
+   */
+  protected static function validateSymlinkMode(string $mode): void {
     if (!in_array($mode, [self::SYMLINK_MODE_NATIVE, self::SYMLINK_MODE_RELATIVE], TRUE)) {
       throw new FileException(sprintf('Unknown symlink mode "%s".', $mode));
     }
-
-    static::$symlinkMode = $mode;
   }
 
   /**

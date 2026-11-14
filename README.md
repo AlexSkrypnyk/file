@@ -178,10 +178,22 @@ File::copy('/path/to/source', '/path/to/destination');
 
 `File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default. `setSymlinkMode()` throws a `FileException` for a value that isn't 1 of the 2 constants.
 
+The mode set with `setSymlinkMode()` applies to every later copy in the process. A library that copies with its own mode passes it to `copy()` instead. That mode applies to that call only and leaves the global mode unchanged:
+
+```php
+File::copy('/path/to/source', '/path/to/destination', symlink_mode: File::SYMLINK_MODE_RELATIVE);
+```
+
 To copy only part of a directory, pass a filter to `copy()`. The filter receives each entry's path relative to the source and whether the entry is a directory. Paths use `/` separators on every platform. A symlink counts as a file. Return `FALSE` to skip the entry. A skipped directory isn't entered, so its whole subtree is skipped:
 
 ```php
 File::copy('/path/to/source', '/path/to/destination', filter: fn(string $path, bool $is_dir): bool => !in_array($path, ['.git', 'vendor'], TRUE));
+```
+
+To copy an exact selection, pass the list of paths instead of a callback. `copy()` enters the parent directories of each listed path, and copies a listed directory with its whole subtree:
+
+```php
+File::copy('/path/to/source', '/path/to/destination', filter: ['hooks/run.sh', 'library'], symlink_mode: File::SYMLINK_MODE_RELATIVE);
 ```
 
 A filtered copy still treats the source as the tree for the relative mode. A symlink whose target is filtered out, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. When `copy()` can't read or create a symlink, it throws a `FileException` that names the symlink.
