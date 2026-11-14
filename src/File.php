@@ -1313,7 +1313,8 @@ class File {
           $discovered[] = $path;
         }
 
-        $discovered = array_merge($discovered, static::scandirPath($path, $real_path, $ignore_paths, $include_dirs, $follow_symlinks, [...$ancestors, static::walkKey($real_path)]));
+        $walked = [...$ancestors, static::walkKey($real_path)];
+        $discovered = array_merge($discovered, static::scandirPath($path, $real_path, $ignore_paths, $include_dirs, $follow_symlinks, $walked));
         continue;
       }
 
