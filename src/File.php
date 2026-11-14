@@ -632,14 +632,50 @@ class File {
    * @codeCoverageIgnore
    */
   protected static function createWindowsSymlink(string $target, string $link, bool $is_dir): bool {
-    if (!function_exists('exec')) {
-      return FALSE;
+    // A relative Windows symlink target resolves only with backslashes.
+    $result = static::runWindowsCommand(sprintf('mklink %s"%%FILE_LINK%%" "%%FILE_TARGET%%"', $is_dir ? '/D ' : ''), [
+      'FILE_LINK' => $link,
+      'FILE_TARGET' => str_replace('/', '\\', $target),
+    ]);
+
+    return $result !== NULL && $result[0] === 0;
+  }
+
+  /**
+   * Run a command with the Windows command interpreter.
+   *
+   * Paths are passed as environment variables and the command reads them as
+   * "%NAME%". cmd substitutes a variable once and does not read its value
+   * again, so a path with "!", "%" or '"' reaches the command unchanged.
+   *
+   * @param string $command
+   *   Command for cmd, with the variables in "%NAME%" form.
+   * @param array<string, string> $variables
+   *   Environment variables, keyed by name.
+   *
+   * @return array{int, array<int, string>}|null
+   *   The exit code and the output lines, or NULL if the command cannot run.
+   *
+   * @codeCoverageIgnore
+   */
+  protected static function runWindowsCommand(string $command, array $variables): ?array {
+    if (!function_exists('proc_open')) {
+      return NULL;
     }
 
-    // A relative Windows symlink target resolves only with backslashes.
-    exec(sprintf('mklink %s%s %s 2>&1', $is_dir ? '/D ' : '', escapeshellarg($link), escapeshellarg(str_replace('/', '\\', $target))), $output, $exit_code);
+    // "/v:off" keeps "!" literal, and "/s" strips only the outer quotes.
+    $process = proc_open('cmd /d /v:off /s /c "' . $command . '"', [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, NULL, $variables + getenv(), ['bypass_shell' => TRUE]);
 
-    return $exit_code === 0;
+    if (!is_resource($process)) {
+      return NULL;
+    }
+
+    $output = (string) stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    $exit_code = proc_close($process);
+
+    return [$exit_code, preg_split('/\R/', rtrim($output)) ?: []];
   }
 
   /**
@@ -726,8 +762,10 @@ class File {
         // @codeCoverageIgnoreEnd
       }
 
-      // A target that starts at a root or a Windows drive is absolute.
-      $absolute = $target[0] === '/' || $target[0] === '\\' || ($target[1] ?? '') === ':';
+      // A target that starts at a root is absolute. A backslash root and a
+      // drive are absolute only on Windows, since a backslash and a colon are
+      // filename characters elsewhere.
+      $absolute = $target[0] === '/' || (static::IS_WINDOWS && ($target[0] === '\\' || ($target[1] ?? '') === ':'));
       $path = static::normalizePath($absolute ? $target : dirname($path) . DIRECTORY_SEPARATOR . $target);
     } while (static::isSymlink($path));
 
@@ -791,14 +829,10 @@ class File {
    * @codeCoverageIgnore
    */
   protected static function readWindowsSymlink(string $link): ?array {
-    if (!function_exists('exec')) {
-      return NULL;
-    }
-
     // Switch the console to UTF-8 so non-ASCII names list unchanged.
-    exec(sprintf('chcp 65001 >nul 2>&1 & dir /AL %s 2>nul', escapeshellarg(dirname($link))), $output, $exit_code);
+    $result = static::runWindowsCommand('chcp 65001 >nul 2>&1 & dir /AL "%FILE_DIR%"', ['FILE_DIR' => dirname($link)]);
 
-    return $exit_code === 0 ? static::parseWindowsSymlinkListing($output, basename($link)) : NULL;
+    return $result !== NULL && $result[0] === 0 ? static::parseWindowsSymlinkListing($result[1], basename($link)) : NULL;
   }
 
   /**
@@ -854,6 +888,14 @@ class File {
    *   Symlink target, or FALSE if it cannot be read.
    */
   public static function readSymlink(string $link, ?string $root = NULL): string|false {
+    // readlink() on Windows also returns the path of a file or directory that
+    // is not a symlink.
+    if (static::IS_WINDOWS && !static::isSymlink($link)) {
+      // @codeCoverageIgnoreStart
+      return FALSE;
+      // @codeCoverageIgnoreEnd
+    }
+
     $target = @readlink($link);
 
     // readlink() on Windows resolves the final path. realpath() still
@@ -961,7 +1003,11 @@ class File {
     }
 
     $separators = static::IS_WINDOWS ? '/\\\\' : '/';
-    preg_match('#^(?:[a-zA-Z]:)?[' . $separators . ']?#', $path, $matches);
+
+    // A Windows root is a UNC server and share, which ".." cannot leave, or an
+    // optional drive and a separator.
+    $root = static::IS_WINDOWS ? '#^(?:[/\\\\]{2}[^/\\\\]+[/\\\\][^/\\\\]+[/\\\\]?|(?:[a-zA-Z]:)?[/\\\\]?)#' : '#^/?#';
+    preg_match($root, $path, $matches);
     $prefix = $matches[0] ?? '';
     $parts = [];
 
@@ -1020,6 +1066,9 @@ class File {
   /**
    * Check whether a path is a directory or lies inside it.
    *
+   * Both paths are compared after their "." and ".." segments are resolved.
+   * Symlinks are not followed.
+   *
    * @param string $path
    *   Absolute path.
    * @param string $dir
@@ -1032,8 +1081,10 @@ class File {
    */
   public static function isPathInside(string $path, string $dir, ?bool $ignore_case = NULL): bool {
     $ignore_case ??= static::IS_WINDOWS;
-    $path = static::toForwardSlashes($path) . '/';
-    $dir = rtrim(static::toForwardSlashes($dir), '/') . '/';
+
+    // ".." segments are resolved first, so they cannot leave the directory.
+    $path = rtrim(static::toForwardSlashes(static::normalizePath($path)), '/') . '/';
+    $dir = rtrim(static::toForwardSlashes(static::normalizePath($dir)), '/') . '/';
 
     return $ignore_case ? str_starts_with(strtolower($path), strtolower($dir)) : str_starts_with($path, $dir);
   }
@@ -1093,12 +1144,15 @@ class File {
   /**
    * Recursively scan directory for files.
    *
+   * A symlink is never followed. A file symlink and a dangling symlink are
+   * listed as files, and a directory symlink is listed as a directory.
+   *
    * @param string $directory
    *   Directory to scan.
    * @param array<int, string> $ignore_paths
    *   Array of paths to ignore.
    * @param bool $include_dirs
-   *   Include directories in the result.
+   *   Include directories and directory symlinks in the result.
    *
    * @return array<int, string>
    *   Array of discovered files.
@@ -1139,18 +1193,26 @@ class File {
         }
       }
 
-      // A directory symlink is listed as an entry and not walked, so a
-      // symlink to an ancestor cannot recurse. filetype() reads the entry
-      // without following it, so a symlink is "link" on every platform.
-      if (@filetype($path) === 'dir') {
+      // filetype() reads the entry without following it, so a symlink is
+      // "link" on every platform.
+      $type = @filetype($path);
+
+      if ($type === 'dir') {
         if ($include_dirs) {
           $discovered[] = $path;
         }
+
         $discovered = array_merge($discovered, static::scandir($path, $ignore_paths, $include_dirs));
+        continue;
       }
-      else {
-        $discovered[] = $path;
+
+      // A directory symlink is listed only with the directories and never
+      // walked, so a symlink to an ancestor cannot recurse.
+      if ($type === 'link' && !$include_dirs && static::isDirectorySymlink($path)) {
+        continue;
       }
+
+      $discovered[] = $path;
     }
 
     return $discovered;

@@ -149,14 +149,14 @@ The directory-wide methods skip the paths returned by `ignoredPaths()` - `/.git/
 | Method                | What it does with a symlink                                                                                                                                                          |
 |-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `copy()`              | Copies the symlink as a symlink, after every file and directory is copied. The symlink mode sets its target.                                                                        |
-| `scandir()`           | Lists the symlink as an entry. A directory symlink isn't walked, so a symlink to an ancestor can't recurse.                                                                         |
+| `scandir()`           | Lists a file symlink or a dangling symlink as a file. Lists a directory symlink as a directory, only when directories are included. A directory symlink isn't walked, so a symlink to an ancestor can't recurse. |
 | `remove()`, `rmdir()` | Removes the symlink and leaves its target.                                                                                                                                           |
 | `rmdirIfEmpty()`      | Leaves a directory symlink in place, even when its target is empty.                                                                                                                  |
 | `exists()`            | Returns `FALSE` for a dangling symlink.                                                                                                                                              |
 | `realpath()`          | Follows the chain of symlinks to the final target. A relative target resolves against its symlink's directory, and a dangling symlink resolves to its target path. A loop throws a `FileException`. |
 | `readSymlink()`       | Reads the target of 1 symlink, relative to a root you pass.                                                                                                                          |
 
-`absolute()`, `dir()` and `mkdir()` resolve a path with `realpath()`, so they follow symlinks the same way. The directory-wide methods, such as `replaceContentInDir()`, get their files from `scandir()`, so they don't walk into directory symlinks.
+`absolute()`, `dir()` and `mkdir()` resolve a path with `realpath()`, so they follow symlinks the same way. The directory-wide methods, such as `replaceContentInDir()`, get their files from `scandir()`, so they skip directory symlinks.
 
 #### Copy symlinks
 
@@ -213,7 +213,7 @@ PHP on Windows reads symlinks differently from Linux and macOS. `File` works aro
 - `realpath()` returns the missing target of a dangling absolute symlink. `File` checks that the target exists before it trusts the result.
 - An archive extractor such as `tar` creates a directory symlink as a file symlink when its target isn't extracted yet. `File` reads it with `realpath()` and copies it as a directory symlink.
 
-Reading and creating a dangling symlink on Windows runs `dir /AL` and `mklink` through `exec()`. When `exec()` is disabled, copying a dangling symlink throws a `FileException`. Paths compare case-insensitively on Windows. Creating any symlink on Windows needs Developer Mode or administrator rights. Junctions aren't supported.
+Reading and creating a dangling symlink on Windows runs `dir /AL` and `mklink` through `proc_open()`. When `proc_open()` is disabled, copying a dangling symlink throws a `FileException`. Paths compare case-insensitively on Windows. Creating any symlink on Windows needs Developer Mode or administrator rights. Junctions aren't supported.
 
 ### Batch Operations
 

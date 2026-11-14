@@ -1138,6 +1138,73 @@ final class FileTest extends UnitTestCase {
     $this->assertFalse(File::readSymlink($this->testTmpDir . DIRECTORY_SEPARATOR . 'missing', $this->testTmpDir));
   }
 
+  public function testReadSymlinkNotSymlink(): void {
+    $this->createFiles($this->testTmpDir, ['dir/file.txt' => 'file']);
+
+    $this->assertFalse(File::readSymlink($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('dir/file.txt')));
+    $this->assertFalse(File::readSymlink($this->testTmpDir . DIRECTORY_SEPARATOR . 'dir', $this->testTmpDir));
+  }
+
+  #[DataProvider('dataProviderRealpathPosixTargetCharacters')]
+  public function testRealpathPosixTargetCharacters(string $target): void {
+    if (DIRECTORY_SEPARATOR === '\\') {
+      $this->markTestSkipped('A backslash and a colon are filename characters only outside Windows.');
+    }
+
+    $link = $this->testTmpDir . '/tree/link';
+    File::mkdir(dirname($link));
+    symlink($target, $link);
+
+    // The target is relative, so it resolves inside the symlink directory.
+    $this->assertSame(realpath($this->testTmpDir . '/tree') . '/' . $target, File::realpath($link));
+  }
+
+  public static function dataProviderRealpathPosixTargetCharacters(): \Iterator {
+    yield 'leading backslash' => ['\\missing'];
+    yield 'drive-like prefix' => ['a:b'];
+  }
+
+  public function testDirectoryOperationsSkipDirectorySymlink(): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $this->createFiles($tree, ['dir/file.txt' => 'needle']);
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . 'dir_link', 'dir');
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . 'file_link.txt', self::nativePath('dir/file.txt'));
+
+    // A directory symlink is listed only with the directories.
+    $this->assertSame(['dir/file.txt', 'file_link.txt'], $this->listScandir($tree, FALSE));
+
+    $found = array_map(static fn(string $path): string => basename($path), File::findContainingInDir($tree, 'needle'));
+    sort($found);
+    $this->assertSame(['file.txt', 'file_link.txt'], $found);
+
+    File::replaceContentInDir($tree, 'needle', 'replaced');
+    File::removeLineInDir($tree, 'missing');
+    File::collapseEmptyLinesInDir($tree);
+    $this->assertSame('replaced', file_get_contents($tree . DIRECTORY_SEPARATOR . self::nativePath('dir/file.txt')));
+  }
+
+  public function testCopyDanglingSymlinkWithShellCharacters(): void {
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
+
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+    $target = 'ta!rget%PATH%.txt';
+    $link = 'li!nk%PATH%';
+
+    // The target exists while the symlink is created, so PHP on Windows
+    // accepts it, then it is removed to leave the symlink dangling.
+    File::dump($source_dir . DIRECTORY_SEPARATOR . $target, 'source');
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . $link, $target);
+    File::remove($source_dir . DIRECTORY_SEPARATOR . $target);
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+
+    // The restored target is read through the copied symlink, so both names
+    // are exact.
+    File::dump($dest_dir . DIRECTORY_SEPARATOR . $target, 'restored');
+    $this->assertSame('restored', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . $link));
+  }
+
   #[DataProvider('dataProviderIsPathInside')]
   public function testIsPathInside(string $path, string $dir, ?bool $ignore_case, bool $expected): void {
     $this->assertSame($expected, File::isPathInside($path, $dir, $ignore_case));
@@ -1151,6 +1218,10 @@ final class FileTest extends UnitTestCase {
     yield 'parent directory' => ['/x', '/x/src', NULL, FALSE];
     yield 'different case, ignoring case' => ['/x/SRC/a', '/x/src', TRUE, TRUE];
     yield 'different case, matching case' => ['/x/SRC/a', '/x/src', FALSE, FALSE];
+    yield 'parent segment that leaves the directory' => ['/x/src/../outside/file', '/x/src', NULL, FALSE];
+    yield 'parent segment that stays inside the directory' => ['/x/src/a/../b', '/x/src', NULL, TRUE];
+    yield 'parent segment in the directory' => ['/x/src/a', '/x/other/../src', NULL, TRUE];
+    yield 'root directory' => ['/x/src', '/', NULL, TRUE];
   }
 
   #[DataProvider('dataProviderToForwardSlashes')]
@@ -1176,6 +1247,10 @@ final class FileTest extends UnitTestCase {
     yield 'root' => ['/', '/'];
     // A backslash separates segments only on Windows.
     yield 'backslash in a name' => ['/x/miss\\ing/file', DIRECTORY_SEPARATOR === '\\' ? '/x/miss/ing/file' : '/x/miss\\ing/file'];
+    // A UNC root keeps both leading separators, and ".." cannot leave it.
+    yield 'UNC root' => ['\\\\server\\share\\a\\..\\..\\file.txt', DIRECTORY_SEPARATOR === '\\' ? '\\\\server\\share\\file.txt' : '\\\\server\\share\\a\\..\\..\\file.txt'];
+    // A colon starts a drive only on Windows.
+    yield 'drive letter' => ['C:/x/../file.txt', DIRECTORY_SEPARATOR === '\\' ? 'C:\\file.txt' : 'C:/file.txt'];
   }
 
   public function testResolveMissingPath(): void {
@@ -1266,14 +1341,16 @@ final class FileTest extends UnitTestCase {
    * List the paths File::scandir() discovers, relative to the directory.
    *
    * @param string $dir
-   *   Directory to scan, including directories in the result.
+   *   Directory to scan.
+   * @param bool $include_dirs
+   *   Whether to include directories in the result.
    *
    * @return array<int, string>
    *   Sorted paths relative to $dir with "/" separators.
    */
-  protected function listScandir(string $dir): array {
+  protected function listScandir(string $dir, bool $include_dirs = TRUE): array {
     $base = File::toForwardSlashes(File::dir($dir)) . '/';
-    $paths = array_map(static fn(string $path): string => substr(File::toForwardSlashes($path), strlen($base)), File::scandir($dir, [], TRUE));
+    $paths = array_map(static fn(string $path): string => substr(File::toForwardSlashes($path), strlen($base)), File::scandir($dir, [], $include_dirs));
     sort($paths);
 
     return $paths;
