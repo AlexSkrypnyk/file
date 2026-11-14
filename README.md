@@ -33,7 +33,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
   - [Available Methods](#available-methods)
-  - [Symlinks on Windows](#symlinks-on-windows)
+  - [Symlinks](#symlinks)
   - [Batch Operations](#batch-operations)
   - [Content Replacement](#content-replacement)
   - [Assertion Traits](#assertion-traits)
@@ -140,32 +140,34 @@ Methods that accept a needle also accept a regular expression. A needle is treat
 
 The directory-wide methods skip the paths returned by `ignoredPaths()` - `/.git/`, `/.idea/`, `/vendor/` and `/node_modules/`. The methods that rewrite the content of a single file additionally skip images: `.png`, `.jpg`, `.jpeg`, `.bmp` and `.tiff`.
 
-### Symlinks on Windows
+### Symlinks
 
-On Linux and macOS, `copy()` recreates each symlink with its stored target. On Windows, PHP reads a symlink's target as a resolved absolute path, so `copy()` gets the absolute form of a relative target. Pick how `copy()` recreates symlinks on Windows:
+`copy()` and `copyPaths()` recreate each symlink in the destination after every file and directory is copied, so a symlink and its target can come in any order. Pick how they set each symlink's target:
 
-| Mode                                     | The copied symlink points at                                                                                    |
-|------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `WindowsSymlinkMode::Absolute` (default) | The target in the source tree, as an absolute path.                                                             |
-| `WindowsSymlinkMode::Relative`           | The copied target, as a path relative to the symlink. A target outside the copied tree stays an absolute path. |
+| Mode                            | The copied symlink points at                                                                                                                                  |
+|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SymlinkMode::Native` (default) | The target the platform reads. Linux and macOS read the stored target. Windows reads the resolved absolute target, which points into the source tree.          |
+| `SymlinkMode::Relative`         | A target inside the copied tree, as a path relative to the symlink, on every platform. A target outside the copied tree becomes an absolute path.              |
 
-To keep copied symlinks working after the source tree is removed, set the relative mode before copying:
+To make the copied tree self-contained, so its symlinks keep working after the source tree is removed, set the relative mode before copying:
 
 ```php
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\WindowsSymlinkMode;
+use AlexSkrypnyk\File\SymlinkMode;
 
-File::setWindowsSymlinkMode(WindowsSymlinkMode::Relative);
+File::setSymlinkMode(SymlinkMode::Relative);
 File::copy('/path/to/source', '/path/to/destination');
 ```
 
-`File::getWindowsSymlinkMode()` returns the current mode, and `File::resetWindowsSymlinkMode()` restores the default.
+`File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default.
 
-To copy only some paths of a directory, pass them to `copyPaths()` in 1 call. It creates every symlink after the last path is copied, so a symlink and its target can come in any order:
+To copy only some paths of a directory, pass them to `copyPaths()` in 1 call:
 
 ```php
 File::copyPaths('/path/to/source', '/path/to/destination', ['hooks/run.sh', 'library/provision.sh']);
 ```
+
+A symlink whose target is left out of the copied paths is created anyway, and stays dangling until the target exists. When a symlink can't be created, `copy()` and `copyPaths()` throw a `FileException` that names every symlink they couldn't create.
 
 ### Batch Operations
 
