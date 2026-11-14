@@ -932,6 +932,149 @@ final class FileTest extends UnitTestCase {
     File::setSymlinkMode('absolute');
   }
 
+  #[DataProvider('dataProviderSymlinkHandling')]
+  public function testSymlinkHandling(bool $is_dir, bool $absolute, string $target, string $link, bool $chained, bool $dangling): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $target_path = $tree . DIRECTORY_SEPARATOR . self::nativePath($target);
+    $link_path = $tree . DIRECTORY_SEPARATOR . self::nativePath($link);
+    $hop_path = dirname($link_path) . DIRECTORY_SEPARATOR . 'hop';
+
+    // A target outside the tree is reached through the tree directory.
+    File::mkdir($tree);
+    $this->createTarget($target_path, $is_dir, $target);
+    $target_path = realpath(dirname($target_path)) . DIRECTORY_SEPARATOR . basename($target_path);
+
+    if ($chained) {
+      $this->createSymlink($hop_path, $this->symlinkTargetString($target_path, $hop_path, $absolute));
+      $this->createSymlink($link_path, $this->symlinkTargetString($hop_path, $link_path, $absolute));
+    }
+    else {
+      $this->createSymlink($link_path, $this->symlinkTargetString($target_path, $link_path, $absolute));
+    }
+
+    if ($dangling) {
+      File::remove($target_path);
+    }
+
+    // realpath() follows the chain to the final target, missing or not.
+    $this->assertSame($target_path, File::realpath($link_path));
+
+    // A dangling symlink does not exist.
+    $this->assertSame(!$dangling, File::exists($link_path));
+
+    // scandir() lists every symlink and does not walk a directory symlink.
+    $listed = $this->listScandir($tree);
+    $this->assertContains($link, $listed);
+
+    if ($chained) {
+      $this->assertContains(ltrim(dirname($link) . '/hop', './'), $listed);
+    }
+
+    $this->assertNotContains($link . '/inner.txt', $listed);
+
+    // remove() removes the symlink and leaves its target.
+    File::remove($link_path);
+    $this->assertNotContains(basename($link_path), (array) scandir(dirname($link_path)));
+    $this->assertSame(!$dangling, file_exists($target_path));
+
+    // remove() removes a tree that still holds symlinks, dangling or not.
+    File::remove($tree);
+    $this->assertDirectoryDoesNotExist($tree);
+  }
+
+  public static function dataProviderSymlinkHandling(): \Iterator {
+    $locations = [
+      'same directory' => ['a/b/target', 'a/b/link'],
+      'parent' => ['a/target', 'a/b/link'],
+      'child' => ['a/b/c/target', 'a/b/link'],
+      'link at the tree root' => ['a/b/target', 'link'],
+      'outside the tree' => ['../outside/target', 'a/b/link'],
+    ];
+
+    foreach (['file' => FALSE, 'directory' => TRUE] as $kind => $is_dir) {
+      foreach (['relative' => FALSE, 'absolute' => TRUE] as $style => $absolute) {
+        foreach ($locations as $location => [$target, $link]) {
+          foreach (['direct' => FALSE, 'through a second link' => TRUE] as $shape => $chained) {
+            foreach (['target present' => FALSE, 'dangling' => TRUE] as $state => $dangling) {
+              yield sprintf('%s link, %s target, %s, %s, %s', $kind, $style, $location, $shape, $state) => [$is_dir, $absolute, $target, $link, $chained, $dangling];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  public function testSymlinkLoop(): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    File::mkdir($tree);
+    $this->createDanglingSymlink($tree . DIRECTORY_SEPARATOR . 'a', 'b');
+    $this->createDanglingSymlink($tree . DIRECTORY_SEPARATOR . 'b', 'a');
+
+    $this->assertFalse(File::exists($tree . DIRECTORY_SEPARATOR . 'a'));
+    $this->assertSame(['a', 'b'], $this->listScandir($tree));
+    $this->assertFalse(File::dirIsEmpty($tree));
+
+    try {
+      File::realpath($tree . DIRECTORY_SEPARATOR . 'a');
+      $this->fail('A symlink loop throws.');
+    }
+    catch (FileException $file_exception) {
+      $this->assertStringContainsString(DIRECTORY_SEPARATOR . 'a": the symlinks form a loop.', $file_exception->getMessage());
+    }
+
+    File::remove($tree);
+    $this->assertDirectoryDoesNotExist($tree);
+  }
+
+  public function testScandirSymlinksToAncestors(): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $this->createFiles($tree, ['a/file.txt' => 'file']);
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . self::nativePath('a/self'), '.');
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . self::nativePath('a/up'), '..');
+
+    $this->assertSame(['a', 'a/file.txt', 'a/self', 'a/up'], $this->listScandir($tree));
+  }
+
+  public function testRmdirIfEmptyKeepsDirectorySymlink(): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    File::mkdir($tree . DIRECTORY_SEPARATOR . 'empty');
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . 'link', 'empty');
+
+    File::rmdirIfEmpty($tree . DIRECTORY_SEPARATOR . 'link');
+
+    $this->assertTrue(is_link($tree . DIRECTORY_SEPARATOR . 'link'));
+    $this->assertDirectoryExists($tree . DIRECTORY_SEPARATOR . 'empty');
+  }
+
+  public function testSymlinkResolvesLoop(): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    File::mkdir($tree);
+    $this->createDanglingSymlink($tree . DIRECTORY_SEPARATOR . 'a', 'b');
+    $this->createDanglingSymlink($tree . DIRECTORY_SEPARATOR . 'b', 'a');
+
+    $this->assertFalse(self::callProtectedMethod(File::class, 'symlinkResolves', [$tree . DIRECTORY_SEPARATOR . 'a']));
+  }
+
+  public function testFileSymlinkToDirectoryHandling(): void {
+    // Only Windows has file symlinks to directories.
+    if (DIRECTORY_SEPARATOR !== '\\') {
+      $this->markTestSkipped('Windows only.');
+    }
+
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $this->createFiles($tree, ['update/script.sh' => 'script']);
+    exec(sprintf('cmd /c mklink %s update', escapeshellarg($tree . '\\deploy')), $output, $exit_code);
+    $this->assertSame(0, $exit_code, implode(PHP_EOL, $output));
+
+    $this->assertSame(realpath($tree . '\\update'), File::realpath($tree . '\\deploy'));
+    $this->assertTrue(File::exists($tree . '\\deploy'));
+    $this->assertSame(['deploy', 'update', 'update/script.sh'], $this->listScandir($tree));
+
+    File::remove($tree . '\\deploy');
+    $this->assertNotContains('deploy', (array) scandir($tree));
+    $this->assertFileExists($tree . '\\update\\script.sh');
+  }
+
   #[DataProvider('dataProviderReadSymlink')]
   public function testReadSymlink(bool $outside, bool $absolute, bool $dangling, bool $with_root): void {
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
@@ -1095,6 +1238,45 @@ final class FileTest extends UnitTestCase {
     chdir($current_dir);
 
     $this->assertTrue($created, sprintf('Created symlink %s -> %s', $link, $target));
+  }
+
+  /**
+   * Create a file symlink to a target that does not exist.
+   *
+   * PHP on Windows refuses to create a symlink to a missing target, so the
+   * Windows mklink command creates it there.
+   *
+   * @param string $link
+   *   Symlink path.
+   * @param string $target
+   *   Symlink target, relative to the symlink directory.
+   */
+  protected function createDanglingSymlink(string $link, string $target): void {
+    if (DIRECTORY_SEPARATOR === '\\') {
+      exec(sprintf('mklink %s %s 2>&1', escapeshellarg($link), escapeshellarg($target)), $output, $exit_code);
+      $this->assertSame(0, $exit_code, implode(PHP_EOL, $output));
+
+      return;
+    }
+
+    $this->assertTrue(symlink($target, $link), sprintf('Created symlink %s -> %s', $link, $target));
+  }
+
+  /**
+   * List the paths File::scandir() discovers, relative to the directory.
+   *
+   * @param string $dir
+   *   Directory to scan, including directories in the result.
+   *
+   * @return array<int, string>
+   *   Sorted paths relative to $dir with "/" separators.
+   */
+  protected function listScandir(string $dir): array {
+    $base = File::toForwardSlashes(File::dir($dir)) . '/';
+    $paths = array_map(static fn(string $path): string => substr(File::toForwardSlashes($path), strlen($base)), File::scandir($dir, [], TRUE));
+    sort($paths);
+
+    return $paths;
   }
 
   /**

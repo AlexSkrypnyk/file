@@ -70,11 +70,18 @@ class File {
    * its scheme and only the part after it is normalised. Symlinks are not
    * resolved for such a path.
    *
+   * When the path is a symlink, the chain of symlinks is followed to its
+   * final target. A relative target resolves against the directory of its
+   * symlink, and a dangling symlink resolves to its normalised target path.
+   *
    * @param string $path
    *   Path that needs to be resolved.
    *
    * @return string
    *   Resolved path.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When the path is a loop of symlinks, or a symlink target cannot be read.
    *
    * @see https://stackoverflow.com/a/29372360/712666
    */
@@ -129,15 +136,7 @@ class File {
       return $path;
     }
 
-    if (function_exists('readlink') && file_exists($path) && is_link($path) > 0) {
-      $path = readlink($path);
-
-      if (!$path) {
-        // @codeCoverageIgnoreStart
-        throw new FileException(sprintf('Could not resolve symlink for path: %s', $path));
-        // @codeCoverageIgnoreEnd
-      }
-    }
+    $path = static::resolveSymlinkChain($path);
 
     if (str_starts_with($path, sys_get_temp_dir())) {
       $tmp_realpath = realpath(sys_get_temp_dir());
@@ -176,6 +175,8 @@ class File {
   /**
    * Check if file or directory exists.
    *
+   * A dangling symlink does not exist, on every platform.
+   *
    * @param string|array $files
    *   Path or array of paths to check.
    *
@@ -183,7 +184,12 @@ class File {
    *   TRUE if file exists, FALSE otherwise.
    */
   public static function exists(string|array $files): bool {
-    return (new Filesystem())->exists($files);
+    if (!(new Filesystem())->exists($files)) {
+      return FALSE;
+    }
+
+    // PHP on Windows reports a dangling absolute symlink as existing.
+    return array_filter((array) $files, static fn(mixed $file): bool => is_link((string) $file) && !static::symlinkResolves((string) $file)) === [];
   }
 
   /**
@@ -433,8 +439,7 @@ class File {
   protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root, array &$symlinks, ?callable $filter, string $path): bool {
     static::mkdir(dirname($dest), $permissions);
 
-    // PHP on Windows does not report a dangling symlink as a link.
-    if (is_link($source) || (DIRECTORY_SEPARATOR === '\\' && !file_exists($source) && static::readWindowsSymlink($source) !== NULL)) {
+    if (static::isSymlink($source)) {
       if (is_readable($dest)) {
         return TRUE;
       }
@@ -480,7 +485,7 @@ class File {
       $entry_source = sprintf('%s/%s', $source, $entry);
       $entry_path = $path === '' ? $entry : $path . '/' . $entry;
 
-      if ($filter !== NULL && !$filter($entry_path, is_dir($entry_source) && !is_link($entry_source))) {
+      if ($filter !== NULL && !$filter($entry_path, is_dir($entry_source) && !static::isSymlink($entry_source))) {
         continue;
       }
 
@@ -625,6 +630,77 @@ class File {
     exec(sprintf('mklink %s%s %s 2>&1', $is_dir ? '/D ' : '', escapeshellarg($link), escapeshellarg(str_replace('/', '\\', $target))), $output, $exit_code);
 
     return $exit_code === 0;
+  }
+
+  /**
+   * Check whether a path is a symlink, on every platform.
+   *
+   * PHP on Windows does not report a dangling relative symlink as a link,
+   * so a missing path that its directory still lists is looked up in the
+   * Windows directory listing.
+   *
+   * @param string $path
+   *   Path to check.
+   *
+   * @return bool
+   *   TRUE if the path is a symlink, FALSE otherwise.
+   */
+  protected static function isSymlink(string $path): bool {
+    return is_link($path) || (DIRECTORY_SEPARATOR === '\\' && !file_exists($path) && in_array(basename($path), @scandir(dirname($path)) ?: [], TRUE) && static::readWindowsSymlink($path) !== NULL);
+  }
+
+  /**
+   * Follow a chain of symlinks to its final target.
+   *
+   * @param string $path
+   *   Normalised absolute path.
+   *
+   * @return string
+   *   The final target, or $path when it is not a symlink.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When the symlinks form a loop, or a symlink target cannot be read.
+   */
+  protected static function resolveSymlinkChain(string $path): string {
+    $link = $path;
+    $visited = [];
+
+    while (static::isSymlink($path)) {
+      if (isset($visited[$path])) {
+        throw new FileException(sprintf('Unable to resolve symlink "%s": the symlinks form a loop.', $link));
+      }
+
+      $visited[$path] = TRUE;
+      $target = static::readSymlink($path);
+
+      if ($target === FALSE) {
+        // @codeCoverageIgnoreStart
+        throw new FileException(sprintf('Unable to read the target of symlink "%s".', $path));
+        // @codeCoverageIgnoreEnd
+      }
+
+      $path = static::normalizePath((new Filesystem())->isAbsolutePath($target) ? $target : dirname($path) . DIRECTORY_SEPARATOR . $target);
+    }
+
+    return $path;
+  }
+
+  /**
+   * Check whether a symlink chain ends at an existing path.
+   *
+   * @param string $link
+   *   Symlink path.
+   *
+   * @return bool
+   *   TRUE if the final target exists, FALSE for a dangling symlink or a loop.
+   */
+  protected static function symlinkResolves(string $link): bool {
+    try {
+      return file_exists(static::realpath($link));
+    }
+    catch (FileException) {
+      return FALSE;
+    }
   }
 
   /**
@@ -1008,7 +1084,9 @@ class File {
         }
       }
 
-      if (is_dir($path)) {
+      // A directory symlink is listed as an entry and not walked, so a
+      // symlink to an ancestor cannot recurse.
+      if (is_dir($path) && !static::isSymlink($path)) {
         if ($include_dirs) {
           $discovered[] = $path;
         }
@@ -1045,17 +1123,19 @@ class File {
    *   Directory path to remove.
    */
   public static function rmdir(string $directory): void {
-    (new Filesystem())->remove($directory);
+    static::remove($directory);
   }
 
   /**
    * Remove directory recursively if empty.
    *
+   * A directory symlink is never removed, even when its target is empty.
+   *
    * @param string $directory
    *   Directory path to remove if empty.
    */
   public static function rmdirIfEmpty(string $directory): void {
-    if (is_dir($directory) && !is_link($directory) && static::dirIsEmpty($directory)) {
+    if (is_dir($directory) && !static::isSymlink($directory) && static::dirIsEmpty($directory)) {
       static::rmdir($directory);
       static::rmdirIfEmpty(dirname($directory));
     }
@@ -1064,11 +1144,50 @@ class File {
   /**
    * Remove file or directory.
    *
+   * A symlink is removed without following it, on every platform.
+   *
    * @param string|iterable<string> $files
    *   File or directory path, or iterable of paths to remove.
    */
   public static function remove(string|iterable $files): void {
+    $files = is_string($files) ? [$files] : iterator_to_array($files, FALSE);
+
+    // Symfony Filesystem does not see a dangling relative symlink on Windows,
+    // so a directory that holds one cannot be removed until it is gone.
+    if (DIRECTORY_SEPARATOR === '\\') {
+      // @codeCoverageIgnoreStart
+      static::removeWindowsDanglingSymlinks($files);
+      // @codeCoverageIgnoreEnd
+    }
+
     (new Filesystem())->remove($files);
+  }
+
+  /**
+   * Remove the dangling symlinks that PHP on Windows does not report.
+   *
+   * @param array<int, string> $paths
+   *   Paths to remove such symlinks from, recursively.
+   *
+   * @codeCoverageIgnore
+   */
+  protected static function removeWindowsDanglingSymlinks(array $paths): void {
+    foreach ($paths as $path) {
+      if (!is_link($path) && static::isSymlink($path)) {
+        if (static::readWindowsSymlink($path)[1] ?? FALSE) {
+          @rmdir($path);
+        }
+        else {
+          @unlink($path);
+        }
+
+        continue;
+      }
+
+      if (is_dir($path) && !is_link($path)) {
+        static::removeWindowsDanglingSymlinks(array_map(static fn(string $entry): string => $path . DIRECTORY_SEPARATOR . $entry, array_values(array_diff(scandir($path) ?: [], ['.', '..']))));
+      }
+    }
   }
 
   /**
