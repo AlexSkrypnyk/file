@@ -40,6 +40,7 @@ final class FileTest extends UnitTestCase {
   #[\Override]
   protected function tearDown(): void {
     File::resetSymlinkMode();
+    File::resetFollowSymlinks();
 
     if (is_dir($this->testTmpDir)) {
       File::remove($this->testTmpDir);
@@ -1083,8 +1084,9 @@ final class FileTest extends UnitTestCase {
     // A dangling symlink does not exist.
     $this->assertSame(!$dangling, File::exists($link_path));
 
-    // scandir() lists every symlink and does not walk a directory symlink.
-    $listed = $this->listScandir($tree);
+    // scandir() lists every symlink, and walks a directory symlink only when
+    // following symlinks.
+    $listed = $this->listScandir($tree, follow_symlinks: FALSE);
     $this->assertContains($link, $listed);
 
     if ($chained) {
@@ -1092,6 +1094,10 @@ final class FileTest extends UnitTestCase {
     }
 
     $this->assertNotContains($link . '/inner.txt', $listed);
+
+    $followed = $this->listScandir($tree, follow_symlinks: TRUE);
+    $this->assertContains($link, $followed);
+    $this->assertSame($is_dir && !$dangling, in_array($link . '/inner.txt', $followed, TRUE));
 
     // remove() removes the symlink and leaves its target.
     File::remove($link_path);
@@ -1156,6 +1162,45 @@ final class FileTest extends UnitTestCase {
     $this->assertSame(['a', 'a/file.txt', 'a/self', 'a/up'], $this->listScandir($tree));
   }
 
+  public function testScandirMutualDirectorySymlinks(): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $this->createFiles($tree, ['a/b/b.txt' => 'b', 'a/c/c.txt' => 'c']);
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . self::nativePath('a/b/to_c'), self::nativePath('../c'));
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . self::nativePath('a/c/to_b'), self::nativePath('../b'));
+
+    $expected = ['a', 'a/b', 'a/b/b.txt', 'a/b/to_c', 'a/b/to_c/c.txt', 'a/b/to_c/to_b', 'a/c', 'a/c/c.txt', 'a/c/to_b', 'a/c/to_b/b.txt', 'a/c/to_b/to_c'];
+    $this->assertSame($expected, $this->listScandir($tree, follow_symlinks: TRUE));
+  }
+
+  public function testFollowSymlinks(): void {
+    $this->assertTrue(File::getFollowSymlinks());
+
+    File::setFollowSymlinks(FALSE);
+    $this->assertFalse(File::getFollowSymlinks());
+
+    File::resetFollowSymlinks();
+    $this->assertTrue(File::getFollowSymlinks());
+  }
+
+  #[DataProvider('dataProviderScandirFollowSymlinksPerCall')]
+  public function testScandirFollowSymlinksPerCall(bool $global, ?bool $call, bool $expect_walked): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $this->createFiles($tree, ['dir/file.txt' => 'file']);
+    $this->createSymlink($tree . DIRECTORY_SEPARATOR . 'dir_link', 'dir');
+
+    File::setFollowSymlinks($global);
+
+    $this->assertSame($expect_walked, in_array('dir_link/file.txt', $this->listScandir($tree, FALSE, $call), TRUE));
+    $this->assertSame($global, File::getFollowSymlinks(), 'The global setting is unchanged.');
+  }
+
+  public static function dataProviderScandirFollowSymlinksPerCall(): \Iterator {
+    yield 'global follow, no call setting' => [TRUE, NULL, TRUE];
+    yield 'global follow, call does not follow' => [TRUE, FALSE, FALSE];
+    yield 'global does not follow, no call setting' => [FALSE, NULL, FALSE];
+    yield 'global does not follow, call follows' => [FALSE, TRUE, TRUE];
+  }
+
   public function testRmdirIfEmptyKeepsDirectorySymlink(): void {
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     File::mkdir($tree . DIRECTORY_SEPARATOR . 'empty');
@@ -1189,7 +1234,8 @@ final class FileTest extends UnitTestCase {
 
     $this->assertSame(realpath($tree . '\\update'), File::realpath($tree . '\\deploy'));
     $this->assertTrue(File::exists($tree . '\\deploy'));
-    $this->assertSame(['deploy', 'update', 'update/script.sh'], $this->listScandir($tree));
+    $this->assertSame(['deploy', 'update', 'update/script.sh'], $this->listScandir($tree, follow_symlinks: FALSE));
+    $this->assertSame(['deploy', 'deploy/script.sh', 'update', 'update/script.sh'], $this->listScandir($tree, follow_symlinks: TRUE));
 
     File::remove($tree . '\\deploy');
     $this->assertNotContains('deploy', (array) scandir($tree));
@@ -1285,23 +1331,31 @@ final class FileTest extends UnitTestCase {
     yield 'drive-like prefix' => ['a:b'];
   }
 
-  public function testDirectoryOperationsSkipDirectorySymlink(): void {
+  #[DataProvider('dataProviderDirectoryOperationsDirectorySymlink')]
+  public function testDirectoryOperationsDirectorySymlink(bool $follow, array $expected_listed, array $expected_found): void {
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     $this->createFiles($tree, ['dir/file.txt' => 'needle']);
     $this->createSymlink($tree . DIRECTORY_SEPARATOR . 'dir_link', 'dir');
     $this->createSymlink($tree . DIRECTORY_SEPARATOR . 'file_link.txt', self::nativePath('dir/file.txt'));
 
-    // A directory symlink is listed only with the directories.
-    $this->assertSame(['dir/file.txt', 'file_link.txt'], $this->listScandir($tree, FALSE));
+    File::setFollowSymlinks($follow);
+
+    $this->assertSame($expected_listed, $this->listScandir($tree, FALSE));
 
     $found = array_map(basename(...), File::findContainingInDir($tree, 'needle'));
     sort($found);
-    $this->assertSame(['file.txt', 'file_link.txt'], $found);
+    $this->assertSame($expected_found, $found);
 
     File::replaceContentInDir($tree, 'needle', 'replaced');
     File::removeLineInDir($tree, 'missing');
     File::collapseEmptyLinesInDir($tree);
     $this->assertSame('replaced', file_get_contents($tree . DIRECTORY_SEPARATOR . self::nativePath('dir/file.txt')));
+  }
+
+  public static function dataProviderDirectoryOperationsDirectorySymlink(): \Iterator {
+    yield 'following symlinks' => [TRUE, ['dir/file.txt', 'dir_link/file.txt', 'file_link.txt'], ['file.txt', 'file.txt', 'file_link.txt']];
+    // A directory symlink is listed only with the directories.
+    yield 'not following symlinks' => [FALSE, ['dir/file.txt', 'file_link.txt'], ['file.txt', 'file_link.txt']];
   }
 
   public function testCopyDanglingSymlinkWithShellCharacters(): void {
@@ -1465,13 +1519,15 @@ final class FileTest extends UnitTestCase {
    *   Directory to scan.
    * @param bool $include_dirs
    *   Whether to include directories in the result.
+   * @param bool|null $follow_symlinks
+   *   Whether to walk directory symlinks, or NULL for the global setting.
    *
    * @return array<int, string>
    *   Sorted paths relative to $dir with "/" separators.
    */
-  protected function listScandir(string $dir, bool $include_dirs = TRUE): array {
+  protected function listScandir(string $dir, bool $include_dirs = TRUE, ?bool $follow_symlinks = NULL): array {
     $base = File::toForwardSlashes(File::dir($dir)) . '/';
-    $paths = array_map(static fn(string $path): string => substr(File::toForwardSlashes($path), strlen($base)), File::scandir($dir, [], $include_dirs));
+    $paths = array_map(static fn(string $path): string => substr(File::toForwardSlashes($path), strlen($base)), File::scandir($dir, [], $include_dirs, $follow_symlinks));
     sort($paths);
 
     return $paths;
