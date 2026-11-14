@@ -159,7 +159,7 @@ File::copy('/path/to/source', '/path/to/destination');
 
 `File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default. `setSymlinkMode()` throws a `FileException` for a value that isn't 1 of the 2 constants.
 
-To copy only part of a directory, pass a filter to `copy()`. The filter receives each entry's path relative to the source, with `/` separators, and whether the entry is a directory. A symlink counts as a file. Return `FALSE` to skip the entry. A skipped directory isn't entered, so its whole subtree is skipped:
+To copy only part of a directory, pass a filter to `copy()`. The filter receives each entry's path relative to the source and whether the entry is a directory. Paths use `/` separators on every platform. A symlink counts as a file. Return `FALSE` to skip the entry. A skipped directory isn't entered, so its whole subtree is skipped:
 
 ```php
 File::copy('/path/to/source', '/path/to/destination', filter: fn(string $path, bool $is_dir): bool => !in_array($path, ['.git', 'vendor'], TRUE));
