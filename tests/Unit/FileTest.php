@@ -511,8 +511,8 @@ final class FileTest extends UnitTestCase {
     $this->assertSame('outside', file_get_contents($dest_link));
   }
 
-  #[DataProvider('dataProviderCopyPaths')]
-  public function testCopyPaths(array $paths): void {
+  #[DataProvider('dataProviderCopyFilter')]
+  public function testCopyFilter(array $paths): void {
     File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
@@ -526,7 +526,7 @@ final class FileTest extends UnitTestCase {
     $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh'), self::nativePath('../library/provision.sh'));
     $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/deploy'), 'update');
 
-    $this->assertTrue(File::copyPaths($source_dir, $dest_dir, array_map(self::nativePath(...), $paths)));
+    $this->assertTrue(File::copy($source_dir, $dest_dir, filter: self::pathsFilter($paths)));
     File::remove($source_dir);
 
     $this->assertFileDoesNotExist($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/skipped.sh'));
@@ -540,14 +540,42 @@ final class FileTest extends UnitTestCase {
     }
   }
 
-  public static function dataProviderCopyPaths(): \Iterator {
-    yield 'symlinks before their targets' => [['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update/script.sh', 'library/provision.sh']];
-    yield 'symlinks after their targets' => [['library/provision.sh', 'hooks/update/script.sh', 'hooks/deploy', 'hooks/1.provision.sh']];
-    yield 'directory containing the symlink target' => [['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update', 'library']];
+  public static function dataProviderCopyFilter(): \Iterator {
+    yield 'files and symlinks' => [['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update/script.sh', 'library/provision.sh']];
+    yield 'directories containing the symlink targets' => [['hooks/1.provision.sh', 'hooks/deploy', 'hooks/update', 'library']];
   }
 
-  public function testCopyPathsEmpty(): void {
-    $this->assertTrue(File::copyPaths($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', []));
+  public function testCopyFilterCalls(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, [
+      'file.txt' => 'file',
+      'dir/inner.txt' => 'inner',
+      'excluded/inner.txt' => 'excluded',
+    ]);
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . 'dir_link', 'dir');
+
+    $calls = [];
+    $filter = function (string $path, bool $is_dir) use (&$calls): bool {
+      $calls[$path] = $is_dir;
+
+      return $path !== 'excluded';
+    };
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir, filter: $filter));
+
+    ksort($calls);
+    $this->assertSame(['dir' => TRUE, 'dir/inner.txt' => FALSE, 'dir_link' => FALSE, 'excluded' => TRUE, 'file.txt' => FALSE], $calls, 'The rejected directory is not entered, and a symlink is not a directory.');
+    $this->assertFileExists($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('dir/inner.txt'));
+    $this->assertTrue(is_link($dest_dir . DIRECTORY_SEPARATOR . 'dir_link'));
+    $this->assertDirectoryDoesNotExist($dest_dir . DIRECTORY_SEPARATOR . 'excluded');
+  }
+
+  public function testCopyFilterRejectsEverything(): void {
+    $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', ['file.txt' => 'file']);
+
+    $this->assertTrue(File::copy($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', filter: fn(): bool => FALSE));
     $this->assertDirectoryDoesNotExist($this->testTmpDir . DIRECTORY_SEPARATOR . 'destination');
   }
 
@@ -713,7 +741,7 @@ final class FileTest extends UnitTestCase {
       $this->expectExceptionMessage('Unable to create symlinks: ');
     }
 
-    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copyPaths($tree, $dest, $this->listTree($tree)));
+    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: self::pathsFilter($this->listTree($tree))));
 
     // A dangling copy proves it stays inside the destination by reading a
     // target restored there while the source target is still missing.
@@ -749,7 +777,7 @@ final class FileTest extends UnitTestCase {
       'outside the tree' => ['../outside/target', 'a/b/link'],
     ];
 
-    foreach (['copy', 'copyPaths'] as $operation) {
+    foreach (['copy', 'filtered copy'] as $operation) {
       foreach (['file' => FALSE, 'directory' => TRUE] as $kind => $is_dir) {
         foreach (['relative' => FALSE, 'absolute' => TRUE] as $style => $absolute) {
           foreach ($locations as $location => [$target, $link]) {
@@ -776,7 +804,7 @@ final class FileTest extends UnitTestCase {
       $this->createSymlink($tree . DIRECTORY_SEPARATOR . self::nativePath($path), self::nativePath($target));
     }
 
-    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copyPaths($tree, $dest, $this->listTree($tree)));
+    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: self::pathsFilter($this->listTree($tree))));
     File::remove($tree);
 
     $this->assertSame($expected, file_get_contents($dest . DIRECTORY_SEPARATOR . self::nativePath($check)));
@@ -792,15 +820,15 @@ final class FileTest extends UnitTestCase {
       'link to the tree root' => [['marker.txt' => 'root'], ['a/b/root' => '../..'], 'a/b/root/marker.txt', 'root'],
     ];
 
-    foreach (['copy', 'copyPaths'] as $operation) {
+    foreach (['copy', 'filtered copy'] as $operation) {
       foreach ($cases as $name => $case) {
         yield sprintf('%s, %s', $operation, $name) => [$operation, ...$case];
       }
     }
   }
 
-  #[DataProvider('dataProviderCopyPathsMissingTarget')]
-  public function testCopyPathsMissingTarget(string $mode, bool $is_dir, bool $broken): void {
+  #[DataProvider('dataProviderCopyFilterMissingTarget')]
+  public function testCopyFilterMissingTarget(string $mode, bool $is_dir, bool $broken): void {
     if ($mode === File::SYMLINK_MODE_NATIVE && !$broken && DIRECTORY_SEPARATOR === '\\') {
       $this->markTestSkipped('File::SYMLINK_MODE_NATIVE on Windows points the symlink at the source target.');
     }
@@ -818,8 +846,8 @@ final class FileTest extends UnitTestCase {
       File::remove($target);
     }
 
-    // The target is left out of the copied paths.
-    $this->assertTrue(File::copyPaths($tree, $dest, [self::nativePath('a/b/link')]));
+    // The filter leaves the target out of the copy.
+    $this->assertTrue(File::copy($tree, $dest, filter: self::pathsFilter(['a/b/link'])));
     File::remove($tree);
 
     $copied_target = $dest . DIRECTORY_SEPARATOR . self::nativePath('a/target');
@@ -834,7 +862,7 @@ final class FileTest extends UnitTestCase {
     $this->assertSame('restored', file_get_contents($is_dir ? $copied_link . DIRECTORY_SEPARATOR . 'inner.txt' : $copied_link));
   }
 
-  public static function dataProviderCopyPathsMissingTarget(): \Iterator {
+  public static function dataProviderCopyFilterMissingTarget(): \Iterator {
     foreach (['native', 'relative'] as $mode) {
       yield $mode . ', file target left out' => [$mode, FALSE, FALSE];
       yield $mode . ', directory target left out' => [$mode, TRUE, FALSE];
@@ -1024,6 +1052,46 @@ final class FileTest extends UnitTestCase {
     }
 
     return self::nativePath(rtrim((new Filesystem())->makePathRelative($target, (string) realpath(dirname($link))), '/'));
+  }
+
+  /**
+   * Build a copy() filter that selects a list of paths.
+   *
+   * The filter accepts each listed path, the directories above it and
+   * everything inside a listed directory.
+   *
+   * @param array<int, string> $paths
+   *   Paths relative to the copied tree, with either separator.
+   *
+   * @return \Closure
+   *   Filter for copy().
+   */
+  protected static function pathsFilter(array $paths): \Closure {
+    $selected = [];
+    $parents = [];
+
+    foreach ($paths as $path) {
+      $path = str_replace(DIRECTORY_SEPARATOR, '/', $path);
+      $selected[$path] = TRUE;
+
+      for ($dir = dirname($path); $dir !== '.'; $dir = dirname($dir)) {
+        $parents[$dir] = TRUE;
+      }
+    }
+
+    return static function (string $path) use ($selected, $parents): bool {
+      if (isset($selected[$path]) || isset($parents[$path])) {
+        return TRUE;
+      }
+
+      for ($dir = dirname($path); $dir !== '.'; $dir = dirname($dir)) {
+        if (isset($selected[$dir])) {
+          return TRUE;
+        }
+      }
+
+      return FALSE;
+    };
   }
 
   /**

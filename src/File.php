@@ -40,7 +40,7 @@ class File {
   protected static ?Replacer $replacer = NULL;
 
   /**
-   * How copy() and copyPaths() recreate symlinks.
+   * How copy() recreates symlinks.
    */
   protected static string $symlinkMode = self::SYMLINK_MODE_NATIVE;
 
@@ -368,6 +368,10 @@ class File {
   /**
    * Copy file or directory.
    *
+   * Symlinks are created after every file and directory is copied, and
+   * $source is the tree that File::SYMLINK_MODE_RELATIVE keeps targets
+   * inside. A symlink whose target is not copied is created dangling.
+   *
    * @param string $source
    *   Source file or directory path.
    * @param string $dest
@@ -376,6 +380,13 @@ class File {
    *   Permissions to set on created directories.
    * @param bool $copy_empty_dirs
    *   Whether to copy empty directories.
+   * @param callable|null $filter
+   *   Callback that selects the entries of a directory to copy, as
+   *   fn(string $path, bool $is_dir): bool. It receives each entry's path
+   *   relative to $source with "/" separators, and whether the entry is a
+   *   directory. A symlink is not a directory, since it is copied as a
+   *   symlink. Returning FALSE skips the entry, and for a directory the
+   *   whole subtree.
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
@@ -383,47 +394,9 @@ class File {
    * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When a symlink cannot be created.
    */
-  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
+  public static function copy(string $source, string $dest, int $permissions = 0755, bool $copy_empty_dirs = FALSE, ?callable $filter = NULL): bool {
     $symlinks = [];
-    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks);
-    static::createSymlinks($symlinks, $dest);
-
-    return $ret;
-  }
-
-  /**
-   * Copy selected paths of a directory, keeping their relative locations.
-   *
-   * Symlinks are created after every path is copied, and the source
-   * directory is the tree that File::SYMLINK_MODE_RELATIVE keeps targets
-   * inside. A symlink whose target is not among the copied paths is created
-   * dangling.
-   *
-   * @param string $source
-   *   Source directory path.
-   * @param string $dest
-   *   Destination directory path.
-   * @param array<int, string> $paths
-   *   Paths relative to $source.
-   * @param int $permissions
-   *   Permissions to set on created directories.
-   * @param bool $copy_empty_dirs
-   *   Whether to copy empty directories.
-   *
-   * @return bool
-   *   TRUE if every path was copied, FALSE otherwise.
-   *
-   * @throws \AlexSkrypnyk\File\Exception\FileException
-   *   When a symlink cannot be created.
-   */
-  public static function copyPaths(string $source, string $dest, array $paths, int $permissions = 0755, bool $copy_empty_dirs = FALSE): bool {
-    $symlinks = [];
-    $ret = TRUE;
-
-    foreach ($paths as $path) {
-      $ret = static::copyPath($source . DIRECTORY_SEPARATOR . $path, $dest . DIRECTORY_SEPARATOR . $path, $permissions, $copy_empty_dirs, $source, $symlinks) && $ret;
-    }
-
+    $ret = static::copyPath($source, $dest, $permissions, $copy_empty_dirs, $source, $symlinks, $filter, '');
     static::createSymlinks($symlinks, $dest);
 
     return $ret;
@@ -445,6 +418,11 @@ class File {
    * @param array<int, array{string, string, bool}> $symlinks
    *   Symlinks to create once the tree is copied, as the target, the
    *   destination path and whether the source target is a directory.
+   * @param callable|null $filter
+   *   Callback that selects the entries to copy, as described for copy().
+   * @param string $path
+   *   Path of $source relative to $root with "/" separators, or an empty
+   *   string for $root itself.
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
@@ -452,7 +430,7 @@ class File {
    * @throws \AlexSkrypnyk\File\Exception\FileException
    *   When the target of a symlink cannot be read.
    */
-  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root, array &$symlinks): bool {
+  protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root, array &$symlinks, ?callable $filter, string $path): bool {
     static::mkdir(dirname($dest), $permissions);
 
     // PHP on Windows does not report a dangling symlink as a link.
@@ -498,7 +476,15 @@ class File {
       if ($entry === '..') {
         continue;
       }
-      static::copyPath(sprintf('%s/%s', $source, $entry), sprintf('%s/%s', $dest, $entry), $permissions, FALSE, $root, $symlinks);
+
+      $entry_source = sprintf('%s/%s', $source, $entry);
+      $entry_path = $path === '' ? $entry : $path . '/' . $entry;
+
+      if ($filter !== NULL && !$filter($entry_path, is_dir($entry_source) && !is_link($entry_source))) {
+        continue;
+      }
+
+      static::copyPath($entry_source, sprintf('%s/%s', $dest, $entry), $permissions, FALSE, $root, $symlinks, $filter, $entry_path);
     }
 
     $dir && $dir->close();
@@ -1688,7 +1674,7 @@ class File {
   }
 
   /**
-   * Set how copy() and copyPaths() recreate symlinks.
+   * Set how copy() recreates symlinks.
    *
    * @param string $mode
    *   File::SYMLINK_MODE_NATIVE or File::SYMLINK_MODE_RELATIVE.
@@ -1705,7 +1691,7 @@ class File {
   }
 
   /**
-   * Get how copy() and copyPaths() recreate symlinks.
+   * Get how copy() recreates symlinks.
    *
    * @return string
    *   File::SYMLINK_MODE_NATIVE or File::SYMLINK_MODE_RELATIVE.
@@ -1715,7 +1701,7 @@ class File {
   }
 
   /**
-   * Reset how copy() and copyPaths() recreate symlinks to the default.
+   * Reset how copy() recreates symlinks to the default.
    */
   public static function resetSymlinkMode(): void {
     static::$symlinkMode = self::SYMLINK_MODE_NATIVE;

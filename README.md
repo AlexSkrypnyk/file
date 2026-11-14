@@ -108,7 +108,6 @@ catch (FileException $exception) {
 | `contains()`                 | Check if file contains a specific string or matches a pattern.                     |
 | `copy()`                     | Copy file or directory.                                                            |
 | `copyIfExists()`             | Copy file or directory if it exists.                                               |
-| `copyPaths()`                | Copy selected paths of a directory, keeping their relative locations.              |
 | `cwd()`                      | Get current working directory with absolute path.                                  |
 | `dir()`                      | Get absolute path for existing directory.                                          |
 | `dirIsEmpty()`               | Check if directory is empty.                                                       |
@@ -142,7 +141,7 @@ The directory-wide methods skip the paths returned by `ignoredPaths()` - `/.git/
 
 ### Symlinks
 
-`copy()` and `copyPaths()` recreate each symlink in the destination after every file and directory is copied, so a symlink and its target can come in any order. Pick how they set each symlink's target:
+`copy()` recreates each symlink in the destination after every file and directory is copied, so a symlink and its target can come in any order. Pick how it sets each symlink's target:
 
 | Mode                                    | The copied symlink points at                                                                                                                          |
 |-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -160,13 +159,13 @@ File::copy('/path/to/source', '/path/to/destination');
 
 `File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default. `setSymlinkMode()` throws a `FileException` for a value that isn't 1 of the 2 constants.
 
-To copy only some paths of a directory, pass them to `copyPaths()` in 1 call:
+To copy only part of a directory, pass a filter to `copy()`. The filter receives each entry's path relative to the source, with `/` separators, and whether the entry is a directory. A symlink counts as a file. Return `FALSE` to skip the entry. A skipped directory isn't entered, so its whole subtree is skipped:
 
 ```php
-File::copyPaths('/path/to/source', '/path/to/destination', ['hooks/run.sh', 'library/provision.sh']);
+File::copy('/path/to/source', '/path/to/destination', filter: fn(string $path, bool $is_dir): bool => !in_array($path, ['.git', 'vendor'], TRUE));
 ```
 
-A symlink whose target is left out of the copied paths, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. On Windows, PHP can only create a symlink to a target that exists, so `File` places a temporary placeholder at the target. It does that only inside the destination, so on Windows a dangling symlink to a target outside the destination can't be copied. When `copy()` or `copyPaths()` can't read or create a symlink, it throws a `FileException` that names the symlink.
+A filtered copy still treats the source as the tree for the relative mode. A symlink whose target is filtered out, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. On Windows, PHP can only create a symlink to a target that exists, so `File` places a temporary placeholder at the target. It does that only inside the destination, so on Windows a dangling symlink to a target outside the destination can't be copied. When `copy()` can't read or create a symlink, it throws a `FileException` that names the symlink.
 
 ### Batch Operations
 
