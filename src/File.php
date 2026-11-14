@@ -403,8 +403,8 @@ class File {
    *   directory. A symlink is not a directory, since it is copied as a
    *   symlink. Returning FALSE skips the entry, and for a directory the
    *   whole subtree. An array that is not a callable lists the paths to copy
-   *   relative to $source, with either separator. A listed directory is
-   *   copied with its whole subtree.
+   *   relative to $source, with "/" separators, or either separator on
+   *   Windows. A listed directory is copied with its whole subtree.
    * @param string|null $symlink_mode
    *   File::SYMLINK_MODE_NATIVE or File::SYMLINK_MODE_RELATIVE for this copy
    *   only, or NULL for the mode set with setSymlinkMode().
@@ -443,7 +443,8 @@ class File {
    * everything inside a listed directory.
    *
    * @param array<mixed> $paths
-   *   Paths relative to the copied tree, with either separator.
+   *   Paths relative to the copied tree, with "/" separators, or either
+   *   separator on Windows.
    *
    * @return \Closure
    *   Filter for copy().
@@ -460,7 +461,8 @@ class File {
         throw new FileException(sprintf('The copy() filter path list holds a %s instead of a path.', get_debug_type($path)));
       }
 
-      $path = trim(static::toForwardSlashes($path), '/');
+      // The walk passes paths without empty or "." segments.
+      $path = implode('/', array_diff(explode('/', static::toForwardSlashes($path)), ['', '.']));
       $selected[$path] = TRUE;
 
       for ($dir = dirname($path); $dir !== '.' && !isset($parents[$dir]); $dir = dirname($dir)) {
@@ -468,8 +470,8 @@ class File {
       }
     }
 
-    return static function (string $path) use ($selected, $parents): bool {
-      if (isset($selected[$path]) || isset($parents[$path])) {
+    return static function (string $path, bool $is_dir) use ($selected, $parents): bool {
+      if (isset($selected[$path]) || ($is_dir && isset($parents[$path]))) {
         return TRUE;
       }
 

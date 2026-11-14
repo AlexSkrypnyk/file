@@ -1011,6 +1011,29 @@ final class FileTest extends UnitTestCase {
     $this->assertFileDoesNotExist($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('destination/skip.txt'));
   }
 
+  #[DataProvider('dataProviderCopyFilterPathList')]
+  public function testCopyFilterPathList(array $files, array $paths, array $expected): void {
+    $source = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+    $this->createFiles($source, $files);
+
+    $this->assertTrue(File::copy($source, $dest, filter: $paths));
+    $this->assertSame(array_map(self::nativePath(...), $expected), $this->listTree($dest));
+  }
+
+  public static function dataProviderCopyFilterPathList(): \Iterator {
+    $files = ['hooks/run.sh' => 'run', 'hooks/other.sh' => 'other', 'library/a.txt' => 'a', 'library/sub/b.txt' => 'b', 'top.txt' => 'top'];
+
+    yield 'file' => [$files, ['hooks/run.sh'], ['hooks/run.sh']];
+    yield 'directory with its subtree' => [$files, ['library'], ['library/a.txt', 'library/sub/b.txt']];
+    yield 'leading dot segment' => [$files, ['./hooks/run.sh'], ['hooks/run.sh']];
+    yield 'dot segment inside' => [$files, ['hooks/./run.sh'], ['hooks/run.sh']];
+    yield 'repeated separators' => [$files, ['hooks//run.sh'], ['hooks/run.sh']];
+    yield 'leading and trailing separators' => [$files, ['/library/'], ['library/a.txt', 'library/sub/b.txt']];
+    yield 'backslash separator' => [$files, ['hooks\\run.sh', 'top.txt'], PHP_OS_FAMILY === 'Windows' ? ['hooks/run.sh', 'top.txt'] : ['top.txt']];
+    yield 'ancestor is a file' => [['a' => 'file', 'top.txt' => 'top'], ['a/b.txt', 'top.txt'], ['top.txt']];
+  }
+
   public function testCopyFilterPathNotString(): void {
     $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', ['file.txt' => 'file']);
 
