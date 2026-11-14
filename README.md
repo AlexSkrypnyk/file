@@ -149,14 +149,33 @@ The directory-wide methods skip the paths returned by `ignoredPaths()` - `/.git/
 | Method                | What it does with a symlink                                                                                                                                                          |
 |-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `copy()`              | Copies the symlink as a symlink, after every file and directory is copied. The symlink mode sets its target.                                                                        |
-| `scandir()`           | Lists a file symlink or a dangling symlink as a file. Lists a directory symlink as a directory, only when directories are included. A directory symlink isn't walked, so a symlink to an ancestor can't recurse. |
+| `scandir()`           | Lists a file symlink or a dangling symlink as a file. Lists a directory symlink as a directory, only when directories are included. Walks a directory symlink by default and lists its files under the symlink path. Stops at a symlink to a directory the walk is already inside, so a loop can't recurse. |
 | `remove()`, `rmdir()` | Removes the symlink and leaves its target.                                                                                                                                           |
 | `rmdirIfEmpty()`      | Leaves a directory symlink in place, even when its target is empty.                                                                                                                  |
 | `exists()`            | Returns `FALSE` for a dangling symlink.                                                                                                                                              |
 | `realpath()`          | Follows the chain of symlinks to the final target. A relative target resolves against its symlink's directory, and a dangling symlink resolves to its target path. A loop throws a `FileException`. |
 | `readSymlink()`       | Reads the target of 1 symlink, relative to a root you pass.                                                                                                                          |
 
-`absolute()`, `dir()` and `mkdir()` resolve a path with `realpath()`, so they follow symlinks the same way. The directory-wide methods, such as `replaceContentInDir()`, get their files from `scandir()`, so they skip directory symlinks.
+`absolute()`, `dir()` and `mkdir()` resolve a path with `realpath()`, so they follow symlinks the same way. The directory-wide methods, such as `replaceContentInDir()`, get their files from `scandir()`, so they reach the files behind a directory symlink too. `dirIsEmpty()` counts those files as well, so `rmdirIfEmpty()` keeps a directory that holds a symlink to a non-empty directory.
+
+#### Scan without following symlinks
+
+To list directory symlinks without walking them, call `File::setFollowSymlinks(FALSE)` before you scan. The directory-wide methods then skip the files behind each directory symlink:
+
+```php
+use AlexSkrypnyk\File\File;
+
+File::setFollowSymlinks(FALSE);
+File::replaceContentInDir('/path/to/tree', 'old', 'new');
+```
+
+`File::getFollowSymlinks()` returns the current setting, and `File::resetFollowSymlinks()` restores the default of following symlinks.
+
+The setting applies to every later scan in the process. A library that scans with its own setting passes it to `scandir()` instead. That setting applies to that call only and leaves the global setting unchanged:
+
+```php
+File::scandir('/path/to/tree', follow_symlinks: FALSE);
+```
 
 #### Copy symlinks
 

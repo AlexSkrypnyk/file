@@ -50,6 +50,11 @@ class File {
   protected static string $symlinkMode = self::SYMLINK_MODE_NATIVE;
 
   /**
+   * Whether scandir() walks directory symlinks.
+   */
+  protected static bool $followSymlinks = TRUE;
+
+  /**
    * Get current working directory with absolute path.
    *
    * @return string
@@ -1213,8 +1218,10 @@ class File {
   /**
    * Recursively scan directory for files.
    *
-   * A symlink is never followed. A file symlink and a dangling symlink are
-   * listed as files, and a directory symlink is listed as a directory.
+   * A file symlink and a dangling symlink are listed as files, and a
+   * directory symlink is listed as a directory. A walked directory symlink
+   * lists its entries under the symlink path. A directory symlink to a
+   * directory above it in the walk is not walked, so the walk cannot loop.
    *
    * @param string $directory
    *   Directory to scan.
@@ -1222,13 +1229,14 @@ class File {
    *   Array of paths to ignore.
    * @param bool $include_dirs
    *   Include directories and directory symlinks in the result.
+   * @param bool|null $follow_symlinks
+   *   TRUE to walk directory symlinks, FALSE to list them without walking,
+   *   or NULL for the setting from setFollowSymlinks().
    *
    * @return array<int, string>
    *   Array of discovered files.
    */
-  public static function scandir(string $directory, array $ignore_paths = [], bool $include_dirs = FALSE): array {
-    $discovered = [];
-
+  public static function scandir(string $directory, array $ignore_paths = [], bool $include_dirs = FALSE, ?bool $follow_symlinks = NULL): array {
     try {
       $directory = static::dir($directory);
     }
@@ -1236,23 +1244,46 @@ class File {
       return [];
     }
 
-    $files = scandir($directory);
+    $ignore_paths = array_map(static fn(mixed $ignore_path): string => static::toForwardSlashes((string) $ignore_path), $ignore_paths);
+
+    // A stream wrapper URL has no real path.
+    $real = realpath($directory) ?: $directory;
+
+    return static::scandirPath($directory, $real, $ignore_paths, $include_dirs, $follow_symlinks ?? static::$followSymlinks, [static::walkKey($real)]);
+  }
+
+  /**
+   * Recursively scan a directory reached by a scandir() walk.
+   *
+   * @param string $directory
+   *   Directory path the discovered paths are listed under.
+   * @param string $real
+   *   Path the directory is read from, with directory symlinks resolved.
+   * @param array<int, string> $ignore_paths
+   *   Paths to ignore, with "/" separators on Windows.
+   * @param bool $include_dirs
+   *   Include directories and directory symlinks in the result.
+   * @param bool $follow_symlinks
+   *   Whether to walk directory symlinks.
+   * @param array<int, string> $ancestors
+   *   Walk keys of the directory and of the directories above it.
+   *
+   * @return array<int, string>
+   *   Array of discovered files.
+   */
+  protected static function scandirPath(string $directory, string $real, array $ignore_paths, bool $include_dirs, bool $follow_symlinks, array $ancestors): array {
+    $files = scandir($real);
+
     if ($files === FALSE) {
       // @codeCoverageIgnoreStart
       throw new FileException(sprintf('Failed to scan directory "%s".', $directory));
       // @codeCoverageIgnoreEnd
     }
 
-    $paths = array_diff($files, ['.', '..']);
+    $discovered = [];
 
-    if (empty($paths)) {
-      return [];
-    }
-
-    $ignore_paths = array_map(static fn(mixed $ignore_path): string => static::toForwardSlashes((string) $ignore_path), $ignore_paths);
-
-    foreach ($paths as $path) {
-      $path = $directory . '/' . $path;
+    foreach (array_diff($files, ['.', '..']) as $entry) {
+      $path = $directory . '/' . $entry;
       $match_path = static::toForwardSlashes($path);
 
       foreach ($ignore_paths as $ignore_path) {
@@ -1262,22 +1293,34 @@ class File {
         }
       }
 
+      $real_path = $real . '/' . $entry;
+
       // filetype() reads the entry without following it, so a symlink is
       // "link" on every platform.
-      $type = @filetype($path);
+      $type = @filetype($real_path);
+
+      if ($type === 'link' && $follow_symlinks) {
+        $target = static::walkableSymlinkTarget($real_path, $ancestors);
+
+        if ($target !== NULL) {
+          $type = 'dir';
+          $real_path = $target;
+        }
+      }
 
       if ($type === 'dir') {
         if ($include_dirs) {
           $discovered[] = $path;
         }
 
-        $discovered = array_merge($discovered, static::scandir($path, $ignore_paths, $include_dirs));
+        $walked = [...$ancestors, static::walkKey($real_path)];
+        $discovered = array_merge($discovered, static::scandirPath($path, $real_path, $ignore_paths, $include_dirs, $follow_symlinks, $walked));
         continue;
       }
 
-      // A directory symlink is listed only with the directories and never
-      // walked, so a symlink to an ancestor cannot recurse.
-      if ($type === 'link' && !$include_dirs && static::isDirectorySymlink($path)) {
+      // A directory symlink that is not walked is listed only with the
+      // directories.
+      if ($type === 'link' && !$include_dirs && static::isDirectorySymlink($real_path)) {
         continue;
       }
 
@@ -1285,6 +1328,44 @@ class File {
     }
 
     return $discovered;
+  }
+
+  /**
+   * Resolve the target of a directory symlink that scandir() can walk.
+   *
+   * @param string $link
+   *   Symlink path.
+   * @param array<int, string> $ancestors
+   *   Walk keys of the directory holding the symlink and of the directories
+   *   above it.
+   *
+   * @return string|null
+   *   Real path of the target, or NULL when the target is missing, is not a
+   *   directory, or is 1 of $ancestors.
+   */
+  protected static function walkableSymlinkTarget(string $link, array $ancestors): ?string {
+    $target = realpath($link);
+
+    if ($target === FALSE || !is_dir($target)) {
+      return NULL;
+    }
+
+    return in_array(static::walkKey($target), $ancestors, TRUE) ? NULL : $target;
+  }
+
+  /**
+   * Build the key that identifies a real directory in a scandir() walk.
+   *
+   * @param string $path
+   *   Real directory path.
+   *
+   * @return string
+   *   Path with "/" separators, lowercased on Windows.
+   */
+  protected static function walkKey(string $path): string {
+    $path = static::toForwardSlashes($path);
+
+    return static::IS_WINDOWS ? strtolower($path) : $path;
   }
 
   /**
@@ -2084,6 +2165,33 @@ class File {
    */
   public static function resetSymlinkMode(): void {
     static::$symlinkMode = self::SYMLINK_MODE_NATIVE;
+  }
+
+  /**
+   * Set whether scandir() walks directory symlinks.
+   *
+   * @param bool $follow
+   *   TRUE to walk directory symlinks, FALSE to list them without walking.
+   */
+  public static function setFollowSymlinks(bool $follow): void {
+    static::$followSymlinks = $follow;
+  }
+
+  /**
+   * Get whether scandir() walks directory symlinks.
+   *
+   * @return bool
+   *   TRUE if directory symlinks are walked, FALSE otherwise.
+   */
+  public static function getFollowSymlinks(): bool {
+    return static::$followSymlinks;
+  }
+
+  /**
+   * Reset whether scandir() walks directory symlinks to the default.
+   */
+  public static function resetFollowSymlinks(): void {
+    static::$followSymlinks = TRUE;
   }
 
 }
