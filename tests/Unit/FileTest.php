@@ -706,6 +706,13 @@ final class FileTest extends UnitTestCase {
       File::remove($target_path);
     }
 
+    // PHP on Windows needs a placeholder to create a symlink to a missing
+    // target, and placeholders stay inside the destination.
+    if ($dangling && $outside && DIRECTORY_SEPARATOR === '\\') {
+      $this->expectException(FileException::class);
+      $this->expectExceptionMessage('Unable to create symlinks: ');
+    }
+
     $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copyPaths($tree, $dest, $this->listTree($tree)));
 
     // A dangling copy proves it stays inside the destination by reading a

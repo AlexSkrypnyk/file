@@ -679,7 +679,9 @@ class File {
   protected static function isDirectorySymlink(string $link): bool {
     $resolved = realpath($link);
 
-    if ($resolved !== FALSE) {
+    // realpath() on Windows returns the missing target of a dangling
+    // absolute symlink.
+    if ($resolved !== FALSE && file_exists($resolved)) {
       return is_dir($resolved);
     }
 
