@@ -830,7 +830,7 @@ final class FileTest extends UnitTestCase {
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
     $this->createFiles($dest_dir, $existing);
     File::mkdir($dest_dir . DIRECTORY_SEPARATOR . 'hooks');
-    $link = (string) realpath($dest_dir . DIRECTORY_SEPARATOR . 'hooks') . DIRECTORY_SEPARATOR . 'link';
+    $link = realpath($dest_dir . DIRECTORY_SEPARATOR . 'hooks') . DIRECTORY_SEPARATOR . 'link';
     $before = File::scandir($dest_dir, [], TRUE);
 
     if ($read_only_link_dir) {
@@ -913,7 +913,7 @@ final class FileTest extends UnitTestCase {
    */
   protected function symlinkTargetString(string $target, string $link, bool $absolute): string {
     File::mkdir(dirname($link));
-    $target = (string) realpath(dirname($target)) . DIRECTORY_SEPARATOR . basename($target);
+    $target = realpath(dirname($target)) . DIRECTORY_SEPARATOR . basename($target);
 
     if ($absolute) {
       return $target;
