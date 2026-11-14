@@ -883,6 +883,20 @@ final class FileTest extends UnitTestCase {
     $file::copy($source_dir, $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination');
   }
 
+  public function testCopySymlinkOverExistingFile(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+
+    $this->createFiles($source_dir, ['file.txt' => 'file']);
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . 'link.txt', 'file.txt');
+    File::dump($dest_dir . DIRECTORY_SEPARATOR . 'link.txt', 'existing');
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir));
+
+    $this->assertFalse(is_link($dest_dir . DIRECTORY_SEPARATOR . 'link.txt'));
+    $this->assertSame('existing', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . 'link.txt'));
+  }
+
   public function testSetSymlinkModeUnknown(): void {
     $this->expectException(FileException::class);
     $this->expectExceptionMessage('Unknown symlink mode "absolute".');

@@ -395,8 +395,8 @@ class File {
    * Copy selected paths of a directory, keeping their relative locations.
    *
    * Symlinks are created after every path is copied, and the source
-   * directory is the tree that File::SYMLINK_MODE_RELATIVE keeps targets inside.
-   * A symlink whose target is not among the copied paths is created
+   * directory is the tree that File::SYMLINK_MODE_RELATIVE keeps targets
+   * inside. A symlink whose target is not among the copied paths is created
    * dangling.
    *
    * @param string $source
