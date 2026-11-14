@@ -35,6 +35,11 @@ class File {
   public const SYMLINK_MODE_RELATIVE = 'relative';
 
   /**
+   * Whether PHP runs on Windows.
+   */
+  protected const bool IS_WINDOWS = PHP_OS_FAMILY === 'Windows';
+
+  /**
    * The shared Replacer instance.
    */
   protected static ?Replacer $replacer = NULL;
@@ -138,7 +143,7 @@ class File {
 
     // The checks match isSymlink(), inline so a path that is not a symlink
     // costs 1 lstat() on Linux and macOS.
-    if (is_link($path) || (DIRECTORY_SEPARATOR === '\\' && static::isWindowsDanglingSymlink($path))) {
+    if (is_link($path) || (static::IS_WINDOWS && static::isWindowsDanglingSymlink($path))) {
       $path = static::resolveSymlinkChain($path);
     }
 
@@ -194,7 +199,7 @@ class File {
 
     // PHP on Windows reports a dangling absolute symlink as existing. Other
     // platforms follow the symlink, so a dangling one does not exist there.
-    return DIRECTORY_SEPARATOR === '/' || array_filter((array) $files, static fn(mixed $file): bool => is_string($file) && is_link($file) && !static::symlinkResolves($file)) === [];
+    return !static::IS_WINDOWS || array_filter((array) $files, static fn(mixed $file): bool => is_string($file) && is_link($file) && !static::symlinkResolves($file)) === [];
   }
 
   /**
@@ -608,7 +613,7 @@ class File {
    *   TRUE if the symlink was created, FALSE otherwise.
    */
   protected static function createDanglingSymlink(string $target, string $link, bool $is_dir): bool {
-    return DIRECTORY_SEPARATOR === '\\' && static::createWindowsSymlink($target, $link, $is_dir);
+    return static::IS_WINDOWS && static::createWindowsSymlink($target, $link, $is_dir);
   }
 
   /**
@@ -647,7 +652,7 @@ class File {
    *   TRUE if the path is a symlink, FALSE otherwise.
    */
   protected static function isSymlink(string $path): bool {
-    return is_link($path) || (DIRECTORY_SEPARATOR === '\\' && static::isWindowsDanglingSymlink($path));
+    return is_link($path) || (static::IS_WINDOWS && static::isWindowsDanglingSymlink($path));
   }
 
   /**
@@ -713,7 +718,7 @@ class File {
       // readlink() reads most symlinks, and readSymlink() covers the Windows
       // cases it cannot read.
       $target = @readlink($path);
-      $target = $target === FALSE || DIRECTORY_SEPARATOR === '\\' ? static::readSymlink($path) : $target;
+      $target = $target === FALSE || static::IS_WINDOWS ? static::readSymlink($path) : $target;
 
       if ($target === FALSE) {
         // @codeCoverageIgnoreStart
@@ -766,7 +771,7 @@ class File {
       return is_dir($resolved);
     }
 
-    return DIRECTORY_SEPARATOR === '\\' && (static::readWindowsSymlink($link)[1] ?? FALSE);
+    return static::IS_WINDOWS && (static::readWindowsSymlink($link)[1] ?? FALSE);
   }
 
   /**
@@ -854,13 +859,13 @@ class File {
     // readlink() on Windows resolves the final path. realpath() still
     // resolves a file symlink that points to a directory, and the directory
     // listing holds the stored target of a dangling symlink.
-    $target = $target === FALSE && DIRECTORY_SEPARATOR === '\\' ? (realpath($link) ?: (static::readWindowsSymlink($link)[0] ?? FALSE)) : $target;
+    $target = $target === FALSE && static::IS_WINDOWS ? (realpath($link) ?: (static::readWindowsSymlink($link)[0] ?? FALSE)) : $target;
 
     if ($target === FALSE || $root === NULL) {
       return $target;
     }
 
-    return static::relativeSymlinkTarget(static::resolveSymlinkTarget($target, $link), dirname($link), $root, DIRECTORY_SEPARATOR === '\\');
+    return static::relativeSymlinkTarget(static::resolveSymlinkTarget($target, $link), dirname($link), $root, static::IS_WINDOWS);
   }
 
   /**
@@ -951,11 +956,11 @@ class File {
   protected static function normalizePath(string $path): string {
     // A path with no "." segment, repeated or trailing separator, or foreign
     // separator is already normalized.
-    if (!str_contains($path, DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR) && !str_contains($path, DIRECTORY_SEPARATOR . '.') && !str_ends_with($path, DIRECTORY_SEPARATOR) && (DIRECTORY_SEPARATOR === '/' || !str_contains($path, '/'))) {
+    if (!str_contains($path, DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR) && !str_contains($path, DIRECTORY_SEPARATOR . '.') && !str_ends_with($path, DIRECTORY_SEPARATOR) && (!static::IS_WINDOWS || !str_contains($path, '/'))) {
       return $path;
     }
 
-    $separators = DIRECTORY_SEPARATOR === '\\' ? '/\\\\' : '/';
+    $separators = static::IS_WINDOWS ? '/\\\\' : '/';
     preg_match('#^(?:[a-zA-Z]:)?[' . $separators . ']?#', $path, $matches);
     $prefix = $matches[0] ?? '';
     $parts = [];
@@ -973,7 +978,7 @@ class File {
       $parts[] = $part;
     }
 
-    $prefix = DIRECTORY_SEPARATOR === '\\' ? str_replace('/', '\\', $prefix) : $prefix;
+    $prefix = static::IS_WINDOWS ? str_replace('/', '\\', $prefix) : $prefix;
 
     return $prefix . implode(DIRECTORY_SEPARATOR, $parts);
   }
@@ -1026,7 +1031,7 @@ class File {
    *   TRUE if $path is $dir or lies inside it, FALSE otherwise.
    */
   public static function isPathInside(string $path, string $dir, ?bool $ignore_case = NULL): bool {
-    $ignore_case ??= DIRECTORY_SEPARATOR === '\\';
+    $ignore_case ??= static::IS_WINDOWS;
     $path = static::toForwardSlashes($path) . '/';
     $dir = rtrim(static::toForwardSlashes($dir), '/') . '/';
 
@@ -1164,7 +1169,7 @@ class File {
    *   Path with forward slashes on Windows, or the path unchanged elsewhere.
    */
   public static function toForwardSlashes(string $path): string {
-    return DIRECTORY_SEPARATOR === '\\' ? str_replace('\\', '/', $path) : $path;
+    return static::IS_WINDOWS ? str_replace('\\', '/', $path) : $path;
   }
 
   /**
@@ -1205,7 +1210,7 @@ class File {
 
     // Symfony Filesystem does not see a dangling relative symlink on Windows,
     // so a directory that holds one cannot be removed until it is gone.
-    if (DIRECTORY_SEPARATOR === '\\') {
+    if (static::IS_WINDOWS) {
       // @codeCoverageIgnoreStart
       static::removeWindowsDanglingSymlinks($files);
       // @codeCoverageIgnoreEnd
