@@ -526,7 +526,7 @@ final class FileTest extends UnitTestCase {
     $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/1.provision.sh'), self::nativePath('../library/provision.sh'));
     $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/deploy'), 'update');
 
-    $this->assertTrue(File::copy($source_dir, $dest_dir, filter: self::pathsFilter($paths)));
+    $this->assertTrue(File::copy($source_dir, $dest_dir, filter: $paths));
     File::remove($source_dir);
 
     $this->assertFileDoesNotExist($dest_dir . DIRECTORY_SEPARATOR . self::nativePath('hooks/skipped.sh'));
@@ -708,7 +708,8 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderSymlinkPermutations')]
   public function testSymlinkPermutations(string $operation, bool $is_dir, bool $absolute, string $target, string $link, bool $chained, bool $dangling): void {
-    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
+    // A filtered copy sets the relative mode for the call only.
+    File::setSymlinkMode($operation === 'copy' ? File::SYMLINK_MODE_RELATIVE : File::SYMLINK_MODE_NATIVE);
 
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     $dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -734,7 +735,8 @@ final class FileTest extends UnitTestCase {
       File::remove($target_path);
     }
 
-    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: self::pathsFilter($this->listTree($tree))));
+    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: $this->listTree($tree), symlink_mode: File::SYMLINK_MODE_RELATIVE));
+    $this->assertSame($operation === 'copy' ? File::SYMLINK_MODE_RELATIVE : File::SYMLINK_MODE_NATIVE, File::getSymlinkMode(), 'The global symlink mode is unchanged.');
 
     // A dangling copy proves it stays inside the destination by reading a
     // target restored there while the source target is still missing.
@@ -787,7 +789,8 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderSymlinkSpecialCases')]
   public function testSymlinkSpecialCases(string $operation, array $files, array $links, string $check, string $expected): void {
-    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
+    // A filtered copy sets the relative mode for the call only.
+    File::setSymlinkMode($operation === 'copy' ? File::SYMLINK_MODE_RELATIVE : File::SYMLINK_MODE_NATIVE);
 
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     $dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -797,7 +800,7 @@ final class FileTest extends UnitTestCase {
       $this->createSymlink($tree . DIRECTORY_SEPARATOR . self::nativePath($path), self::nativePath($target));
     }
 
-    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: self::pathsFilter($this->listTree($tree))));
+    $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copy($tree, $dest, filter: $this->listTree($tree), symlink_mode: File::SYMLINK_MODE_RELATIVE));
     File::remove($tree);
 
     $this->assertSame($expected, file_get_contents($dest . DIRECTORY_SEPARATOR . self::nativePath($check)));
@@ -840,7 +843,7 @@ final class FileTest extends UnitTestCase {
     }
 
     // The filter leaves the target out of the copy.
-    $this->assertTrue(File::copy($tree, $dest, filter: self::pathsFilter(['a/b/link'])));
+    $this->assertTrue(File::copy($tree, $dest, filter: ['a/b/link']));
     File::remove($tree);
 
     $copied_target = $dest . DIRECTORY_SEPARATOR . self::nativePath('a/target');
@@ -899,7 +902,7 @@ final class FileTest extends UnitTestCase {
       /**
        * {@inheritdoc}
        */
-      protected static function readSymlinkTarget(string $link, string $root): string|false {
+      protected static function readSymlinkTarget(string $link, ?string $root): string|false {
         return FALSE;
       }
 
@@ -930,6 +933,101 @@ final class FileTest extends UnitTestCase {
     $this->expectExceptionMessage('Unknown symlink mode "absolute".');
 
     File::setSymlinkMode('absolute');
+  }
+
+  #[DataProvider('dataProviderCopySymlinkModePerCall')]
+  public function testCopySymlinkModePerCall(string $global_mode, ?string $call_mode, bool $expect_relative): void {
+    File::setSymlinkMode($global_mode);
+
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
+    $this->createFiles($source_dir, ['target.txt' => 'target']);
+
+    // An absolute target points into the source in the native mode, on every
+    // platform.
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . 'link.txt', realpath($source_dir) . DIRECTORY_SEPARATOR . 'target.txt');
+
+    $this->assertTrue(File::copy($source_dir, $dest_dir, symlink_mode: $call_mode));
+    $this->assertSame($global_mode, File::getSymlinkMode(), 'The global symlink mode is unchanged.');
+
+    // The relative copy reads the copied target, and the native copy reads
+    // the source target.
+    File::dump($source_dir . DIRECTORY_SEPARATOR . 'target.txt', 'changed');
+    $this->assertSame($expect_relative ? 'target' : 'changed', file_get_contents($dest_dir . DIRECTORY_SEPARATOR . 'link.txt'));
+  }
+
+  public static function dataProviderCopySymlinkModePerCall(): \Iterator {
+    yield 'global native, call relative' => [File::SYMLINK_MODE_NATIVE, File::SYMLINK_MODE_RELATIVE, TRUE];
+    yield 'global relative, call native' => [File::SYMLINK_MODE_RELATIVE, File::SYMLINK_MODE_NATIVE, FALSE];
+    yield 'global native, no call mode' => [File::SYMLINK_MODE_NATIVE, NULL, FALSE];
+    yield 'global relative, no call mode' => [File::SYMLINK_MODE_RELATIVE, NULL, TRUE];
+  }
+
+  public function testCopySymlinkModePerCallWhenCopyThrows(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $this->createFiles($source_dir, ['file.txt' => 'file']);
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . 'link.txt', 'file.txt');
+
+    $file = new class() extends File {
+
+      /**
+       * {@inheritdoc}
+       */
+      protected static function readSymlinkTarget(string $link, ?string $root): string|false {
+        return FALSE;
+      }
+
+    };
+
+    try {
+      $file::copy($source_dir, $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', symlink_mode: File::SYMLINK_MODE_RELATIVE);
+      $this->fail('The copy throws.');
+    }
+    catch (FileException) {
+      $this->assertSame(File::SYMLINK_MODE_NATIVE, File::getSymlinkMode());
+    }
+  }
+
+  public function testCopyFilterCallableArray(): void {
+    $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', ['keep.txt' => 'keep', 'skip.txt' => 'skip']);
+
+    // An array that is a callable is used as a callback, not as a path list.
+    $filter = [
+      new class() {
+
+        /**
+         * Select keep.txt.
+         */
+        public function select(string $path): bool {
+          return $path === 'keep.txt';
+        }
+
+      },
+      'select',
+    ];
+
+    $this->assertTrue(File::copy($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', filter: $filter));
+    $this->assertFileExists($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('destination/keep.txt'));
+    $this->assertFileDoesNotExist($this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('destination/skip.txt'));
+  }
+
+  public function testCopyFilterPathNotString(): void {
+    $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', ['file.txt' => 'file']);
+
+    $this->expectException(FileException::class);
+    $this->expectExceptionMessage('The copy() filter path list holds a int instead of a path.');
+
+    // @phpstan-ignore-next-line
+    File::copy($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', filter: ['file.txt', 1]);
+  }
+
+  public function testCopySymlinkModeUnknown(): void {
+    $this->createFiles($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', ['file.txt' => 'file']);
+
+    $this->expectException(FileException::class);
+    $this->expectExceptionMessage('Unknown symlink mode "absolute".');
+
+    File::copy($this->testTmpDir . DIRECTORY_SEPARATOR . 'source', $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination', symlink_mode: 'absolute');
   }
 
   #[DataProvider('dataProviderSymlinkHandling')]
@@ -1392,46 +1490,6 @@ final class FileTest extends UnitTestCase {
     }
 
     return self::nativePath(rtrim((new Filesystem())->makePathRelative($target, (string) realpath(dirname($link))), '/'));
-  }
-
-  /**
-   * Build a copy() filter that selects a list of paths.
-   *
-   * The filter accepts each listed path, the directories above it and
-   * everything inside a listed directory.
-   *
-   * @param array<int, string> $paths
-   *   Paths relative to the copied tree, with either separator.
-   *
-   * @return \Closure
-   *   Filter for copy().
-   */
-  protected static function pathsFilter(array $paths): \Closure {
-    $selected = [];
-    $parents = [];
-
-    foreach ($paths as $path) {
-      $path = str_replace(DIRECTORY_SEPARATOR, '/', $path);
-      $selected[$path] = TRUE;
-
-      for ($dir = dirname($path); $dir !== '.'; $dir = dirname($dir)) {
-        $parents[$dir] = TRUE;
-      }
-    }
-
-    return static function (string $path) use ($selected, $parents): bool {
-      if (isset($selected[$path]) || isset($parents[$path])) {
-        return TRUE;
-      }
-
-      for ($dir = dirname($path); $dir !== '.'; $dir = dirname($dir)) {
-        if (isset($selected[$dir])) {
-          return TRUE;
-        }
-      }
-
-      return FALSE;
-    };
   }
 
   /**
