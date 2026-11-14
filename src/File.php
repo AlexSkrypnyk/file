@@ -20,6 +20,21 @@ use Symfony\Component\Filesystem\Filesystem;
 class File {
 
   /**
+   * Recreate each symlink with the target the platform reads.
+   *
+   * Linux and macOS read the stored target. Windows reads the resolved
+   * absolute target, which points into the source tree.
+   */
+  public const SYMLINK_MODE_NATIVE = 'native';
+
+  /**
+   * Make symlink targets inside the copied tree relative, on every platform.
+   *
+   * A target outside the copied tree becomes absolute.
+   */
+  public const SYMLINK_MODE_RELATIVE = 'relative';
+
+  /**
    * The shared Replacer instance.
    */
   protected static ?Replacer $replacer = NULL;
@@ -27,7 +42,7 @@ class File {
   /**
    * How copy() and copyPaths() recreate symlinks.
    */
-  protected static SymlinkMode $symlinkMode = SymlinkMode::Native;
+  protected static string $symlinkMode = self::SYMLINK_MODE_NATIVE;
 
   /**
    * Get current working directory with absolute path.
@@ -380,7 +395,7 @@ class File {
    * Copy selected paths of a directory, keeping their relative locations.
    *
    * Symlinks are created after every path is copied, and the source
-   * directory is the tree that SymlinkMode::Relative keeps targets inside.
+   * directory is the tree that File::SYMLINK_MODE_RELATIVE keeps targets inside.
    * A symlink whose target is not among the copied paths is created
    * dangling.
    *
@@ -433,19 +448,28 @@ class File {
    *
    * @return bool
    *   TRUE if copying was successful, FALSE otherwise.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When the target of a symlink cannot be read.
    */
   protected static function copyPath(string $source, string $dest, int $permissions, bool $copy_empty_dirs, string $root, array &$symlinks): bool {
     static::mkdir(dirname($dest), $permissions);
 
-    if (is_link($source)) {
-      $target = is_readable($dest) ? FALSE : static::readSymlinkTarget($source, $root);
+    // PHP on Windows does not report a dangling symlink as a link.
+    if (is_link($source) || (DIRECTORY_SEPARATOR === '\\' && !file_exists($source) && static::readWindowsSymlink($source) !== NULL)) {
+      if (is_readable($dest)) {
+        return TRUE;
+      }
+
+      $target = static::readSymlinkTarget($source, $root);
+
+      if ($target === FALSE) {
+        throw new FileException(sprintf('Unable to read the target of symlink "%s".', $source));
+      }
 
       // Symlinks are created from within their directory, so a relative
       // destination is resolved while the working directory is unchanged.
-      if ($target !== FALSE) {
-        $link = static::absolutePath($dest);
-        $symlinks[] = [$target, $link, is_dir(realpath($source) ?: $source)];
-      }
+      $symlinks[] = [$target, static::absolutePath($dest), static::isDirectorySymlink($source)];
 
       return TRUE;
     }
@@ -509,7 +533,7 @@ class File {
     $failed = [];
 
     try {
-      do {
+      while ($symlinks !== []) {
         $pending = [];
 
         foreach ($symlinks as $symlink) {
@@ -518,14 +542,18 @@ class File {
           }
         }
 
-        $created = count($pending) < count($symlinks);
-        $symlinks = $pending;
-      } while ($pending !== [] && $created);
+        // A pass that creates nothing leaves only missing targets. The first
+        // one gets a placeholder, which can unblock a symlink that points to
+        // it on the next pass.
+        if ($pending !== [] && count($pending) === count($symlinks)) {
+          [$target, $link, $is_dir] = array_shift($pending);
 
-      foreach ($pending as [$target, $link, $is_dir]) {
-        if (!static::createSymlinkWithPlaceholder($target, $link, $is_dir, $dest)) {
-          $failed[] = sprintf('"%s" -> "%s"', $link, $target);
+          if (!static::createSymlinkWithPlaceholder($target, $link, $is_dir, $dest)) {
+            $failed[] = sprintf('"%s" -> "%s"', $link, $target);
+          }
         }
+
+        $symlinks = $pending;
       }
     }
     finally {
@@ -639,12 +667,90 @@ class File {
   }
 
   /**
+   * Check whether a symlink points to a directory.
+   *
+   * @param string $link
+   *   Symlink path.
+   *
+   * @return bool
+   *   TRUE if the symlink points to a directory, or is a dangling Windows
+   *   directory symlink, FALSE otherwise.
+   */
+  protected static function isDirectorySymlink(string $link): bool {
+    $resolved = realpath($link);
+
+    if ($resolved !== FALSE) {
+      return is_dir($resolved);
+    }
+
+    return DIRECTORY_SEPARATOR === '\\' && (static::readWindowsSymlink($link)[1] ?? FALSE);
+  }
+
+  /**
+   * Read a symlink from the Windows directory listing of its directory.
+   *
+   * PHP on Windows reads a symlink by resolving its final path, so a dangling
+   * symlink cannot be read through PHP. The listing of "dir /AL" holds the
+   * stored target and the symlink type.
+   *
+   * @param string $link
+   *   Symlink path.
+   *
+   * @return array{string, bool}|null
+   *   The stored target and whether it is a directory symlink, or NULL if
+   *   the path is not a symlink in the listing.
+   *
+   * @codeCoverageIgnore
+   */
+  protected static function readWindowsSymlink(string $link): ?array {
+    if (!function_exists('exec')) {
+      return NULL;
+    }
+
+    // Switch the console to UTF-8 so non-ASCII names list unchanged.
+    exec(sprintf('chcp 65001 >nul 2>&1 & dir /AL %s 2>nul', escapeshellarg(dirname($link))), $output, $exit_code);
+
+    return $exit_code === 0 ? static::parseWindowsSymlinkListing($output, basename($link)) : NULL;
+  }
+
+  /**
+   * Find a symlink in the lines of a Windows "dir /AL" listing.
+   *
+   * A symlink line ends with "<SYMLINK> name [target]", or "<SYMLINKD>" for
+   * a directory symlink. Junctions are not symlinks and are skipped.
+   *
+   * @param array<int, string> $lines
+   *   Listing lines.
+   * @param string $name
+   *   Symlink name.
+   *
+   * @return array{string, bool}|null
+   *   The stored target and whether it is a directory symlink, or NULL if
+   *   the listing has no symlink with that name.
+   */
+  protected static function parseWindowsSymlinkListing(array $lines, string $name): ?array {
+    $prefix = $name . ' [';
+
+    foreach ($lines as $line) {
+      if (preg_match('/<(SYMLINKD?)>\s+(.*)$/', rtrim($line), $matches) !== 1) {
+        continue;
+      }
+
+      if (str_starts_with($matches[2], $prefix) && str_ends_with($matches[2], ']')) {
+        return [substr($matches[2], strlen($prefix), -1), $matches[1] === 'SYMLINKD'];
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
    * Read the target to recreate a copied symlink with.
    *
    * On Windows, readlink() returns the resolved absolute target instead of
-   * the stored one. In SymlinkMode::Relative, a target inside the copied tree
-   * is made relative to the link on every platform, and a target outside it
-   * becomes absolute.
+   * the stored one. In File::SYMLINK_MODE_RELATIVE, a target inside the
+   * copied tree is made relative to the link on every platform, and a target
+   * outside it becomes absolute.
    *
    * @param string $link
    *   Symlink path.
@@ -657,12 +763,13 @@ class File {
   protected static function readSymlinkTarget(string $link, string $root): string|false {
     $target = @readlink($link);
 
-    // readlink() fails on Windows for a file symlink that points to a
-    // directory, which realpath() still resolves.
-    $target = $target === FALSE && DIRECTORY_SEPARATOR === '\\' ? realpath($link) : $target;
+    // readlink() on Windows resolves the final path. realpath() still
+    // resolves a file symlink that points to a directory, and the directory
+    // listing holds the stored target of a dangling symlink.
+    $target = $target === FALSE && DIRECTORY_SEPARATOR === '\\' ? (realpath($link) ?: (static::readWindowsSymlink($link)[0] ?? FALSE)) : $target;
 
     // A symlink copied on its own has no tree to stay inside.
-    if ($target === FALSE || $link === $root || static::$symlinkMode !== SymlinkMode::Relative) {
+    if ($target === FALSE || $link === $root || static::$symlinkMode !== self::SYMLINK_MODE_RELATIVE) {
       return $target;
     }
 
@@ -1581,20 +1688,27 @@ class File {
   /**
    * Set how copy() and copyPaths() recreate symlinks.
    *
-   * @param \AlexSkrypnyk\File\SymlinkMode $mode
-   *   The symlink mode.
+   * @param string $mode
+   *   File::SYMLINK_MODE_NATIVE or File::SYMLINK_MODE_RELATIVE.
+   *
+   * @throws \AlexSkrypnyk\File\Exception\FileException
+   *   When the mode is not one of the symlink mode constants.
    */
-  public static function setSymlinkMode(SymlinkMode $mode): void {
+  public static function setSymlinkMode(string $mode): void {
+    if (!in_array($mode, [self::SYMLINK_MODE_NATIVE, self::SYMLINK_MODE_RELATIVE], TRUE)) {
+      throw new FileException(sprintf('Unknown symlink mode "%s".', $mode));
+    }
+
     static::$symlinkMode = $mode;
   }
 
   /**
    * Get how copy() and copyPaths() recreate symlinks.
    *
-   * @return \AlexSkrypnyk\File\SymlinkMode
-   *   The symlink mode.
+   * @return string
+   *   File::SYMLINK_MODE_NATIVE or File::SYMLINK_MODE_RELATIVE.
    */
-  public static function getSymlinkMode(): SymlinkMode {
+  public static function getSymlinkMode(): string {
     return static::$symlinkMode;
   }
 
@@ -1602,7 +1716,7 @@ class File {
    * Reset how copy() and copyPaths() recreate symlinks to the default.
    */
   public static function resetSymlinkMode(): void {
-    static::$symlinkMode = SymlinkMode::Native;
+    static::$symlinkMode = self::SYMLINK_MODE_NATIVE;
   }
 
 }

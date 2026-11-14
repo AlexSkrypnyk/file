@@ -144,22 +144,21 @@ The directory-wide methods skip the paths returned by `ignoredPaths()` - `/.git/
 
 `copy()` and `copyPaths()` recreate each symlink in the destination after every file and directory is copied, so a symlink and its target can come in any order. Pick how they set each symlink's target:
 
-| Mode                            | The copied symlink points at                                                                                                                                  |
-|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `SymlinkMode::Native` (default) | The target the platform reads. Linux and macOS read the stored target. Windows reads the resolved absolute target, which points into the source tree.          |
-| `SymlinkMode::Relative`         | A target inside the copied tree, as a path relative to the symlink, on every platform. A target outside the copied tree becomes an absolute path.              |
+| Mode                                    | The copied symlink points at                                                                                                                          |
+|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `File::SYMLINK_MODE_NATIVE` (default)   | The target the platform reads. Linux and macOS read the stored target. Windows reads the resolved absolute target, which points into the source tree. |
+| `File::SYMLINK_MODE_RELATIVE`           | A target inside the copied tree, as a path relative to the symlink, on every platform. A target outside the copied tree becomes an absolute path.      |
 
 To make the copied tree self-contained, so its symlinks keep working after the source tree is removed, set the relative mode before copying:
 
 ```php
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\SymlinkMode;
 
-File::setSymlinkMode(SymlinkMode::Relative);
+File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 File::copy('/path/to/source', '/path/to/destination');
 ```
 
-`File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default.
+`File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default. `setSymlinkMode()` throws a `FileException` for a value that isn't 1 of the 2 constants.
 
 To copy only some paths of a directory, pass them to `copyPaths()` in 1 call:
 
@@ -167,7 +166,7 @@ To copy only some paths of a directory, pass them to `copyPaths()` in 1 call:
 File::copyPaths('/path/to/source', '/path/to/destination', ['hooks/run.sh', 'library/provision.sh']);
 ```
 
-A symlink whose target is left out of the copied paths is created anyway, and stays dangling until the target exists. When a symlink can't be created, `copy()` and `copyPaths()` throw a `FileException` that names every symlink they couldn't create.
+A symlink whose target is left out of the copied paths, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. When `copy()` or `copyPaths()` can't read or create a symlink, it throws a `FileException` that names the symlink.
 
 ### Batch Operations
 

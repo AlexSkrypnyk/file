@@ -6,7 +6,6 @@ namespace AlexSkrypnyk\File\Tests\Unit;
 
 use AlexSkrypnyk\File\Exception\FileException;
 use AlexSkrypnyk\File\File;
-use AlexSkrypnyk\File\SymlinkMode;
 use AlexSkrypnyk\PhpunitHelpers\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversMethod;
@@ -451,7 +450,7 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderCopyRelativeSymlink')]
   public function testCopyRelativeSymlink(array $links, string $link, string $expected_path): void {
-    File::setSymlinkMode(SymlinkMode::Relative);
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -514,7 +513,7 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderCopyPaths')]
   public function testCopyPaths(array $paths): void {
-    File::setSymlinkMode(SymlinkMode::Relative);
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -560,7 +559,7 @@ final class FileTest extends UnitTestCase {
       $this->markTestSkipped('Windows only.');
     }
 
-    File::setSymlinkMode(SymlinkMode::Relative);
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 
     $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
     $dest_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -599,13 +598,13 @@ final class FileTest extends UnitTestCase {
   }
 
   public function testSymlinkMode(): void {
-    $this->assertSame(SymlinkMode::Native, File::getSymlinkMode());
+    $this->assertSame(File::SYMLINK_MODE_NATIVE, File::getSymlinkMode());
 
-    File::setSymlinkMode(SymlinkMode::Relative);
-    $this->assertSame(SymlinkMode::Relative, File::getSymlinkMode());
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
+    $this->assertSame(File::SYMLINK_MODE_RELATIVE, File::getSymlinkMode());
 
     File::resetSymlinkMode();
-    $this->assertSame(SymlinkMode::Native, File::getSymlinkMode());
+    $this->assertSame(File::SYMLINK_MODE_NATIVE, File::getSymlinkMode());
   }
 
   public function testCopySymlinksToRelativeDestination(): void {
@@ -680,18 +679,19 @@ final class FileTest extends UnitTestCase {
   }
 
   #[DataProvider('dataProviderSymlinkPermutations')]
-  public function testSymlinkPermutations(string $operation, bool $is_dir, bool $absolute, string $target, string $link, bool $chained): void {
-    File::setSymlinkMode(SymlinkMode::Relative);
+  public function testSymlinkPermutations(string $operation, bool $is_dir, bool $absolute, string $target, string $link, bool $chained, bool $dangling): void {
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     $dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
     $target_path = $tree . DIRECTORY_SEPARATOR . self::nativePath($target);
     $link_path = $tree . DIRECTORY_SEPARATOR . self::nativePath($link);
     $hop_path = dirname($link_path) . DIRECTORY_SEPARATOR . 'hop';
+    $outside = str_starts_with($target, '../');
 
     // A target outside the tree is reached through the tree directory.
     File::mkdir($tree);
-    File::dump($is_dir ? $target_path . DIRECTORY_SEPARATOR . 'inner.txt' : $target_path, $target);
+    $this->createTarget($target_path, $is_dir, $target);
     $target_path = (string) realpath($target_path);
 
     if ($chained) {
@@ -702,13 +702,30 @@ final class FileTest extends UnitTestCase {
       $this->createSymlink($link_path, $this->symlinkTargetString($target_path, $link_path, $absolute));
     }
 
+    if ($dangling) {
+      File::remove($target_path);
+    }
+
     $this->assertTrue($operation === 'copy' ? File::copy($tree, $dest) : File::copyPaths($tree, $dest, $this->listTree($tree)));
-    File::remove($tree);
+
+    // A dangling copy proves it stays inside the destination by reading a
+    // target restored there while the source target is still missing.
+    if ($dangling) {
+      $this->createTarget($outside ? $target_path : $dest . DIRECTORY_SEPARATOR . self::nativePath($target), $is_dir, $target);
+    }
+    else {
+      File::remove($tree);
+    }
 
     foreach ($chained ? [$link_path, $hop_path] : [$link_path] as $path) {
       $copied = $dest . substr($path, strlen($tree));
       $this->assertTrue(is_link($copied), sprintf('"%s" is a symlink.', $copied));
-      $this->assertSame($target, file_get_contents($is_dir ? $copied . DIRECTORY_SEPARATOR . 'inner.txt' : $copied), sprintf('"%s" reads its target after the source is removed.', $copied));
+      $this->assertSame($target, file_get_contents($is_dir ? $copied . DIRECTORY_SEPARATOR . 'inner.txt' : $copied), sprintf('"%s" reads its target without the source target.', $copied));
+    }
+
+    // Restoring the source target leaves no dangling symlink to clean up.
+    if ($dangling && !$outside) {
+      $this->createTarget($target_path, $is_dir, $target);
     }
   }
 
@@ -730,7 +747,9 @@ final class FileTest extends UnitTestCase {
         foreach (['relative' => FALSE, 'absolute' => TRUE] as $style => $absolute) {
           foreach ($locations as $location => [$target, $link]) {
             foreach (['direct' => FALSE, 'through a second link' => TRUE] as $shape => $chained) {
-              yield sprintf('%s, %s link, %s target, %s, %s', $operation, $kind, $style, $location, $shape) => [$operation, $is_dir, $absolute, $target, $link, $chained];
+              foreach (['target present' => FALSE, 'dangling in the source' => TRUE] as $state => $dangling) {
+                yield sprintf('%s, %s link, %s target, %s, %s, %s', $operation, $kind, $style, $location, $shape, $state) => [$operation, $is_dir, $absolute, $target, $link, $chained, $dangling];
+              }
             }
           }
         }
@@ -740,7 +759,7 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderSymlinkSpecialCases')]
   public function testSymlinkSpecialCases(string $operation, array $files, array $links, string $check, string $expected): void {
-    File::setSymlinkMode(SymlinkMode::Relative);
+    File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
 
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     $dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -775,16 +794,11 @@ final class FileTest extends UnitTestCase {
 
   #[DataProvider('dataProviderCopyPathsMissingTarget')]
   public function testCopyPathsMissingTarget(string $mode, bool $is_dir, bool $broken): void {
-    // PHP on Windows can neither create nor see a broken relative symlink.
-    if ($broken && DIRECTORY_SEPARATOR === '\\') {
-      $this->markTestSkipped('PHP on Windows cannot create a broken relative symlink.');
+    if ($mode === File::SYMLINK_MODE_NATIVE && !$broken && DIRECTORY_SEPARATOR === '\\') {
+      $this->markTestSkipped('File::SYMLINK_MODE_NATIVE on Windows points the symlink at the source target.');
     }
 
-    if ($mode === SymlinkMode::Native->value && DIRECTORY_SEPARATOR === '\\') {
-      $this->markTestSkipped('SymlinkMode::Native on Windows points the symlink at the source target.');
-    }
-
-    File::setSymlinkMode(SymlinkMode::from($mode));
+    File::setSymlinkMode($mode);
 
     $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
     $dest = $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination';
@@ -819,6 +833,61 @@ final class FileTest extends UnitTestCase {
       yield $mode . ', directory target left out' => [$mode, TRUE, FALSE];
       yield $mode . ', broken symlink' => [$mode, FALSE, TRUE];
     }
+  }
+
+  #[DataProvider('dataProviderParseWindowsSymlinkListing')]
+  public function testParseWindowsSymlinkListing(string $name, ?array $expected): void {
+    $lines = [
+      ' Volume in drive C is Windows',
+      ' Directory of C:\\work\\hooks',
+      '',
+      '11/13/2026  10:09 AM    <SYMLINKD>     deploy [update]',
+      '11/13/2026  10:09 AM    <SYMLINK>      1.provision.sh [..\\library\\provision.sh]',
+      '11/13/2026  10:09 AM    <SYMLINK>      my link [my [target].txt]',
+      '11/13/2026  10:09 AM    <SYMLINK>      link2 [b.txt]',
+      '11/13/2026  10:09 AM    <JUNCTION>     junction [C:\\work\\dir]',
+      '               2 File(s)              0 bytes',
+    ];
+
+    $this->assertSame($expected, self::callProtectedMethod(File::class, 'parseWindowsSymlinkListing', [$lines, $name]));
+  }
+
+  public static function dataProviderParseWindowsSymlinkListing(): \Iterator {
+    yield 'directory symlink' => ['deploy', ['update', TRUE]];
+    yield 'file symlink with a relative target' => ['1.provision.sh', ['..\\library\\provision.sh', FALSE]];
+    yield 'name with spaces and a target with brackets' => ['my link', ['my [target].txt', FALSE]];
+    yield 'name that prefixes another name' => ['link', NULL];
+    yield 'junction' => ['junction', NULL];
+    yield 'name not listed' => ['missing', NULL];
+  }
+
+  public function testCopyUnreadableSymlink(): void {
+    $source_dir = $this->testTmpDir . DIRECTORY_SEPARATOR . 'source';
+    $this->createFiles($source_dir, ['file.txt' => 'file']);
+    $this->createSymlink($source_dir . DIRECTORY_SEPARATOR . 'link.txt', 'file.txt');
+
+    $file = new class() extends File {
+
+      /**
+       * {@inheritdoc}
+       */
+      protected static function readSymlinkTarget(string $link, string $root): string|false {
+        return FALSE;
+      }
+
+    };
+
+    $this->expectException(FileException::class);
+    $this->expectExceptionMessage(sprintf('Unable to read the target of symlink "%s/link.txt".', $source_dir));
+
+    $file::copy($source_dir, $this->testTmpDir . DIRECTORY_SEPARATOR . 'destination');
+  }
+
+  public function testSetSymlinkModeUnknown(): void {
+    $this->expectException(FileException::class);
+    $this->expectExceptionMessage('Unknown symlink mode "absolute".');
+
+    File::setSymlinkMode('absolute');
   }
 
   #[DataProvider('dataProviderCreateSymlinkWithPlaceholder')]
@@ -896,6 +965,20 @@ final class FileTest extends UnitTestCase {
     chdir($current_dir);
 
     $this->assertTrue($created, sprintf('Created symlink %s -> %s', $link, $target));
+  }
+
+  /**
+   * Create a symlink target as a file, or a directory holding inner.txt.
+   *
+   * @param string $path
+   *   Target path.
+   * @param bool $is_dir
+   *   Whether the target is a directory.
+   * @param string $content
+   *   Content of the file or of inner.txt.
+   */
+  protected function createTarget(string $path, bool $is_dir, string $content): void {
+    File::dump($is_dir ? $path . DIRECTORY_SEPARATOR . 'inner.txt' : $path, $content);
   }
 
   /**
