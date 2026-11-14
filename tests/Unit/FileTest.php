@@ -648,8 +648,8 @@ final class FileTest extends UnitTestCase {
     try {
       File::copy($source_dir . DIRECTORY_SEPARATOR . 'link.txt', $dest_dir . DIRECTORY_SEPARATOR . 'link.txt');
     }
-    catch (FileException $fileException) {
-      $exception = $fileException;
+    catch (FileException $file_exception) {
+      $exception = $file_exception;
     }
     chmod($dest_dir, 0755);
 
