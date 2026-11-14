@@ -662,16 +662,28 @@ class File {
    *   When the symlinks form a loop, or a symlink target cannot be read.
    */
   protected static function resolveSymlinkChain(string $path): string {
+    // PHP's realpath() resolves a chain that ends at an existing path in 1
+    // cached call. On Windows it returns the missing target of a dangling
+    // absolute symlink, so the chain is followed there.
+    $resolved = DIRECTORY_SEPARATOR === '/' && is_link($path) ? realpath($path) : FALSE;
+
+    if ($resolved !== FALSE) {
+      return $resolved;
+    }
+
     $link = $path;
     $visited = [];
 
-    while (static::isSymlink($path)) {
+    // is_link() and readlink() answer for most symlinks, and isSymlink() and
+    // readSymlink() cover the Windows cases they cannot read.
+    while (is_link($path) || (DIRECTORY_SEPARATOR === '\\' && static::isSymlink($path))) {
       if (isset($visited[$path])) {
         throw new FileException(sprintf('Unable to resolve symlink "%s": the symlinks form a loop.', $link));
       }
 
       $visited[$path] = TRUE;
-      $target = static::readSymlink($path);
+      $target = @readlink($path);
+      $target = $target === FALSE || DIRECTORY_SEPARATOR === '\\' ? static::readSymlink($path) : $target;
 
       if ($target === FALSE) {
         // @codeCoverageIgnoreStart
@@ -679,7 +691,9 @@ class File {
         // @codeCoverageIgnoreEnd
       }
 
-      $path = static::normalizePath((new Filesystem())->isAbsolutePath($target) ? $target : dirname($path) . DIRECTORY_SEPARATOR . $target);
+      // A target that starts at a root or a Windows drive is absolute.
+      $absolute = $target[0] === '/' || $target[0] === '\\' || ($target[1] ?? '') === ':';
+      $path = static::normalizePath($absolute ? $target : dirname($path) . DIRECTORY_SEPARATOR . $target);
     }
 
     return $path;
@@ -905,6 +919,12 @@ class File {
    *   Normalized path, joined with the platform directory separator.
    */
   protected static function normalizePath(string $path): string {
+    // A path with no "." segment, repeated or trailing separator, or foreign
+    // separator is already normalized.
+    if (!str_contains($path, DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR) && !str_contains($path, DIRECTORY_SEPARATOR . '.') && !str_ends_with($path, DIRECTORY_SEPARATOR) && (DIRECTORY_SEPARATOR === '/' || !str_contains($path, '/'))) {
+      return $path;
+    }
+
     $separators = DIRECTORY_SEPARATOR === '\\' ? '/\\\\' : '/';
     preg_match('#^(?:[a-zA-Z]:)?[' . $separators . ']?#', $path, $matches);
     $prefix = $matches[0] ?? '';
