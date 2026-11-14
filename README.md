@@ -116,8 +116,10 @@ catch (FileException $exception) {
 | `findContainingInDir()`      | Find all files in directory containing a specific string.                          |
 | `findMatchingPath()`         | Find first path that matches a needle among provided paths.                        |
 | `ignoredPaths()`             | Get the default list of ignored subpaths, optionally merged with extra ones.        |
+| `isPathInside()`             | Check if a path is a directory or lies inside it.                                  |
 | `mkdir()`                    | Creates a directory if it doesn't exist.                                           |
 | `read()`                     | Read file contents.                                                                |
+| `readSymlink()`              | Read a symlink target, relative to a root when the target is inside it.            |
 | `realpath()`                 | Replacement for PHP's `realpath` resolves non-existing paths.                      |
 | `remove()`                   | Remove file or directory.                                                          |
 | `removeLine()`               | Remove lines containing a specific string or pattern from a string.                |
@@ -134,6 +136,7 @@ catch (FileException $exception) {
 | `rmdirIfEmpty()`             | Remove directory recursively if empty.                                             |
 | `scandir()`                  | Recursively scan directory for files.                                              |
 | `tmpdir()`                   | Create temporary directory.                                                        |
+| `toForwardSlashes()`         | Replace Windows directory separators with forward slashes.                         |
 
 Methods that accept a needle also accept a regular expression. A needle is treated as a pattern when it starts with one of the `/`, `#`, `~`, `@` or `%` delimiters and is a valid expression, so `'/\.php$/'` matches by pattern while `'text'` matches literally.
 
@@ -166,6 +169,13 @@ File::copy('/path/to/source', '/path/to/destination', filter: fn(string $path, b
 ```
 
 A filtered copy still treats the source as the tree for the relative mode. A symlink whose target is filtered out, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. On Windows, PHP can only create a symlink to a target that exists, so `File` creates a dangling symlink with the `mklink` command. When `copy()` can't read or create a symlink, it throws a `FileException` that names the symlink.
+
+To read a symlink's target the same way on every platform, pass the root of its tree to `readSymlink()`. A target inside the root comes back relative to the symlink's directory with `/` separators, and a target outside it comes back absolute. The result doesn't depend on the symlink mode. Without a root, `readSymlink()` returns the target the platform reads, and it returns `FALSE` when the target can't be read:
+
+```php
+File::readSymlink('/path/to/tree/hooks/link', '/path/to/tree');
+// '../library/provision.sh'
+```
 
 ### Batch Operations
 

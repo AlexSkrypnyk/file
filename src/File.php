@@ -708,12 +708,46 @@ class File {
   }
 
   /**
+   * Read the target of a symlink, the same way on every platform.
+   *
+   * With $root, a target inside $root is returned relative to the symlink's
+   * directory with "/" separators, and a target outside $root is returned
+   * as a resolved absolute path. The result does not depend on the symlink
+   * mode set with setSymlinkMode().
+   *
+   * Without $root, the target the platform reads is returned. Linux and
+   * macOS read the stored target. Windows reads the resolved absolute
+   * target, or the stored target of a dangling symlink.
+   *
+   * @param string $link
+   *   Symlink path.
+   * @param string|null $root
+   *   Root of the tree the symlink belongs to, or NULL for the target the
+   *   platform reads.
+   *
+   * @return string|false
+   *   Symlink target, or FALSE if it cannot be read.
+   */
+  public static function readSymlink(string $link, ?string $root = NULL): string|false {
+    $target = @readlink($link);
+
+    // readlink() on Windows resolves the final path. realpath() still
+    // resolves a file symlink that points to a directory, and the directory
+    // listing holds the stored target of a dangling symlink.
+    $target = $target === FALSE && DIRECTORY_SEPARATOR === '\\' ? (realpath($link) ?: (static::readWindowsSymlink($link)[0] ?? FALSE)) : $target;
+
+    if ($target === FALSE || $root === NULL) {
+      return $target;
+    }
+
+    return static::relativeSymlinkTarget(static::resolveSymlinkTarget($target, $link), dirname($link), $root, DIRECTORY_SEPARATOR === '\\');
+  }
+
+  /**
    * Read the target to recreate a copied symlink with.
    *
-   * On Windows, readlink() returns the resolved absolute target instead of
-   * the stored one. In File::SYMLINK_MODE_RELATIVE, a target inside the
-   * copied tree is made relative to the link on every platform, and a target
-   * outside it becomes absolute.
+   * In File::SYMLINK_MODE_RELATIVE, the target is read relative to the
+   * copied tree. Otherwise it is the target the platform reads.
    *
    * @param string $link
    *   Symlink path.
@@ -724,19 +758,8 @@ class File {
    *   Symlink target, or FALSE if it cannot be read.
    */
   protected static function readSymlinkTarget(string $link, string $root): string|false {
-    $target = @readlink($link);
-
-    // readlink() on Windows resolves the final path. realpath() still
-    // resolves a file symlink that points to a directory, and the directory
-    // listing holds the stored target of a dangling symlink.
-    $target = $target === FALSE && DIRECTORY_SEPARATOR === '\\' ? (realpath($link) ?: (static::readWindowsSymlink($link)[0] ?? FALSE)) : $target;
-
     // A symlink copied on its own has no tree to stay inside.
-    if ($target === FALSE || $link === $root || static::$symlinkMode !== self::SYMLINK_MODE_RELATIVE) {
-      return $target;
-    }
-
-    return static::relativeSymlinkTarget(static::resolveSymlinkTarget($target, $link), dirname($link), $root, DIRECTORY_SEPARATOR === '\\');
+    return static::readSymlink($link, $link !== $root && static::$symlinkMode === self::SYMLINK_MODE_RELATIVE ? $root : NULL);
   }
 
   /**
@@ -876,7 +899,7 @@ class File {
    * @return bool
    *   TRUE if $path is $dir or lies inside it, FALSE otherwise.
    */
-  protected static function isPathInside(string $path, string $dir, ?bool $ignore_case = NULL): bool {
+  public static function isPathInside(string $path, string $dir, ?bool $ignore_case = NULL): bool {
     $ignore_case ??= DIRECTORY_SEPARATOR === '\\';
     $path = static::toForwardSlashes($path) . '/';
     $dir = rtrim(static::toForwardSlashes($dir), '/') . '/';
@@ -1011,7 +1034,7 @@ class File {
    * @return string
    *   Path with forward slashes on Windows, or the path unchanged elsewhere.
    */
-  protected static function toForwardSlashes(string $path): string {
+  public static function toForwardSlashes(string $path): string {
     return DIRECTORY_SEPARATOR === '\\' ? str_replace('\\', '/', $path) : $path;
   }
 

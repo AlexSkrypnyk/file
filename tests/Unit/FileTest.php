@@ -932,6 +932,95 @@ final class FileTest extends UnitTestCase {
     File::setSymlinkMode('absolute');
   }
 
+  #[DataProvider('dataProviderReadSymlink')]
+  public function testReadSymlink(bool $outside, bool $absolute, bool $dangling, bool $with_root): void {
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    $target = $outside ? $this->testTmpDir . DIRECTORY_SEPARATOR . self::nativePath('outside/target.txt') : $tree . DIRECTORY_SEPARATOR . self::nativePath('library/target.txt');
+    $link = $tree . DIRECTORY_SEPARATOR . self::nativePath('hooks/link');
+
+    File::dump($target, 'target');
+    $target = realpath(dirname($target)) . DIRECTORY_SEPARATOR . basename($target);
+    $stored = $absolute ? $target : self::nativePath($outside ? '../../outside/target.txt' : '../library/target.txt');
+    $this->createSymlink($link, $stored);
+
+    if ($dangling) {
+      File::remove($target);
+    }
+
+    // The global mode does not change the result.
+    File::setSymlinkMode(File::SYMLINK_MODE_NATIVE);
+
+    // On Windows, $tree uses the 8.3 short form of the temporary directory,
+    // which the long form of the target is compared with.
+    $result = File::readSymlink($link, $with_root ? $tree : NULL);
+
+    if ($with_root) {
+      $this->assertSame($outside ? $target : '../library/target.txt', $result);
+    }
+    elseif (DIRECTORY_SEPARATOR === '/' || $dangling) {
+      $this->assertSame($stored, $result);
+    }
+    else {
+      // readlink() on Windows returns the resolved target.
+      $this->assertIsString($result);
+      $this->assertSame(realpath($target), realpath($result));
+    }
+  }
+
+  public static function dataProviderReadSymlink(): \Iterator {
+    foreach (['inside the root' => FALSE, 'outside the root' => TRUE] as $location => $outside) {
+      foreach (['relative' => FALSE, 'absolute' => TRUE] as $style => $absolute) {
+        foreach (['present' => FALSE, 'dangling' => TRUE] as $state => $dangling) {
+          foreach (['with a root' => TRUE, 'without a root' => FALSE] as $root => $with_root) {
+            yield sprintf('%s, %s target, %s, %s', $location, $style, $state, $root) => [$outside, $absolute, $dangling, $with_root];
+          }
+        }
+      }
+    }
+  }
+
+  public function testReadSymlinkRootInDifferentCase(): void {
+    if (DIRECTORY_SEPARATOR !== '\\') {
+      $this->markTestSkipped('Windows only.');
+    }
+
+    $tree = $this->testTmpDir . DIRECTORY_SEPARATOR . 'tree';
+    File::dump($tree . '\\library\\target.txt', 'target');
+    $this->createSymlink($tree . '\\hooks\\link', '..\\library\\target.txt');
+
+    $this->assertSame('../library/target.txt', File::readSymlink($tree . '\\hooks\\link', strtoupper($tree)));
+  }
+
+  public function testReadSymlinkMissing(): void {
+    $this->assertFalse(File::readSymlink($this->testTmpDir . DIRECTORY_SEPARATOR . 'missing', $this->testTmpDir));
+  }
+
+  #[DataProvider('dataProviderIsPathInside')]
+  public function testIsPathInside(string $path, string $dir, ?bool $ignore_case, bool $expected): void {
+    $this->assertSame($expected, File::isPathInside($path, $dir, $ignore_case));
+  }
+
+  public static function dataProviderIsPathInside(): \Iterator {
+    yield 'same directory' => ['/x/src', '/x/src', NULL, TRUE];
+    yield 'nested path' => ['/x/src/a/b', '/x/src', NULL, TRUE];
+    yield 'directory with a trailing slash' => ['/x/src/a', '/x/src/', NULL, TRUE];
+    yield 'directory sharing the prefix' => ['/x/src2/a', '/x/src', NULL, FALSE];
+    yield 'parent directory' => ['/x', '/x/src', NULL, FALSE];
+    yield 'different case, ignoring case' => ['/x/SRC/a', '/x/src', TRUE, TRUE];
+    yield 'different case, matching case' => ['/x/SRC/a', '/x/src', FALSE, FALSE];
+  }
+
+  #[DataProvider('dataProviderToForwardSlashes')]
+  public function testToForwardSlashes(string $path, string $expected): void {
+    $this->assertSame($expected, File::toForwardSlashes($path));
+  }
+
+  public static function dataProviderToForwardSlashes(): \Iterator {
+    yield 'forward slashes' => ['a/b/c', 'a/b/c'];
+    // A backslash is a filename character outside Windows.
+    yield 'backslashes' => ['a\\b/c', DIRECTORY_SEPARATOR === '\\' ? 'a/b/c' : 'a\\b/c'];
+  }
+
   #[DataProvider('dataProviderNormalizePath')]
   public function testNormalizePath(string $path, string $expected): void {
     $this->assertSame(self::nativePath($expected), self::callProtectedMethod(File::class, 'normalizePath', [$path]));
