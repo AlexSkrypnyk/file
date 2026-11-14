@@ -33,6 +33,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
   - [Available Methods](#available-methods)
+  - [Symlinks](#symlinks)
   - [Batch Operations](#batch-operations)
   - [Content Replacement](#content-replacement)
   - [Assertion Traits](#assertion-traits)
@@ -115,8 +116,10 @@ catch (FileException $exception) {
 | `findContainingInDir()`      | Find all files in directory containing a specific string.                          |
 | `findMatchingPath()`         | Find first path that matches a needle among provided paths.                        |
 | `ignoredPaths()`             | Get the default list of ignored subpaths, optionally merged with extra ones.        |
+| `isPathInside()`             | Check if a path is a directory or lies inside it.                                  |
 | `mkdir()`                    | Creates a directory if it doesn't exist.                                           |
 | `read()`                     | Read file contents.                                                                |
+| `readSymlink()`              | Read a symlink target, relative to a root when the target is inside it.            |
 | `realpath()`                 | Replacement for PHP's `realpath` resolves non-existing paths.                      |
 | `remove()`                   | Remove file or directory.                                                          |
 | `removeLine()`               | Remove lines containing a specific string or pattern from a string.                |
@@ -133,10 +136,84 @@ catch (FileException $exception) {
 | `rmdirIfEmpty()`             | Remove directory recursively if empty.                                             |
 | `scandir()`                  | Recursively scan directory for files.                                              |
 | `tmpdir()`                   | Create temporary directory.                                                        |
+| `toForwardSlashes()`         | Replace Windows directory separators with forward slashes.                         |
 
 Methods that accept a needle also accept a regular expression. A needle is treated as a pattern when it starts with one of the `/`, `#`, `~`, `@` or `%` delimiters and is a valid expression, so `'/\.php$/'` matches by pattern while `'text'` matches literally.
 
 The directory-wide methods skip the paths returned by `ignoredPaths()` - `/.git/`, `/.idea/`, `/vendor/` and `/node_modules/`. The methods that rewrite the content of a single file additionally skip images: `.png`, `.jpg`, `.jpeg`, `.bmp` and `.tiff`.
+
+### Symlinks
+
+`File` treats symlinks the same way on Linux, macOS and Windows. The following table lists what each method does with a symlink:
+
+| Method                | What it does with a symlink                                                                                                                                                          |
+|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `copy()`              | Copies the symlink as a symlink, after every file and directory is copied. The symlink mode sets its target.                                                                        |
+| `scandir()`           | Lists a file symlink or a dangling symlink as a file. Lists a directory symlink as a directory, only when directories are included. A directory symlink isn't walked, so a symlink to an ancestor can't recurse. |
+| `remove()`, `rmdir()` | Removes the symlink and leaves its target.                                                                                                                                           |
+| `rmdirIfEmpty()`      | Leaves a directory symlink in place, even when its target is empty.                                                                                                                  |
+| `exists()`            | Returns `FALSE` for a dangling symlink.                                                                                                                                              |
+| `realpath()`          | Follows the chain of symlinks to the final target. A relative target resolves against its symlink's directory, and a dangling symlink resolves to its target path. A loop throws a `FileException`. |
+| `readSymlink()`       | Reads the target of 1 symlink, relative to a root you pass.                                                                                                                          |
+
+`absolute()`, `dir()` and `mkdir()` resolve a path with `realpath()`, so they follow symlinks the same way. The directory-wide methods, such as `replaceContentInDir()`, get their files from `scandir()`, so they skip directory symlinks.
+
+#### Copy symlinks
+
+`copy()` creates every symlink after the files and directories are in place, so a symlink and its target can come in any order. Pick how it sets each symlink's target:
+
+| Mode                                    | The copied symlink points at                                                                                                                          |
+|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `File::SYMLINK_MODE_NATIVE` (default)   | The target the platform reads. Linux and macOS read the stored target. Windows reads the resolved absolute target, which points into the source tree. |
+| `File::SYMLINK_MODE_RELATIVE`           | A target inside the copied tree, as a path relative to the symlink, on every platform. A target outside the copied tree becomes an absolute path.      |
+
+To make the copied tree self-contained, so its symlinks keep working after the source tree is removed, set the relative mode before copying:
+
+```php
+use AlexSkrypnyk\File\File;
+
+File::setSymlinkMode(File::SYMLINK_MODE_RELATIVE);
+File::copy('/path/to/source', '/path/to/destination');
+```
+
+`File::getSymlinkMode()` returns the current mode, and `File::resetSymlinkMode()` restores the default. `setSymlinkMode()` throws a `FileException` for a value that isn't 1 of the 2 constants.
+
+To copy only part of a directory, pass a filter to `copy()`. The filter receives each entry's path relative to the source and whether the entry is a directory. Paths use `/` separators on every platform. A symlink counts as a file. Return `FALSE` to skip the entry. A skipped directory isn't entered, so its whole subtree is skipped:
+
+```php
+File::copy('/path/to/source', '/path/to/destination', filter: fn(string $path, bool $is_dir): bool => !in_array($path, ['.git', 'vendor'], TRUE));
+```
+
+A filtered copy still treats the source as the tree for the relative mode. A symlink whose target is filtered out, or is already missing in the source, is copied as a dangling symlink. It resolves after the target exists. When `copy()` can't read or create a symlink, it throws a `FileException` that names the symlink.
+
+#### Read symlinks
+
+To read a symlink's target the same way on every platform, pass the root of its tree to `readSymlink()`. A target inside the root comes back relative to the symlink's directory with `/` separators, and a target outside it comes back absolute. The result doesn't depend on the symlink mode. Without a root, `readSymlink()` returns the target the platform reads, and it returns `FALSE` when the target can't be read:
+
+```php
+File::readSymlink('/path/to/tree/hooks/link', '/path/to/tree');
+// '../library/provision.sh'
+```
+
+To get the final path a symlink leads to, use `realpath()`:
+
+```php
+// /path/to/tree/current -> release, and /path/to/tree/latest -> current.
+File::realpath('/path/to/tree/latest');
+// '/path/to/tree/release'
+```
+
+#### Symlinks on Windows
+
+PHP on Windows reads symlinks differently from Linux and macOS. `File` works around each difference:
+
+- `readlink()` returns the resolved absolute target instead of the stored one. `File` makes a target relative again in the relative mode and in `readSymlink()`.
+- `readlink()`, `realpath()` and `is_link()` can't read a dangling relative symlink. `File` reads its stored target from the `dir /AL` listing of its directory.
+- `symlink()` refuses a target that doesn't exist yet. `File` creates a dangling symlink with the `mklink` command.
+- `realpath()` returns the missing target of a dangling absolute symlink. `File` checks that the target exists before it trusts the result.
+- An archive extractor such as `tar` creates a directory symlink as a file symlink when its target isn't extracted yet. `File` reads it with `realpath()` and copies it as a directory symlink.
+
+Reading and creating a dangling symlink on Windows runs `dir /AL` and `mklink` through `proc_open()`. When `proc_open()` is disabled, copying a dangling symlink throws a `FileException`. Paths compare case-insensitively on Windows. Creating any symlink on Windows needs Developer Mode or administrator rights. Junctions aren't supported.
 
 ### Batch Operations
 
