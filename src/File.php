@@ -136,7 +136,11 @@ class File {
       return $path;
     }
 
-    $path = static::resolveSymlinkChain($path);
+    // The checks match isSymlink(), inline so a path that is not a symlink
+    // costs 1 lstat() on Linux and macOS.
+    if (is_link($path) || (DIRECTORY_SEPARATOR === '\\' && static::isWindowsDanglingSymlink($path))) {
+      $path = static::resolveSymlinkChain($path);
+    }
 
     if (str_starts_with($path, sys_get_temp_dir())) {
       $tmp_realpath = realpath(sys_get_temp_dir());
@@ -188,8 +192,9 @@ class File {
       return FALSE;
     }
 
-    // PHP on Windows reports a dangling absolute symlink as existing.
-    return array_filter((array) $files, static fn(mixed $file): bool => is_string($file) && is_link($file) && !static::symlinkResolves($file)) === [];
+    // PHP on Windows reports a dangling absolute symlink as existing. Other
+    // platforms follow the symlink, so a dangling one does not exist there.
+    return DIRECTORY_SEPARATOR === '/' || array_filter((array) $files, static fn(mixed $file): bool => is_string($file) && is_link($file) && !static::symlinkResolves($file)) === [];
   }
 
   /**
@@ -485,7 +490,7 @@ class File {
       $entry_source = sprintf('%s/%s', $source, $entry);
       $entry_path = $path === '' ? $entry : $path . '/' . $entry;
 
-      if ($filter !== NULL && !$filter($entry_path, is_dir($entry_source) && !static::isSymlink($entry_source))) {
+      if ($filter !== NULL && !$filter($entry_path, @filetype($entry_source) === 'dir')) {
         continue;
       }
 
@@ -635,10 +640,6 @@ class File {
   /**
    * Check whether a path is a symlink, on every platform.
    *
-   * PHP on Windows does not report a dangling relative symlink as a link,
-   * so a missing path that its directory still lists is looked up in the
-   * Windows directory listing.
-   *
    * @param string $path
    *   Path to check.
    *
@@ -646,7 +647,34 @@ class File {
    *   TRUE if the path is a symlink, FALSE otherwise.
    */
   protected static function isSymlink(string $path): bool {
-    return is_link($path) || (DIRECTORY_SEPARATOR === '\\' && !file_exists($path) && in_array(basename($path), @scandir(dirname($path)) ?: [], TRUE) && static::readWindowsSymlink($path) !== NULL);
+    return is_link($path) || (DIRECTORY_SEPARATOR === '\\' && static::isWindowsDanglingSymlink($path));
+  }
+
+  /**
+   * Check whether a missing path is a symlink that PHP on Windows hides.
+   *
+   * PHP on Windows does not report a dangling relative symlink as a link.
+   * The directory entry is still there, so a missing path that has 1 is
+   * looked up in the Windows directory listing.
+   *
+   * @param string $path
+   *   Path to check.
+   *
+   * @return bool
+   *   TRUE if the path is a dangling symlink, FALSE otherwise.
+   *
+   * @codeCoverageIgnore
+   */
+  protected static function isWindowsDanglingSymlink(string $path): bool {
+    if (file_exists($path)) {
+      return FALSE;
+    }
+
+    // glob() finds a single entry with 1 lookup, and a name with a glob
+    // character is matched against the directory listing instead.
+    $listed = strpbrk(basename($path), '*?[') === FALSE ? (glob($path) ?: []) !== [] : in_array(basename($path), @scandir(dirname($path)) ?: [], TRUE);
+
+    return $listed && static::readWindowsSymlink($path) !== NULL;
   }
 
   /**
@@ -663,25 +691,27 @@ class File {
    */
   protected static function resolveSymlinkChain(string $path): string {
     // PHP's realpath() resolves a chain that ends at an existing path in 1
-    // cached call. On Windows it returns the missing target of a dangling
-    // absolute symlink, so the chain is followed there.
-    $resolved = DIRECTORY_SEPARATOR === '/' && is_link($path) ? realpath($path) : FALSE;
+    // cached call. For a loop on Linux, and for a dangling absolute symlink
+    // on Windows, it returns a path that does not exist, so the chain is
+    // followed instead.
+    $resolved = realpath($path);
 
-    if ($resolved !== FALSE) {
+    if ($resolved !== FALSE && file_exists($resolved)) {
       return $resolved;
     }
 
     $link = $path;
     $visited = [];
 
-    // is_link() and readlink() answer for most symlinks, and isSymlink() and
-    // readSymlink() cover the Windows cases they cannot read.
-    while (is_link($path) || (DIRECTORY_SEPARATOR === '\\' && static::isSymlink($path))) {
+    do {
       if (isset($visited[$path])) {
         throw new FileException(sprintf('Unable to resolve symlink "%s": the symlinks form a loop.', $link));
       }
 
       $visited[$path] = TRUE;
+
+      // readlink() reads most symlinks, and readSymlink() covers the Windows
+      // cases it cannot read.
       $target = @readlink($path);
       $target = $target === FALSE || DIRECTORY_SEPARATOR === '\\' ? static::readSymlink($path) : $target;
 
@@ -694,7 +724,7 @@ class File {
       // A target that starts at a root or a Windows drive is absolute.
       $absolute = $target[0] === '/' || $target[0] === '\\' || ($target[1] ?? '') === ':';
       $path = static::normalizePath($absolute ? $target : dirname($path) . DIRECTORY_SEPARATOR . $target);
-    }
+    } while (static::isSymlink($path));
 
     return $path;
   }
@@ -1105,8 +1135,9 @@ class File {
       }
 
       // A directory symlink is listed as an entry and not walked, so a
-      // symlink to an ancestor cannot recurse.
-      if (is_dir($path) && !static::isSymlink($path)) {
+      // symlink to an ancestor cannot recurse. filetype() reads the entry
+      // without following it, so a symlink is "link" on every platform.
+      if (@filetype($path) === 'dir') {
         if ($include_dirs) {
           $discovered[] = $path;
         }
@@ -1155,7 +1186,7 @@ class File {
    *   Directory path to remove if empty.
    */
   public static function rmdirIfEmpty(string $directory): void {
-    if (is_dir($directory) && !static::isSymlink($directory) && static::dirIsEmpty($directory)) {
+    if (@filetype($directory) === 'dir' && static::dirIsEmpty($directory)) {
       static::rmdir($directory);
       static::rmdirIfEmpty(dirname($directory));
     }
