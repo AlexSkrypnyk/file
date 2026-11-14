@@ -189,7 +189,7 @@ class File {
     }
 
     // PHP on Windows reports a dangling absolute symlink as existing.
-    return array_filter((array) $files, static fn(mixed $file): bool => is_link((string) $file) && !static::symlinkResolves((string) $file)) === [];
+    return array_filter((array) $files, static fn(mixed $file): bool => is_string($file) && is_link($file) && !static::symlinkResolves($file)) === [];
   }
 
   /**
