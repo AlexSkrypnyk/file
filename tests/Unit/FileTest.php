@@ -1173,7 +1173,7 @@ final class FileTest extends UnitTestCase {
     // A directory symlink is listed only with the directories.
     $this->assertSame(['dir/file.txt', 'file_link.txt'], $this->listScandir($tree, FALSE));
 
-    $found = array_map(static fn(string $path): string => basename($path), File::findContainingInDir($tree, 'needle'));
+    $found = array_map(basename(...), File::findContainingInDir($tree, 'needle'));
     sort($found);
     $this->assertSame(['file.txt', 'file_link.txt'], $found);
 
