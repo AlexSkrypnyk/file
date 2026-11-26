@@ -131,8 +131,8 @@ composer install
   - Config: `rector.php`
   - PHP set: derived from the `composer.json` PHP requirement
   - Prepared sets: dead code, code quality, coding style, type declarations,
-    naming, instanceof, early return, PHPUnit code quality
-  - Composer-based PHPUnit set, plus `DeclareStrictTypesRector`
+    PHPUnit code quality
+  - Composer-based PHPUnit set
 
 ### Coding Conventions
 
